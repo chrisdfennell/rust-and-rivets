@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import ambientUrl from '../../assets/industrial_ambiance.mp3';
+import { getAudioSettings, setMusicMutedPref } from './settings';
 
 export const AMBIENT_KEY = 'industrialAmbiance';
 const DEFAULT_VOLUME = 0.32;
@@ -28,7 +29,9 @@ export function preloadMusic(scene: Phaser.Scene): void {
 export function startMusic(scene: Phaser.Scene): void {
   if (started) return;
   if (!scene.cache.audio.exists(AMBIENT_KEY)) return;
-  activeSound = scene.sound.add(AMBIENT_KEY, { loop: true, volume: DEFAULT_VOLUME });
+  const prefs = getAudioSettings();
+  const startingVolume = prefs.musicMuted ? 0 : DEFAULT_VOLUME;
+  activeSound = scene.sound.add(AMBIENT_KEY, { loop: true, volume: startingVolume });
   activeSound.play();
   started = true;
 }
@@ -36,11 +39,15 @@ export function startMusic(scene: Phaser.Scene): void {
 export function setMusicVolume(volume: number): void {
   if (!activeSound) return;
   const clamped = Math.max(0, Math.min(1, volume));
-  // BaseSound's volume setter exists on WebAudioSound / HTML5AudioSound
   (activeSound as Phaser.Sound.BaseSound & { volume: number }).volume = clamped;
 }
 
+export function setMusicMuted(muted: boolean): void {
+  setMusicMutedPref(muted);
+  if (!activeSound) return;
+  (activeSound as Phaser.Sound.BaseSound & { volume: number }).volume = muted ? 0 : DEFAULT_VOLUME;
+}
+
 export function isMusicMuted(): boolean {
-  if (!activeSound) return false;
-  return (activeSound as Phaser.Sound.BaseSound & { volume: number }).volume === 0;
+  return getAudioSettings().musicMuted;
 }

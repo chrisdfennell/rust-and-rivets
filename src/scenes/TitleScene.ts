@@ -6,7 +6,8 @@ import {
 } from '../game/run';
 import { loadMeta, exportSaveString, importSaveString } from '../game/meta';
 import { Button } from '../ui/Button';
-import { preloadMusic, startMusic } from '../audio/music';
+import { preloadMusic, startMusic, setMusicMuted, isMusicMuted } from '../audio/music';
+import { setSfxMuted, isSfxMuted } from '../audio/sfx';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class TitleScene extends Phaser.Scene {
@@ -171,6 +172,23 @@ export class TitleScene extends Phaser.Scene {
     );
     this.add.existing(importBtn);
 
+    // Audio mute toggles
+    const audioY = secondaryY + 56;
+    this.makeMuteToggle(
+      width / 2 - 120,
+      audioY,
+      'MUSIC',
+      isMusicMuted,
+      (m) => setMusicMuted(m)
+    );
+    this.makeMuteToggle(
+      width / 2 + 120,
+      audioY,
+      'SFX',
+      isSfxMuted,
+      (m) => setSfxMuted(m)
+    );
+
     this.add
       .text(width / 2, height - 24, 'Your run auto-saves between rooms.', {
         fontFamily: FONTS.body,
@@ -178,6 +196,31 @@ export class TitleScene extends Phaser.Scene {
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
+  }
+
+  private makeMuteToggle(
+    x: number,
+    y: number,
+    name: string,
+    getter: () => boolean,
+    setter: (m: boolean) => void
+  ): Button {
+    const labelFor = (m: boolean) => (m ? `UNMUTE ${name}` : `MUTE ${name}`);
+    let btn: Button;
+    btn = new Button(
+      this,
+      x,
+      y,
+      labelFor(getter()),
+      () => {
+        const next = !getter();
+        setter(next);
+        btn.setLabel(labelFor(next));
+      },
+      { width: 200, height: 36, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(btn);
+    return btn;
   }
 
   private openWorkshop() {

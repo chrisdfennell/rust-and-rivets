@@ -5,6 +5,7 @@ import type { CombatState, CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { setupPause } from '../ui/setupPause';
+import { sfx } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -242,6 +243,7 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
     this.cancelEndTurnConfirm();
+    sfx.endTurn();
     const pre = this.snapshot();
     endTurn(this.state, {
       afterEnemyResolve: () => this.emitDeltas(pre)
@@ -256,6 +258,7 @@ export class CombatScene extends Phaser.Scene {
   private onPlayCard(card: CardInstance) {
     if (!canPlay(this.state, card.uid)) return;
     this.cancelEndTurnConfirm();
+    sfx.cardPlay();
     const view = this.cardViews.find((v) => v.card.uid === card.uid);
     if (view) {
       // Disable further hit testing on this card so a rapid second click
@@ -314,10 +317,12 @@ export class CombatScene extends Phaser.Scene {
       this.floatNumber(enemyPos.x, enemyPos.y - 60, `-${eHullLoss}`, COLORS.danger);
       this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
       this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 10);
+      sfx.hit();
     }
     if (ePlatingLoss > 0 && eHullLoss <= 0) {
       this.floatNumber(enemyPos.x - 30, enemyPos.y - 40, `-${ePlatingLoss}`, COLORS.shield);
       this.burst(enemyPos.x, enemyPos.y, COLORS.shield, 6);
+      sfx.platingAbsorb();
     }
     if (ePlatingGain > 0) {
       this.floatNumber(enemyPos.x + 30, enemyPos.y - 40, `+${ePlatingGain}`, COLORS.shield);
@@ -338,13 +343,16 @@ export class CombatScene extends Phaser.Scene {
       this.hitRing(playerPos.x, playerPos.y, COLORS.danger);
       this.burst(playerPos.x, playerPos.y, COLORS.rust, 10);
       if (pHullLoss >= 10) this.cameras.main.shake(180, 0.006);
+      sfx.hit();
     }
     if (pHullGain > 0) {
       this.floatNumber(playerPos.x, playerPos.y - 60, `+${pHullGain}`, COLORS.ok);
+      sfx.heal();
     }
     if (pPlatingLoss > 0 && pHullLoss <= 0) {
       this.floatNumber(playerPos.x - 30, playerPos.y - 40, `-${pPlatingLoss}`, COLORS.shield);
       this.burst(playerPos.x, playerPos.y, COLORS.shield, 6);
+      sfx.platingAbsorb();
     }
     if (pPlatingGain > 0) {
       this.floatNumber(playerPos.x + 30, playerPos.y - 40, `+${pPlatingGain}`, COLORS.shield);
@@ -459,11 +467,13 @@ export class CombatScene extends Phaser.Scene {
       }
       const rewardLine = reward > 0 ? ` +${reward} scrap.` : '';
       this.showOverlay('VICTORY', `${s.enemy.def.name} falls.${rewardLine} ${continueLine}`, COLORS.ok);
+      sfx.victory();
       this.bindContinue(nextScene);
     } else if (s.phase === 'defeat' && !this.endHandled) {
       this.endHandled = true;
       failCombat(s.player.hull);
       this.showOverlay('DEFEAT', 'Your mech is scrap. Press SPACE to view the map.', COLORS.danger);
+      sfx.defeat();
       this.bindContinue('Map');
     }
   }

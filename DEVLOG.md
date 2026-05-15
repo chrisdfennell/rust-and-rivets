@@ -83,7 +83,47 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 17 — Ambient music *(current)*
+### Slice 18 — Procedural SFX + mute toggles *(current)*
+Web-Audio-synthesized sound effects for every meaningful action,
+plus persisted mute prefs for music and SFX.
+
+New `src/audio/sfx.ts` — single shared AudioContext, lazily created
+on first use. Each sound is a short composition of OscillatorNodes
+and/or filtered noise bursts shaped with gain envelopes. Sounds:
+- **click** (button press)
+- **cardPlay** (whoosh + low tone)
+- **hit** (low thump + lowpass noise)
+- **platingAbsorb** (high metallic clink)
+- **heal** (C-E-G rising arpeggio)
+- **endTurn** (3-pop mechanical ratchet)
+- **victory** (rising major triad on square wave)
+- **defeat** (descending sawtooth)
+- **enemyAttack** + **steamSpend** (ready for use, unwired)
+
+Wiring:
+- Every `Button` plays `sfx.click` on pointerdown (universal feedback)
+- CombatScene plays `cardPlay` on `onPlayCard`, `endTurn` on
+  confirmed end-turn, `hit`/`platingAbsorb`/`heal` from inside
+  `emitDeltas` based on what changed, and `victory`/`defeat` on
+  the matching overlay
+- All SFX are short (40-700ms) and volume-balanced under the music
+
+Persisted mute prefs:
+- New `src/audio/settings.ts` stores `{ musicMuted, sfxMuted }` in
+  `localStorage["rust-and-rivets/audio/v1"]`. Survives page reload.
+- `music.ts` honors `musicMuted` at start and via `setMusicMuted()`
+  (drops volume to 0 / restores to 0.32).
+- `sfx.ts` honors `sfxMuted` at module init and via `setSfxMuted()`
+  (skips synthesis entirely while muted).
+
+UI:
+- **MUTE MUSIC** and **MUTE SFX** toggle buttons on the title
+  screen below EXPORT/IMPORT.
+- Same toggles in the pause overlay below QUIT TO TITLE.
+- Both label-toggle (MUTE → UNMUTE) and update each other's state
+  via the shared settings module.
+
+### Slice 17 — Ambient music
 - `assets/industrial_ambiance.mp3` plays as a looping background track
   from the title screen onward. Single instance owned by Phaser's
   global SoundManager, so the loop survives scene transitions (title

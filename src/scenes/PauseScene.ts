@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { Button } from '../ui/Button';
+import { setMusicMuted, isMusicMuted } from '../audio/music';
+import { setSfxMuted, isSfxMuted } from '../audio/sfx';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class PauseScene extends Phaser.Scene {
@@ -60,8 +62,12 @@ export class PauseScene extends Phaser.Scene {
     this.add.existing(quit);
     quit.setDepth(1);
 
+    // Audio toggles
+    this.makeMuteToggle(width / 2 - 110, height / 2 + 130, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m));
+    this.makeMuteToggle(width / 2 + 110, height / 2 + 130, 'SFX', isSfxMuted, (m) => setSfxMuted(m));
+
     this.add
-      .text(width / 2, height / 2 + 120, 'ESC to resume', {
+      .text(width / 2, height / 2 + 180, 'ESC to resume', {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
@@ -71,6 +77,32 @@ export class PauseScene extends Phaser.Scene {
 
     // ESC also closes the pause menu
     this.input.keyboard?.on('keydown-ESC', () => this.doResume());
+  }
+
+  private makeMuteToggle(
+    x: number,
+    y: number,
+    name: string,
+    getter: () => boolean,
+    setter: (m: boolean) => void
+  ): Button {
+    const labelFor = (m: boolean) => (m ? `UNMUTE ${name}` : `MUTE ${name}`);
+    let btn: Button;
+    btn = new Button(
+      this,
+      x,
+      y,
+      labelFor(getter()),
+      () => {
+        const next = !getter();
+        setter(next);
+        btn.setLabel(labelFor(next));
+      },
+      { width: 190, height: 36, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(btn);
+    btn.setDepth(1);
+    return btn;
   }
 
   private doResume() {

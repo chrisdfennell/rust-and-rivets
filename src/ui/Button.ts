@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { sfx } from '../audio/sfx';
 import { COLORS, FONTS, hex } from './theme';
 
 export interface ButtonOpts {
@@ -58,7 +59,9 @@ export class Button extends Phaser.GameObjects.Container {
       if (this.enabled) this.bg.setFillStyle(this.opts.fill);
     });
     this.bg.on('pointerdown', () => {
-      if (this.enabled) onClick();
+      if (!this.enabled) return;
+      sfx.click();
+      onClick();
     });
   }
 
