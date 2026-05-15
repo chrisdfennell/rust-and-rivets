@@ -4,6 +4,7 @@ import type {
   CardInstance,
   CombatState,
   EnemyDef,
+  EnemyState,
   PersistentPlayer,
   PlayerState,
   ResolveCtx,
@@ -32,7 +33,7 @@ function instance(cardId: string): CardInstance {
 }
 
 export function createCombatState(
-  enemyDef: EnemyDef,
+  enemyDefs: EnemyDef[],
   persistent: PersistentPlayer,
   relicIds: string[] = []
 ): CombatState {
@@ -57,14 +58,19 @@ export function createCombatState(
     cardsPlayedThisTurn: 0
   };
 
-  const enemy = makeEnemy(enemyDef, 1);
+  const enemies = enemyDefs.map((def) => makeEnemy(def, 1));
+
+  const introLine =
+    enemies.length === 1
+      ? `A ${enemies[0].def.name} blocks the road.`
+      : `${enemies.length} foes block the road: ${enemies.map((e) => e.def.name).join(', ')}.`;
 
   const state: CombatState = {
     phase: 'playerTurn',
     turn: 1,
     player,
-    enemy,
-    log: [`A ${enemy.def.name} blocks the road.`],
+    enemies,
+    log: [introLine],
     relicIds: relicIds.slice()
   };
 
@@ -75,7 +81,7 @@ export function createCombatState(
   return state;
 }
 
-function makeEnemy(def: EnemyDef, turn: number) {
+function makeEnemy(def: EnemyDef, turn: number): EnemyState {
   const memory: Record<string, unknown> = {};
   const action = def.pickAction({ turn, rng, memory });
   return {
@@ -101,6 +107,37 @@ function logTo(state: CombatState, msg: string) {
 
 function ctx(state: CombatState): ResolveCtx {
   return { state, log: (m) => logTo(state, m) };
+}
+
+function isAlive(e: EnemyState): boolean {
+  return e.hull > 0;
+}
+
+export function aliveEnemies(state: CombatState): EnemyState[] {
+  return state.enemies.filter(isAlive);
+}
+
+export function firstAliveIndex(state: CombatState): number {
+  return state.enemies.findIndex(isAlive);
+}
+
+function currentTargetIndex(state: CombatState): number {
+  // Honor the card's chosen target if it's still alive; otherwise fall back
+  // to the first alive enemy (e.g. relic damage, multi-effect cards where
+  // the original target died mid-resolution).
+  const idx = state.activeTargetIndex;
+  if (idx !== undefined && idx >= 0 && idx < state.enemies.length && isAlive(state.enemies[idx])) {
+    return idx;
+  }
+  return firstAliveIndex(state);
+}
+
+function checkVictory(state: CombatState): boolean {
+  if (state.enemies.every((e) => !isAlive(e))) {
+    state.phase = 'victory';
+    return true;
+  }
+  return false;
 }
 
 export function drawCards(state: CombatState, n: number) {
@@ -130,9 +167,17 @@ function startPlayerTurn(state: CombatState) {
   for (const id of state.relicIds) RELICS[id]?.onTurnStart?.(state);
 }
 
-export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
-  const e = c.state.enemy;
-  const p = c.state.player;
+export function dealDamageToEnemy(c: ResolveCtx, raw: number, targetIndex?: number) {
+  const state = c.state;
+  const p = state.player;
+  let idx: number;
+  if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < state.enemies.length && isAlive(state.enemies[targetIndex])) {
+    idx = targetIndex;
+  } else {
+    idx = currentTargetIndex(state);
+  }
+  if (idx < 0) return;
+  const e = state.enemies[idx];
   let dmg = raw + (p.strength > 0 ? p.strength : 0);
   // Brass Knuckles / first-attack bonus applies to the first damaging hit each turn
   if (p.firstAttackBonus > 0) {
@@ -148,8 +193,8 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
   if (through > 0) c.log(`Hit ${e.def.name} for ${through}.`);
   else c.log(`${e.def.name}'s plating absorbs ${absorbed}.`);
   if (e.hull <= 0) {
-    c.state.phase = 'victory';
     c.log(`${e.def.name} collapses into scrap.`);
+    if (checkVictory(state)) return;
     return;
   }
   // Thorns: every attack against an enemy with thorns lashes back at the player
@@ -159,18 +204,26 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
     p.hull = Math.max(0, p.hull - back);
     c.log(`Thorns lash back for ${back}.`);
     if (p.hull <= 0) {
-      c.state.phase = 'defeat';
+      state.phase = 'defeat';
       c.log('Your mech goes dark.');
     }
   }
 }
 
-export function dealDamageToPlayer(c: ResolveCtx, raw: number) {
-  const p = c.state.player;
-  const e = c.state.enemy;
-  let dmg = raw + (e.strength > 0 ? e.strength : 0);
+export function dealDamageToPlayer(c: ResolveCtx, raw: number, attackerIndex?: number) {
+  const state = c.state;
+  const p = state.player;
+  // The attacking enemy's stats (strength, weak) modify outgoing damage and
+  // are also the target of player Thorns. Prefer the explicit arg, then the
+  // active-attacker index set by endTurn while resolving an enemy action,
+  // and finally fall back to the first alive enemy.
+  let attackerIdx = attackerIndex;
+  if (attackerIdx === undefined) attackerIdx = state.activeAttackerIndex;
+  if (attackerIdx === undefined) attackerIdx = firstAliveIndex(state);
+  const attacker = attackerIdx >= 0 ? state.enemies[attackerIdx] : null;
+  let dmg = raw + (attacker?.strength ?? 0);
   if (p.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
-  if (e.weak > 0) dmg = Math.floor(dmg * 0.75);
+  if ((attacker?.weak ?? 0) > 0) dmg = Math.floor(dmg * 0.75);
   const absorbed = Math.min(p.plating, dmg);
   p.plating -= absorbed;
   const through = dmg - absorbed;
@@ -178,25 +231,30 @@ export function dealDamageToPlayer(c: ResolveCtx, raw: number) {
   if (through > 0) c.log(`You take ${through} hull damage.`);
   else c.log(`Plating absorbs ${absorbed}.`);
   if (p.hull <= 0) {
-    c.state.phase = 'defeat';
+    state.phase = 'defeat';
     c.log('Your mech goes dark.');
     return;
   }
   // Thorns on the player retaliate against the attacking enemy (bypasses plating).
-  if (p.thorns > 0) {
+  if (p.thorns > 0 && attacker && isAlive(attacker)) {
     const back = p.thorns;
-    e.hull = Math.max(0, e.hull - back);
-    c.log(`Spikes punish ${e.def.name} for ${back}.`);
-    if (e.hull <= 0) {
-      c.state.phase = 'victory';
-      c.log(`${e.def.name} collapses into scrap.`);
+    attacker.hull = Math.max(0, attacker.hull - back);
+    c.log(`Spikes punish ${attacker.def.name} for ${back}.`);
+    if (attacker.hull <= 0) {
+      c.log(`${attacker.def.name} collapses into scrap.`);
+      checkVictory(state);
     }
   }
 }
 
-export function gainEnemyPlating(c: ResolveCtx, n: number) {
-  c.state.enemy.plating += n;
-  c.log(`${c.state.enemy.def.name} braces (+${n}).`);
+export function gainEnemyPlating(c: ResolveCtx, n: number, targetIndex?: number) {
+  const state = c.state;
+  let idx = targetIndex;
+  if (idx === undefined) idx = firstAliveIndex(state);
+  if (idx < 0) return;
+  const e = state.enemies[idx];
+  e.plating += n;
+  c.log(`${e.def.name} braces (+${n}).`);
 }
 
 export function applyVulnerableToPlayer(c: ResolveCtx, n: number) {
@@ -216,6 +274,8 @@ export function applyBurnToPlayer(c: ResolveCtx, n: number) {
 
 function applyEffect(state: CombatState, eff: CardEffect) {
   const c = ctx(state);
+  const targetIdx = currentTargetIndex(state);
+  const target = targetIdx >= 0 ? state.enemies[targetIdx] : null;
   switch (eff.kind) {
     case 'damage':
       dealDamageToEnemy(c, eff.amount);
@@ -235,12 +295,16 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       logTo(state, `Vent: +${eff.amount} steam.`);
       break;
     case 'applyVulnerable':
-      state.enemy.vulnerable += eff.amount;
-      logTo(state, `${state.enemy.def.name} is Vulnerable (${eff.amount}).`);
+      if (target) {
+        target.vulnerable += eff.amount;
+        logTo(state, `${target.def.name} is Vulnerable (${target.vulnerable}).`);
+      }
       break;
     case 'applyWeak':
-      state.enemy.weak += eff.amount;
-      logTo(state, `${state.enemy.def.name} is Weak (${eff.amount}).`);
+      if (target) {
+        target.weak += eff.amount;
+        logTo(state, `${target.def.name} is Weak (${target.weak}).`);
+      }
       break;
     case 'heal': {
       const p = state.player;
@@ -261,14 +325,14 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       break;
     }
     case 'damageIfEnemyPlated': {
-      if (state.enemy.plating > 0) {
-        dealDamageToEnemy(ctx(state), eff.amount);
+      if (target && target.plating > 0) {
+        dealDamageToEnemy(c, eff.amount);
       }
       break;
     }
     case 'damageEqualToPlating': {
       const dmg = state.player.plating + eff.bonus;
-      dealDamageToEnemy(ctx(state), dmg);
+      dealDamageToEnemy(c, dmg);
       break;
     }
     case 'losePlating': {
@@ -293,8 +357,10 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       break;
     }
     case 'applyBurn': {
-      state.enemy.burn += eff.amount;
-      logTo(state, `${state.enemy.def.name} is Burning (${state.enemy.burn}).`);
+      if (target) {
+        target.burn += eff.amount;
+        logTo(state, `${target.def.name} is Burning (${target.burn}).`);
+      }
       break;
     }
   }
@@ -313,7 +379,7 @@ export function canPlay(state: CombatState, uid: number): boolean {
   return state.player.steam >= effectiveCost(state, card.def.cost);
 }
 
-export function playCard(state: CombatState, uid: number): boolean {
+export function playCard(state: CombatState, uid: number, targetIndex?: number): boolean {
   if (!canPlay(state, uid)) return false;
   const p = state.player;
   const idx = p.hand.findIndex((c) => c.uid === uid);
@@ -324,6 +390,10 @@ export function playCard(state: CombatState, uid: number): boolean {
   if (p.firstCardFree && p.cardsPlayedThisTurn === 0) p.firstCardFree = false;
   p.hand.splice(idx, 1);
 
+  // Set the active target so per-target effect handlers know who to hit.
+  // For non-enemy-target cards (target: 'self' | 'none') the index is unused.
+  state.activeTargetIndex = targetIndex;
+
   for (const eff of card.def.effects) {
     applyEffect(state, eff);
     if (state.phase === 'victory' || state.phase === 'defeat') break;
@@ -331,10 +401,14 @@ export function playCard(state: CombatState, uid: number): boolean {
 
   const indexInTurn = p.cardsPlayedThisTurn;
   p.cardsPlayedThisTurn += 1;
-  // Relic onCardPlayed hooks run after effects so they can react to the played card
+  // Relic onCardPlayed hooks run after effects so they can react to the played
+  // card. The active target stays set so relics that deal damage (e.g. Pneumatic
+  // Strike) hit the same enemy the card just hit when it's still alive.
   if (state.phase === 'playerTurn') {
     for (const id of state.relicIds) RELICS[id]?.onCardPlayed?.(state, card.def, indexInTurn);
   }
+
+  state.activeTargetIndex = undefined;
 
   if (card.def.exhaust) p.exhaust.push(card);
   else p.discard.push(card);
@@ -371,35 +445,64 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
 
   state.phase = 'enemyTurn';
   const c = ctx(state);
-  state.enemy.nextAction.resolve(c);
-  const e = state.enemy;
-  // Tick enemy burn before the visual delta callback so it shows up as part of "the turn".
-  const phaseAfterEnemyAction: string = state.phase;
-  if (phaseAfterEnemyAction !== 'defeat' && phaseAfterEnemyAction !== 'victory' && e.burn > 0) {
-    const tick = e.burn;
-    e.hull = Math.max(0, e.hull - tick);
-    logTo(state, `Burn sears ${e.def.name} for ${tick}.`);
-    e.burn--;
-    if (e.hull <= 0) {
-      state.phase = 'victory';
-      logTo(state, `${e.def.name} collapses into scrap.`);
-    }
+
+  // Each alive enemy resolves its action in order. Capture indices up front so
+  // mid-turn deaths don't reshuffle the iteration.
+  const enemyOrder = state.enemies
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => isAlive(e));
+  for (const { e, i } of enemyOrder) {
+    if (!isAlive(e)) continue; // killed earlier this turn (e.g. by thorns from a prior attacker)
+    // Use the closure'd index so dealDamageToPlayer can attribute damage to the
+    // correct attacker (matters for player Thorns retaliating).
+    runEnemyAction(c, e, i);
+    const phaseNow: string = state.phase;
+    if (phaseNow === 'defeat') break;
   }
+
+  // Tick burn on every still-alive enemy
+  const phaseBeforeBurn: string = state.phase;
+  if (phaseBeforeBurn !== 'defeat') {
+    for (const e of state.enemies) {
+      if (!isAlive(e) || e.burn <= 0) continue;
+      const tick = e.burn;
+      e.hull = Math.max(0, e.hull - tick);
+      logTo(state, `Burn sears ${e.def.name} for ${tick}.`);
+      e.burn--;
+      if (e.hull <= 0) logTo(state, `${e.def.name} collapses into scrap.`);
+    }
+    checkVictory(state);
+  }
+
   hooks?.afterEnemyResolve?.();
   const phase: string = state.phase;
   if (phase === 'defeat' || phase === 'victory') return;
 
-  // Decay enemy debuffs at end of enemy's own turn
-  if (e.vulnerable > 0) e.vulnerable--;
-  if (e.weak > 0) e.weak--;
-
-  e.lastIntent = e.nextAction.intent;
-  e.nextAction = e.def.pickAction({
-    turn: state.turn + 1,
-    rng,
-    memory: e.memory,
-    lastIntent: e.lastIntent
-  });
+  // Decay enemy debuffs at end of enemy's own turn + queue next intent
+  for (const e of state.enemies) {
+    if (!isAlive(e)) continue;
+    if (e.vulnerable > 0) e.vulnerable--;
+    if (e.weak > 0) e.weak--;
+    e.lastIntent = e.nextAction.intent;
+    e.nextAction = e.def.pickAction({
+      turn: state.turn + 1,
+      rng,
+      memory: e.memory,
+      lastIntent: e.lastIntent
+    });
+  }
   state.turn++;
   startPlayerTurn(state);
+}
+
+// Wraps an enemy's action resolve so dealDamageToPlayer can know which enemy
+// is attacking (for player Thorns attribution). The enemy's own resolve()
+// closure calls our public helpers, which pull from state.activeAttackerIndex.
+function runEnemyAction(c: ResolveCtx, e: EnemyState, idx: number) {
+  c.state.activeAttackerIndex = idx;
+  try {
+    e.nextAction.resolve(c);
+  } finally {
+    c.state.activeAttackerIndex = undefined;
+  }
 }

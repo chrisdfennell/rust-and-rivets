@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { createCombatState, endTurn, playCard, canPlay } from '../game/combat';
 import { getRun, completeCombat, failCombat } from '../game/run';
-import type { CombatState, CardInstance } from '../game/types';
+import type { CombatState, CardInstance, EnemyState } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { setupPause } from '../ui/setupPause';
@@ -10,14 +10,34 @@ import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
+interface EnemyUI {
+  sprite: Phaser.GameObjects.Container;
+  bar: StatBar;
+  intent: IntentView;
+  nameLabel: Phaser.GameObjects.Text;
+  dropZone: Phaser.GameObjects.Rectangle;
+  highlight: Phaser.GameObjects.Rectangle;
+  baseX: number;
+  baseY: number;
+}
+
+interface DragState {
+  view: CardView;
+  card: CardInstance;
+  pointerStartX: number;
+  pointerStartY: number;
+  active: boolean;
+  hoveredIndex: number;
+}
+
+const DRAG_THRESHOLD = 6; // pixels of pointer movement before we treat it as a drag
+
 export class CombatScene extends Phaser.Scene {
   private state!: CombatState;
 
   private mech!: Phaser.GameObjects.Container;
-  private enemySprite!: Phaser.GameObjects.Container;
+  private enemyUIs: EnemyUI[] = [];
   private playerBar!: StatBar;
-  private enemyBar!: StatBar;
-  private intent!: IntentView;
   private steamText!: Phaser.GameObjects.Text;
   private steamLabel!: Phaser.GameObjects.Text;
   private turnText!: Phaser.GameObjects.Text;
@@ -32,6 +52,8 @@ export class CombatScene extends Phaser.Scene {
   private endTurnTxt!: Phaser.GameObjects.Text;
   private endTurnPending = false;
   private endTurnTimer: Phaser.Time.TimerEvent | null = null;
+  private drag: DragState | null = null;
+  private inputBound = false;
 
   constructor() {
     super('Combat');
@@ -44,6 +66,8 @@ export class CombatScene extends Phaser.Scene {
     this.cardViews = [];
     this.endTurnPending = false;
     this.endTurnTimer = null;
+    this.enemyUIs = [];
+    this.drag = null;
 
     setupPause(this);
 
@@ -68,21 +92,18 @@ export class CombatScene extends Phaser.Scene {
     }
 
     const run = getRun();
-    if (!run.pendingEnemy) {
+    if (!run.pendingEnemies || run.pendingEnemies.length === 0) {
       // Safety net — if someone navigated straight to Combat without picking a node.
       this.scene.start('Map');
       return;
     }
-    this.state = createCombatState(run.pendingEnemy, run.player, run.relics);
+    this.state = createCombatState(run.pendingEnemies, run.player, run.relics);
 
-    // Top HUD strip: name + HP bar for each side; intent under enemy bar.
-    // Keeping all status UI above the sprites avoids collisions with the card hand.
+    // Top HUD strip: name + HP bar for the player; enemies arrange across the right.
     const hudY = 78;
 
     this.playerBar = new StatBar(this, width * 0.24, hudY, 280);
-    this.enemyBar = new StatBar(this, width * 0.76, hudY, 280);
     this.add.existing(this.playerBar);
-    this.add.existing(this.enemyBar);
 
     this.add
       .text(24, hudY, 'PILOT', {
@@ -93,30 +114,19 @@ export class CombatScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
 
-    this.add
-      .text(width - 24, hudY, this.state.enemy.def.name.toUpperCase(), {
-        fontFamily: FONTS.display,
-        fontSize: '14px',
-        color: hex(COLORS.bone),
-        fontStyle: 'bold'
-      })
-      .setOrigin(1, 0.5);
-
-    this.intent = new IntentView(this, width * 0.76, hudY + 46);
-    this.add.existing(this.intent);
-
-    // Sprites — pushed slightly lower than midline so the HUD has clear sky above.
+    // Player sprite
     const characterId = run.player.characterId ?? 'pilot';
     const drawCharacter = CHARACTER_SPRITES[characterId] ?? CHARACTER_SPRITES.pilot;
-    this.mech = drawCharacter(this, width * 0.28, height * 0.48);
-    const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
-    this.enemySprite = drawEnemy(this, width * 0.72, height * 0.5);
+    this.mech = drawCharacter(this, width * 0.22, height * 0.48);
+
+    // Enemy lineup
+    this.layoutEnemies();
 
     // Steam gauge
-    const steamPanel = this.add
+    this.add
       .rectangle(80, height - 130, 100, 100, COLORS.bgPanel)
-      .setStrokeStyle(3, COLORS.brass);
-    steamPanel.setOrigin(0.5);
+      .setStrokeStyle(3, COLORS.brass)
+      .setOrigin(0.5);
     this.add
       .text(80, height - 175, 'STEAM', {
         fontFamily: FONTS.display,
@@ -183,8 +193,101 @@ export class CombatScene extends Phaser.Scene {
 
     this.overlay = this.add.container(0, 0).setDepth(1000).setVisible(false);
 
+    // Global pointer listeners for drag tracking (bind once per scene-create).
+    if (!this.inputBound) {
+      this.input.on('pointermove', this.onPointerMove, this);
+      this.input.on('pointerup', this.onPointerUp, this);
+      this.input.on('pointerupoutside', this.onPointerUp, this);
+      this.inputBound = true;
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.input.off('pointermove', this.onPointerMove, this);
+        this.input.off('pointerup', this.onPointerUp, this);
+        this.input.off('pointerupoutside', this.onPointerUp, this);
+        this.inputBound = false;
+      });
+    }
+
     this.refresh();
   }
+
+  // ===== Enemy layout =====
+
+  private enemyPositionFor(i: number, count: number): { x: number; y: number; scale: number } {
+    const { width, height } = this.scale;
+    const baseY = height * 0.5;
+    if (count <= 1) return { x: width * 0.72, y: baseY, scale: 1 };
+    if (count === 2) {
+      const xs = [width * 0.6, width * 0.86];
+      return { x: xs[i], y: baseY, scale: 0.85 };
+    }
+    // 3+ — squeeze across the right two-thirds
+    const span = width * 0.42;
+    const startX = width * 0.55;
+    return { x: startX + (i * span) / (count - 1), y: baseY, scale: 0.72 };
+  }
+
+  private barWidthFor(count: number): number {
+    if (count <= 1) return 280;
+    if (count === 2) return 220;
+    return 170;
+  }
+
+  private layoutEnemies() {
+    const enemies = this.state.enemies;
+    const count = enemies.length;
+    const barW = this.barWidthFor(count);
+    const hudY = 78;
+
+    for (let i = 0; i < count; i++) {
+      const e = enemies[i];
+      const pos = this.enemyPositionFor(i, count);
+
+      // Drop zone — a generous box around the sprite so cards can land easily.
+      const zoneW = Math.max(180, 220 * pos.scale);
+      const zoneH = 220 * pos.scale;
+      const highlight = this.add
+        .rectangle(pos.x, pos.y, zoneW, zoneH, COLORS.danger, 0.0)
+        .setStrokeStyle(3, COLORS.danger, 0)
+        .setOrigin(0.5);
+      const dropZone = this.add.rectangle(pos.x, pos.y, zoneW, zoneH, 0xffffff, 0).setOrigin(0.5);
+
+      const drawEnemy = ENEMY_SPRITES[e.def.id] ?? ENEMY_SPRITES.scrapRaider;
+      const sprite = drawEnemy(this, pos.x, pos.y);
+      sprite.setScale(pos.scale);
+
+      // Per-enemy HUD: bar above-right, intent below bar, name above bar.
+      // For multi-enemy fights, put each bar above its own sprite so the
+      // association is obvious.
+      const barY = count <= 1 ? hudY : pos.y - 130 * pos.scale;
+      const bar = new StatBar(this, pos.x, barY, barW);
+      this.add.existing(bar);
+
+      const nameLabel = this.add
+        .text(pos.x, barY - 18, e.def.name.toUpperCase(), {
+          fontFamily: FONTS.display,
+          fontSize: count <= 1 ? '14px' : '11px',
+          color: hex(COLORS.bone),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5, 1);
+
+      const intent = new IntentView(this, pos.x, barY + 36);
+      this.add.existing(intent);
+
+      this.enemyUIs.push({
+        sprite,
+        bar,
+        intent,
+        nameLabel,
+        dropZone,
+        highlight,
+        baseX: pos.x,
+        baseY: pos.y
+      });
+    }
+  }
+
+  // ===== End-turn UI =====
 
   private makeEndTurnButton(x: number, y: number): Phaser.GameObjects.Container {
     const c = this.add.container(x, y);
@@ -234,9 +337,7 @@ export class CombatScene extends Phaser.Scene {
 
   private onEndTurn() {
     if (this.state.phase !== 'playerTurn') return;
-    // Require a second click to confirm only if the player has Steam left
-    // AND at least one card in hand is actually playable. If nothing can be
-    // played, the Steam is wasted no matter what — no point asking.
+    if (this.drag) return; // ignore while dragging
     const canPlayAnything = this.state.player.hand.some((c) => canPlay(this.state, c.uid));
     if (this.state.player.steam > 0 && canPlayAnything && !this.endTurnPending) {
       this.startEndTurnConfirm();
@@ -249,46 +350,160 @@ export class CombatScene extends Phaser.Scene {
       afterEnemyResolve: () => this.emitDeltas(pre)
     });
     if (this.state.player.hull > 0 && this.state.phase === 'playerTurn') {
-      // Brief enemy-acted shake
       this.shake(this.mech, 4);
     }
     this.refresh();
   }
 
-  private onPlayCard(card: CardInstance) {
+  // ===== Drag + click for cards =====
+
+  private onCardPointerDown(card: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) {
     if (!canPlay(this.state, card.uid)) return;
+    if (this.drag) return;
     this.cancelEndTurnConfirm();
-    sfx.cardPlay();
-    const view = this.cardViews.find((v) => v.card.uid === card.uid);
-    if (view) {
-      // Disable further hit testing on this card so a rapid second click
-      // doesn't double-fire while the flourish runs.
-      view.setPlayable(false);
-      view.disableInteractive();
-      this.tweens.add({
-        targets: view,
-        y: view.y - 50,
-        alpha: 0,
-        scaleX: 1.18,
-        scaleY: 1.18,
-        duration: 170,
-        ease: 'Cubic.Out',
-        onComplete: () => this.applyCardPlay(card)
-      });
+    this.drag = {
+      view,
+      card,
+      pointerStartX: pointer.x,
+      pointerStartY: pointer.y,
+      active: false,
+      hoveredIndex: -1
+    };
+  }
+
+  private onPointerMove(pointer: Phaser.Input.Pointer) {
+    const d = this.drag;
+    if (!d) return;
+    if (!d.active) {
+      const dx = pointer.x - d.pointerStartX;
+      const dy = pointer.y - d.pointerStartY;
+      if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+      // Threshold crossed — promote to active drag.
+      d.active = true;
+      d.view.beginDrag();
+    }
+    d.view.setDragPos(pointer.x, pointer.y);
+    // Highlight whichever drop zone the pointer is over (only matters for
+    // enemy-target cards; self/none cards just dim the highlights).
+    const idx = this.enemyIndexAt(pointer.x, pointer.y);
+    const isEnemyCard = d.card.def.target === 'enemy';
+    for (let i = 0; i < this.enemyUIs.length; i++) {
+      const ui = this.enemyUIs[i];
+      const alive = this.state.enemies[i].hull > 0;
+      const on = isEnemyCard && alive && i === idx;
+      ui.highlight.setStrokeStyle(3, COLORS.danger, on ? 1 : 0);
+      ui.highlight.setFillStyle(COLORS.danger, on ? 0.12 : 0);
+    }
+    d.hoveredIndex = idx;
+  }
+
+  private onPointerUp(_pointer: Phaser.Input.Pointer) {
+    const d = this.drag;
+    if (!d) return;
+    // Clear highlights
+    for (const ui of this.enemyUIs) {
+      ui.highlight.setStrokeStyle(3, COLORS.danger, 0);
+      ui.highlight.setFillStyle(COLORS.danger, 0);
+    }
+
+    if (!d.active) {
+      // Treated as a click. For enemy-target cards we auto-target if exactly
+      // one enemy is alive; otherwise the player must drag.
+      this.drag = null;
+      this.handleClickPlay(d.card, d.view);
+      return;
+    }
+
+    // Resolve drag → play
+    const card = d.card;
+    const view = d.view;
+    const hovered = d.hoveredIndex;
+    this.drag = null;
+
+    if (card.def.target === 'enemy') {
+      const aliveIdx = this.aliveAt(hovered) ? hovered : -1;
+      if (aliveIdx < 0) {
+        // Dropped on no valid target — return to hand.
+        void view.endDrag(true);
+        this.refresh();
+        return;
+      }
+      this.playCardWithFlourish(card, view, aliveIdx);
     } else {
-      this.applyCardPlay(card);
+      // self / none — drop anywhere plays it.
+      this.playCardWithFlourish(card, view, undefined);
     }
   }
 
-  private applyCardPlay(card: CardInstance) {
+  private handleClickPlay(card: CardInstance, view: CardView) {
+    if (!canPlay(this.state, card.uid)) return;
+    if (card.def.target === 'enemy') {
+      const alive = this.state.enemies
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => e.hull > 0);
+      if (alive.length === 1) {
+        this.playCardWithFlourish(card, view, alive[0].i);
+        return;
+      }
+      // Multiple enemies — require a drag-to-target; ignore the click.
+      this.flashHint('Drag to a target');
+      return;
+    }
+    // self / none — click plays.
+    this.playCardWithFlourish(card, view, undefined);
+  }
+
+  private aliveAt(idx: number): boolean {
+    if (idx < 0 || idx >= this.state.enemies.length) return false;
+    return this.state.enemies[idx].hull > 0;
+  }
+
+  private enemyIndexAt(x: number, y: number): number {
+    for (let i = 0; i < this.enemyUIs.length; i++) {
+      const ui = this.enemyUIs[i];
+      const r = ui.dropZone;
+      const left = r.x - r.width / 2;
+      const right = r.x + r.width / 2;
+      const top = r.y - r.height / 2;
+      const bottom = r.y + r.height / 2;
+      if (x >= left && x <= right && y >= top && y <= bottom) return i;
+    }
+    return -1;
+  }
+
+  // ===== Card play flourish =====
+
+  private playCardWithFlourish(card: CardInstance, view: CardView, targetIndex: number | undefined) {
+    if (!canPlay(this.state, card.uid)) {
+      void view.endDrag(true);
+      return;
+    }
+    view.setPlayable(false);
+    view.disableInteractive();
+    this.tweens.add({
+      targets: view,
+      y: view.y - 50,
+      alpha: 0,
+      scaleX: 1.18,
+      scaleY: 1.18,
+      duration: 170,
+      ease: 'Cubic.Out',
+      onComplete: () => this.applyCardPlay(card, targetIndex)
+    });
+  }
+
+  private applyCardPlay(card: CardInstance, targetIndex: number | undefined) {
     const pre = this.snapshot();
-    const ok = playCard(this.state, card.uid);
+    sfx.cardPlay();
+    const ok = playCard(this.state, card.uid, targetIndex);
     if (!ok) {
       this.refresh();
       return;
     }
     this.emitDeltas(pre);
-    if (card.def.target === 'enemy') this.shake(this.enemySprite, 6);
+    if (card.def.target === 'enemy' && targetIndex !== undefined && this.enemyUIs[targetIndex]) {
+      this.shake(this.enemyUIs[targetIndex].sprite, 6);
+    }
     this.flashSteam();
     this.refresh();
   }
@@ -299,38 +514,44 @@ export class CombatScene extends Phaser.Scene {
     return {
       playerHull: this.state.player.hull,
       playerPlating: this.state.player.plating,
-      enemyHull: this.state.enemy.hull,
-      enemyPlating: this.state.enemy.plating
+      enemies: this.state.enemies.map((e) => ({ hull: e.hull, plating: e.plating }))
     };
   }
 
   private emitDeltas(prev: ReturnType<typeof this.snapshot>) {
     const cur = this.snapshot();
-    const enemyPos = { x: this.enemySprite.x, y: this.enemySprite.y };
     const playerPos = { x: this.mech.x, y: this.mech.y };
 
-    // Enemy side
-    const eHullLoss = prev.enemyHull - cur.enemyHull;
-    const ePlatingLoss = prev.enemyPlating - cur.enemyPlating;
-    const ePlatingGain = cur.enemyPlating - prev.enemyPlating;
-    if (eHullLoss > 0) {
-      this.floatNumber(enemyPos.x, enemyPos.y - 60, `-${eHullLoss}`, COLORS.danger);
-      this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
-      this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 10);
-      sfx.hit();
-    }
-    if (ePlatingLoss > 0 && eHullLoss <= 0) {
-      this.floatNumber(enemyPos.x - 30, enemyPos.y - 40, `-${ePlatingLoss}`, COLORS.shield);
-      this.burst(enemyPos.x, enemyPos.y, COLORS.shield, 6);
-      sfx.platingAbsorb();
-    }
-    if (ePlatingGain > 0) {
-      this.floatNumber(enemyPos.x + 30, enemyPos.y - 40, `+${ePlatingGain}`, COLORS.shield);
-    }
-    if (cur.enemyHull <= 0 && prev.enemyHull > 0) {
-      this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 24);
-      this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
-      this.cameras.main.shake(220, 0.008);
+    // Per-enemy deltas
+    for (let i = 0; i < this.state.enemies.length; i++) {
+      const ui = this.enemyUIs[i];
+      if (!ui) continue;
+      const prevE = prev.enemies[i];
+      const curE = cur.enemies[i];
+      if (!prevE || !curE) continue;
+      const enemyPos = { x: ui.baseX, y: ui.baseY };
+      const hullLoss = prevE.hull - curE.hull;
+      const platingLoss = prevE.plating - curE.plating;
+      const platingGain = curE.plating - prevE.plating;
+      if (hullLoss > 0) {
+        this.floatNumber(enemyPos.x, enemyPos.y - 60, `-${hullLoss}`, COLORS.danger);
+        this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
+        this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 10);
+        sfx.hit();
+      }
+      if (platingLoss > 0 && hullLoss <= 0) {
+        this.floatNumber(enemyPos.x - 30, enemyPos.y - 40, `-${platingLoss}`, COLORS.shield);
+        this.burst(enemyPos.x, enemyPos.y, COLORS.shield, 6);
+        sfx.platingAbsorb();
+      }
+      if (platingGain > 0) {
+        this.floatNumber(enemyPos.x + 30, enemyPos.y - 40, `+${platingGain}`, COLORS.shield);
+      }
+      if (curE.hull <= 0 && prevE.hull > 0) {
+        this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 24);
+        this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
+        this.cameras.main.shake(220, 0.008);
+      }
     }
 
     // Player side
@@ -436,6 +657,31 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
+  private flashHint(msg: string) {
+    const { width, height } = this.scale;
+    const t = this.add
+      .text(width / 2, height - 220, msg, {
+        fontFamily: FONTS.display,
+        fontSize: '15px',
+        color: hex(COLORS.steam),
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      })
+      .setOrigin(0.5)
+      .setDepth(950);
+    this.tweens.add({
+      targets: t,
+      alpha: 0,
+      y: t.y - 20,
+      duration: 700,
+      ease: 'Cubic.Out',
+      onComplete: () => t.destroy()
+    });
+  }
+
+  // ===== Refresh =====
+
   private refresh() {
     const s = this.state;
     this.playerBar.update(
@@ -443,12 +689,23 @@ export class CombatScene extends Phaser.Scene {
       s.player.vulnerable, s.player.weak,
       s.player.strength, s.player.dexterity, s.player.burn, s.player.thorns
     );
-    this.enemyBar.update(
-      s.enemy.hull, s.enemy.maxHull, s.enemy.plating,
-      s.enemy.vulnerable, s.enemy.weak,
-      s.enemy.strength, s.enemy.dexterity, s.enemy.burn, s.enemy.thorns
-    );
-    this.intent.update(s.enemy.nextAction.intent);
+    for (let i = 0; i < s.enemies.length; i++) {
+      const e = s.enemies[i];
+      const ui = this.enemyUIs[i];
+      if (!ui) continue;
+      ui.bar.update(
+        Math.max(0, e.hull), e.maxHull, e.plating,
+        e.vulnerable, e.weak,
+        e.strength, e.dexterity, e.burn, e.thorns
+      );
+      ui.intent.update(e.nextAction.intent);
+      const dead = e.hull <= 0;
+      ui.sprite.setAlpha(dead ? 0.25 : 1);
+      ui.intent.setAlpha(dead ? 0.2 : 1);
+      ui.bar.setAlpha(dead ? 0.4 : 1);
+      ui.nameLabel.setAlpha(dead ? 0.4 : 1);
+      if (dead) ui.intent.update({ kind: 'unknown', label: 'DOWN' } as EnemyState['nextAction']['intent']);
+    }
     this.steamLabel.setText(`${s.player.steam}/${s.player.maxSteam}`);
     this.turnText.setText(`TURN ${s.turn}`);
     this.deckText.setText(`DRAW: ${s.player.draw.length}`);
@@ -474,7 +731,9 @@ export class CombatScene extends Phaser.Scene {
         continueLine = 'Press SPACE to claim rewards.';
       }
       const rewardLine = reward > 0 ? ` +${reward} scrap.` : '';
-      this.showOverlay('VICTORY', `${s.enemy.def.name} falls.${rewardLine} ${continueLine}`, COLORS.ok);
+      const titleEnemyName =
+        s.enemies.length === 1 ? s.enemies[0].def.name : 'The lot of them';
+      this.showOverlay('VICTORY', `${titleEnemyName} falls.${rewardLine} ${continueLine}`, COLORS.ok);
       sfx.victory();
       this.bindContinue(nextScene);
     } else if (s.phase === 'defeat' && !this.endHandled) {
@@ -501,7 +760,7 @@ export class CombatScene extends Phaser.Scene {
     for (const card of hand) {
       let view = existing.get(card.uid);
       if (!view) {
-        view = new CardView(this, card, (c) => this.onPlayCard(c));
+        view = new CardView(this, card, (c, v, p) => this.onCardPointerDown(c, v, p));
         this.handLayer.add(view);
       } else {
         existing.delete(card.uid);
@@ -512,8 +771,6 @@ export class CombatScene extends Phaser.Scene {
     this.cardViews = next;
 
     const { width, height } = this.scale;
-    // Card center y so the card's bottom edge stays inside the viewport
-    // (arc offset adds up to ~16px more for edge cards — included in the margin).
     const baseY = height - CARD_H * 0.5 - 16;
     const n = next.length;
     if (n === 0) return;
@@ -524,8 +781,6 @@ export class CombatScene extends Phaser.Scene {
     const startX = width / 2 - (spacing * (n - 1)) / 2;
     const arc = 16;
     const rotMax = 0.08;
-    // Each card "owns" a slot equal to its spacing — keeps adjacent hit areas
-    // from overlapping so pointer events route to the visually-frontmost card.
     const slotWidth = Math.min(CARD_W, n > 1 ? spacing : CARD_W);
 
     for (let i = 0; i < n; i++) {

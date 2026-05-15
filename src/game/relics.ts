@@ -62,10 +62,12 @@ const SALVAGE_LOOP: Relic = {
 const CALIBRATION_SPIKE: Relic = {
   id: 'calibrationSpike',
   name: 'Calibration Spike',
-  description: 'Start each combat by applying 1 Vulnerable to the enemy.',
+  description: 'Start each combat by applying 1 Vulnerable to every enemy.',
   onCombatStart: (state) => {
-    state.enemy.vulnerable += 1;
-    state.log.push(`${state.enemy.def.name} starts Vulnerable.`);
+    for (const e of state.enemies) {
+      if (e.hull > 0) e.vulnerable += 1;
+    }
+    state.log.push('Targets primed: every enemy is Vulnerable.');
   }
 };
 

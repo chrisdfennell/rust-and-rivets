@@ -1015,6 +1015,58 @@ export function getActBoss(act: number): EnemyDef {
   return FOUNDRY_TYRANT;
 }
 
+// ===== Encounter pickers — return arrays so future fights can be 1-N enemies. =====
+
+// Multi-enemy encounters are sprinkled in by these helpers. The 1-enemy
+// case stays the common path; groups appear roughly 1 in 4 regular fights.
+
+const REGULAR_GROUP_CHANCE = 0.22;
+const ELITE_GROUP_CHANCE = 0.18;
+
+function regularGroupFor(act: number, rng: () => number): EnemyDef[] | null {
+  if (rng() >= REGULAR_GROUP_CHANCE) return null;
+  if (act === 1) {
+    // Pack of two scrap mooks
+    return rng() < 0.5
+      ? [JUNK_HOUND, JUNK_HOUND]
+      : [SCRAP_RAIDER, RUST_SPRAYER];
+  }
+  if (act === 2) {
+    return rng() < 0.5
+      ? [CINDER_HOUND, CINDER_HOUND]
+      : [SLAG_DRONE, FORGE_REAVER];
+  }
+  // Act 3+
+  return rng() < 0.5
+    ? [LIGHTNING_SPRITE, LIGHTNING_SPRITE]
+    : [SKY_PIRATE, LIGHTNING_SPRITE];
+}
+
+function eliteGroupFor(act: number, rng: () => number): EnemyDef[] | null {
+  if (rng() >= ELITE_GROUP_CHANCE) return null;
+  if (act === 1) return [IRON_RECLAIMER, SCRAP_RAIDER];
+  if (act === 2) return [RECLAIMER_MK2, CINDER_HOUND];
+  return [SKY_MARSHAL, LIGHTNING_SPRITE];
+}
+
+export function pickRegularEncounter(act: number, rng: () => number = Math.random): EnemyDef[] {
+  const group = regularGroupFor(act, rng);
+  if (group) return group;
+  return [pickRegularEnemy(act, rng)];
+}
+
+export function pickEliteEncounter(act: number, rng: () => number = Math.random): EnemyDef[] {
+  const group = eliteGroupFor(act, rng);
+  if (group) return group;
+  return [pickEliteEnemy(act, rng)];
+}
+
+export function getBossEncounter(act: number): EnemyDef[] {
+  // Bosses stay solo — the fight is their pattern, adding minions would
+  // break their balance. Easy to revisit later (e.g. boss-with-adds).
+  return [getActBoss(act)];
+}
+
 export function getActName(act: number): string {
   if (act >= 3) return 'ABOVE THE CLOUDLINE';
   if (act === 2) return 'THE FOUNDRY DEPTHS';

@@ -110,7 +110,14 @@ export interface CombatState {
   phase: CombatPhase;
   turn: number;
   player: PlayerState;
-  enemy: EnemyState;
+  enemies: EnemyState[];
+  // Set by playCard before effects resolve so per-target helpers know which
+  // enemy to hit. Falls back to the first alive enemy when undefined (e.g.
+  // for relic-triggered damage like Pneumatic Strike).
+  activeTargetIndex?: number;
+  // Set while an enemy's nextAction is resolving so dealDamageToPlayer can
+  // attribute damage to the right attacker (matters for player Thorns).
+  activeAttackerIndex?: number;
   log: string[];
   relicIds: string[];
 }

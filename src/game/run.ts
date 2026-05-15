@@ -1,7 +1,12 @@
 import type { EnemyDef, PersistentPlayer } from './types';
 import { SHOP_POOL, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
 import { generateMap, type MapData, type MapNode } from './map';
-import { pickRegularEnemy, pickEliteEnemy, getActBoss, isFinalAct } from './enemies';
+import {
+  pickRegularEncounter,
+  pickEliteEncounter,
+  getBossEncounter,
+  isFinalAct
+} from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints } from './meta';
@@ -38,7 +43,7 @@ export interface RunState {
   scrap: number;
   relics: string[];
   result: RunResult;
-  pendingEnemy: EnemyDef | null;
+  pendingEnemies: EnemyDef[] | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
   awaitingInterAct: boolean;
@@ -68,7 +73,7 @@ export function startRun(characterId: string = 'pilot'): RunState {
     scrap: 0,
     relics: [],
     result: 'inProgress',
-    pendingEnemy: null,
+    pendingEnemies: null,
     pendingShop: null,
     pendingReward: null,
     awaitingInterAct: false,
@@ -124,17 +129,17 @@ export function enterNode(nodeId: string): void {
   if (!isReachable(nodeId)) throw new Error(`Node ${nodeId} is not reachable`);
   const node = r.map.nodes.get(nodeId)!;
   r.currentNodeId = nodeId;
-  r.pendingEnemy = null;
+  r.pendingEnemies = null;
   r.pendingShop = null;
   r.pendingReward = null;
   r.pendingEventId = null;
   r.pendingEventResult = null;
   if (node.kind === 'combat') {
-    r.pendingEnemy = pickRegularEnemy(r.act, Math.random);
+    r.pendingEnemies = pickRegularEncounter(r.act, Math.random);
   } else if (node.kind === 'elite') {
-    r.pendingEnemy = pickEliteEnemy(r.act, Math.random);
+    r.pendingEnemies = pickEliteEncounter(r.act, Math.random);
   } else if (node.kind === 'boss') {
-    r.pendingEnemy = getActBoss(r.act);
+    r.pendingEnemies = getBossEncounter(r.act);
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
   } else if (node.kind === 'event') {
@@ -206,7 +211,7 @@ export function upgradeDeckCard(deckIndex: number): boolean {
 export function completeNode(): void {
   const r = getRun();
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
-  r.pendingEnemy = null;
+  r.pendingEnemies = null;
   r.pendingShop = null;
   r.pendingEventId = null;
   r.pendingEventResult = null;
@@ -223,7 +228,7 @@ export function completeCombat(survivingHull: number): number {
   const r = getRun();
   r.player.hull = survivingHull;
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
-  r.pendingEnemy = null;
+  r.pendingEnemies = null;
 
   // Engine Oil and similar onCombatEnd hooks tick before reward calc
   for (const id of r.relics) RELICS[id]?.onCombatEnd?.(r);
@@ -306,7 +311,7 @@ export function failCombat(survivingHull: number): void {
   const r = getRun();
   r.player.hull = Math.max(0, survivingHull);
   r.result = 'defeat';
-  r.pendingEnemy = null;
+  r.pendingEnemies = null;
   persist();
 }
 
@@ -332,7 +337,7 @@ export function advanceAct(boon: InterActBoon): void {
   r.map = generateMap();
   r.currentNodeId = null;
   r.visitedNodeIds = new Set();
-  r.pendingEnemy = null;
+  r.pendingEnemies = null;
   r.pendingShop = null;
   r.pendingReward = null;
   r.awaitingInterAct = false;

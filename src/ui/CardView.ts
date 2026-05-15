@@ -17,14 +17,17 @@ export class CardView extends Phaser.GameObjects.Container {
   private exhaustText: Phaser.GameObjects.Text | null = null;
   private playable = true;
   private hovered = false;
+  private homeX = 0;
+  private homeY = 0;
   private homeRot = 0;
   private currentTween: Phaser.Tweens.Tween | null = null;
   private slotWidth = CARD_W;
+  private dragging = false;
 
   constructor(
     scene: Phaser.Scene,
     public readonly card: CardInstance,
-    onClick: (c: CardInstance) => void
+    onPointerDown: (c: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) => void
   ) {
     super(scene, 0, 0);
 
@@ -94,23 +97,29 @@ export class CardView extends Phaser.GameObjects.Container {
     );
 
     this.on('pointerover', () => {
+      if (this.dragging) return;
       if (this.hovered) return;
       this.hovered = true;
       this.applyTransform();
     });
     this.on('pointerout', () => {
+      if (this.dragging) return;
       if (!this.hovered) return;
       this.hovered = false;
       this.applyTransform();
     });
-    this.on('pointerdown', () => {
-      if (this.playable) onClick(card);
+    this.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.playable) onPointerDown(card, this, pointer);
     });
   }
 
   setHome(x: number, y: number, rot: number, slotWidth?: number) {
-    this.x = x;
-    this.y = y;
+    this.homeX = x;
+    this.homeY = y;
+    if (!this.dragging) {
+      this.x = x;
+      this.y = y;
+    }
     this.homeRot = rot;
     // Outer container never rotates — only the visual does, so the hit area stays axis-aligned.
     this.rotation = 0;
@@ -126,12 +135,16 @@ export class CardView extends Phaser.GameObjects.Container {
         Phaser.Geom.Rectangle.Contains
       );
     }
-    if (!this.hovered) {
+    if (!this.hovered && !this.dragging) {
       this.visual.rotation = rot;
       this.visual.y = 0;
       this.visual.scaleX = 1;
       this.visual.scaleY = 1;
     }
+  }
+
+  getHome(): { x: number; y: number; rot: number } {
+    return { x: this.homeX, y: this.homeY, rot: this.homeRot };
   }
 
   setPlayable(p: boolean) {
@@ -144,7 +157,70 @@ export class CardView extends Phaser.GameObjects.Container {
     this.costBadge.setFillStyle(p ? COLORS.steam : COLORS.brassDim);
   }
 
+  isPlayable(): boolean {
+    return this.playable;
+  }
+
+  beginDrag() {
+    if (this.dragging) return;
+    this.dragging = true;
+    if (this.currentTween) {
+      this.currentTween.stop();
+      this.currentTween = null;
+    }
+    // Detach from hover state; the scene now drives position.
+    this.hovered = false;
+    this.visual.rotation = 0;
+    this.visual.y = 0;
+    this.visual.scaleX = 1.08;
+    this.visual.scaleY = 1.08;
+    this.parentContainer?.bringToTop(this);
+    this.setDepth(950);
+  }
+
+  setDragPos(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  endDrag(animate = true): Promise<void> {
+    if (!this.dragging) return Promise.resolve();
+    this.dragging = false;
+    this.setDepth(0);
+    if (!animate) {
+      this.x = this.homeX;
+      this.y = this.homeY;
+      this.visual.rotation = this.homeRot;
+      this.visual.scaleX = 1;
+      this.visual.scaleY = 1;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.scene.tweens.add({
+        targets: this,
+        x: this.homeX,
+        y: this.homeY,
+        duration: 130,
+        ease: 'Cubic.Out'
+      });
+      this.scene.tweens.add({
+        targets: this.visual,
+        rotation: this.homeRot,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 130,
+        ease: 'Cubic.Out',
+        onComplete: () => resolve()
+      });
+    });
+  }
+
+  isDragging(): boolean {
+    return this.dragging;
+  }
+
   private applyTransform() {
+    if (this.dragging) return;
     if (this.currentTween) this.currentTween.stop();
     const targetY = this.hovered ? -LIFT : 0;
     const targetRot = this.hovered ? 0 : this.homeRot;

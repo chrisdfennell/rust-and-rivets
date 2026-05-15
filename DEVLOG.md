@@ -83,7 +83,85 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 20 — Status effects: Strength / Dexterity / Burn / Thorns *(current)*
+### Slice 21 — Multi-enemy combat + click-drag targeting *(current)*
+Combat is no longer 1v1. Regular and elite rooms can now spawn 2-enemy
+encounters, and enemy-target cards are played by dragging them onto the
+specific enemy you want to hit.
+
+**Engine — CombatState reshape**
+- `CombatState.enemy` removed. `enemies: EnemyState[]` takes its place.
+  All single-enemy fights are arrays of length 1.
+- New `CombatState.activeTargetIndex?` set by `playCard` before effects
+  resolve so per-target effect handlers know who to hit. Cleared after
+  the relic `onCardPlayed` hooks fire.
+- New `CombatState.activeAttackerIndex?` set by `endTurn` while resolving
+  each enemy's action so `dealDamageToPlayer` can attribute damage to
+  the right enemy (matters for player Thorns retaliation).
+- `dealDamageToEnemy(c, raw, targetIndex?)` resolves target by:
+  explicit arg → `activeTargetIndex` → first alive enemy.
+- `gainEnemyPlating(c, n, targetIndex?)` likewise — enemies' own brace
+  actions naturally target themselves via the active-attacker index.
+- Victory only flips when *every* enemy is at 0 hull. A killed enemy
+  in mid-card mid-effect lets later effects fall through to a different
+  target via `firstAliveIndex`.
+- `endTurn` now iterates the alive-at-start-of-turn list. Mid-turn
+  deaths (e.g. player Thorns killing an attacker) skip cleanly.
+- Burn ticks fire on every enemy with `burn > 0` after all enemy
+  actions resolve.
+
+**Encounters**
+- New `pickRegularEncounter / pickEliteEncounter / getBossEncounter`
+  returning `EnemyDef[]`. Replaces the old `pickRegularEnemy` etc.
+  callsites in `run.ts`.
+- `~22%` of regular fights and `~18%` of elite fights now roll a 2-enemy
+  group, with act-appropriate combinations: Junk Hound pair, Scrap Raider
+  + Rust Sprayer, Cinder Hound pair, Slag Drone + Forge Reaver, Lightning
+  Sprite pair, Sky Pirate + Lightning Sprite, etc. Elites can spawn a
+  big-with-mook pairing like Iron Reclaimer + Scrap Raider.
+- Bosses stay solo — their patterns are tuned for 1v1.
+
+**Relics**
+- **Calibration Spike** now Vulnerables *every* enemy at combat start
+  (was a single-target hook back when there was only one target).
+- **Pneumatic Strike**'s every-3rd-card hit just rides the card's chosen
+  target via `activeTargetIndex` (which the new playCard keeps set
+  through onCardPlayed hooks).
+
+**Save schema v3 → v4**
+- `pendingEnemyId: string | null` → `pendingEnemyIds: string[] | null`.
+- Old v3 saves discarded on load — they reference a single enemy and
+  can't hydrate cleanly into the array shape. Players will start a fresh
+  run; meta progress (Workshop points / upgrades) is in a separate
+  key and survives.
+
+**UI**
+- CombatScene lays out 1, 2, or 3+ enemies horizontally across the right
+  side of the screen. Each enemy gets its own sprite, hull bar, name
+  label, intent box, and drop zone. Bars shrink (280 → 220 → 170 px)
+  and sprites scale (1.0 → 0.85 → 0.72) as the lineup grows.
+- Dead enemies dim to alpha 0.25 with a `DOWN` placeholder in their
+  intent box and stop being valid drop targets.
+- Victory line collapses N enemy names to "The lot of them" when the
+  fight had multiple foes.
+
+**Drag-to-target**
+- `CardView` no longer fires `onClick` on pointerdown. It calls
+  `onPointerDown(card, view, pointer)` and lets the scene decide
+  click vs drag based on pointer-move distance (>6px = drag).
+- `CardView.beginDrag()` / `setDragPos(x, y)` / `endDrag(animate)`
+  let the scene float a card to the pointer and snap it back to its
+  fan position when the drop misses.
+- Each enemy has a hidden drop zone (~200x200 around its sprite). While
+  dragging an enemy-target card, the hovered enemy's drop zone glows
+  red. Releasing over a valid target plays the card with that index;
+  releasing anywhere else returns the card to hand.
+- **Click behavior** still works as a shortcut when it's unambiguous:
+  - Self / none cards → click plays as before.
+  - Enemy cards with exactly 1 alive enemy → click auto-targets it.
+  - Enemy cards with 2+ alive enemies → click flashes a "Drag to a
+    target" hint above the hand; the player must drag.
+
+### Slice 20 — Status effects: Strength / Dexterity / Burn / Thorns
 Four new keyword statuses, plus the cards and relics that exercise them.
 
 **Engine**

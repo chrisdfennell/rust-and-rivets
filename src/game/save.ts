@@ -3,8 +3,8 @@ import { ENEMY_DEFS } from './enemies';
 import type { RunState, ShopState, RunResult, PendingReward } from './run';
 import type { PersistentPlayer } from './types';
 
-const KEY = 'rust-and-rivets/save/v3';
-const SCHEMA_VERSION = 3;
+const KEY = 'rust-and-rivets/save/v4';
+const SCHEMA_VERSION = 4;
 
 interface SavedMap {
   floors: number;
@@ -24,7 +24,7 @@ interface SavedRun {
   scrap: number;
   relics: string[];
   result: RunResult;
-  pendingEnemyId: string | null;
+  pendingEnemyIds: string[] | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
   awaitingInterAct: boolean;
@@ -49,7 +49,7 @@ function snapshot(state: RunState): SavedRun {
     scrap: state.scrap,
     relics: state.relics.slice(),
     result: state.result,
-    pendingEnemyId: state.pendingEnemy?.id ?? null,
+    pendingEnemyIds: state.pendingEnemies ? state.pendingEnemies.map((e) => e.id) : null,
     pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null,
     pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null,
     awaitingInterAct: state.awaitingInterAct,
@@ -68,7 +68,11 @@ function hydrate(saved: SavedRun): RunState {
     entryNodeIds: saved.map.entryNodeIds,
     bossNodeId: saved.map.bossNodeId
   };
-  const pendingEnemy = saved.pendingEnemyId ? ENEMY_DEFS[saved.pendingEnemyId] ?? null : null;
+  const pendingEnemies = saved.pendingEnemyIds
+    ? (saved.pendingEnemyIds
+        .map((id) => ENEMY_DEFS[id])
+        .filter((def): def is NonNullable<typeof def> => !!def))
+    : null;
   // Pre-character saves lack characterId — default to 'pilot' for back-compat.
   const player: PersistentPlayer = saved.player.characterId
     ? saved.player
@@ -82,7 +86,7 @@ function hydrate(saved: SavedRun): RunState {
     scrap: saved.scrap,
     relics: saved.relics ?? [],
     result: saved.result,
-    pendingEnemy,
+    pendingEnemies: pendingEnemies && pendingEnemies.length > 0 ? pendingEnemies : null,
     pendingShop: saved.pendingShop,
     pendingReward: saved.pendingReward ?? null,
     awaitingInterAct: saved.awaitingInterAct ?? false,
