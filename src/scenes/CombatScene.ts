@@ -195,28 +195,177 @@ export class CombatScene extends Phaser.Scene {
 
   private onEndTurn() {
     if (this.state.phase !== 'playerTurn') return;
-    endTurn(this.state);
-    this.shake(this.enemySprite, 4);
-    this.refresh();
-    if (this.state.phase === 'playerTurn') {
-      // Brief enemy-acted flash
-      this.tweens.add({
-        targets: this.mech,
-        x: this.mech.x - 6,
-        duration: 60,
-        yoyo: true,
-        repeat: 1
-      });
+    const pre = this.snapshot();
+    endTurn(this.state, {
+      afterEnemyResolve: () => this.emitDeltas(pre)
+    });
+    if (this.state.player.hull > 0 && this.state.phase === 'playerTurn') {
+      // Brief enemy-acted shake
+      this.shake(this.mech, 4);
     }
+    this.refresh();
   }
 
   private onPlayCard(card: CardInstance) {
     if (!canPlay(this.state, card.uid)) return;
+    const view = this.cardViews.find((v) => v.card.uid === card.uid);
+    if (view) {
+      // Disable further hit testing on this card so a rapid second click
+      // doesn't double-fire while the flourish runs.
+      view.setPlayable(false);
+      view.disableInteractive();
+      this.tweens.add({
+        targets: view,
+        y: view.y - 50,
+        alpha: 0,
+        scaleX: 1.18,
+        scaleY: 1.18,
+        duration: 170,
+        ease: 'Cubic.Out',
+        onComplete: () => this.applyCardPlay(card)
+      });
+    } else {
+      this.applyCardPlay(card);
+    }
+  }
+
+  private applyCardPlay(card: CardInstance) {
+    const pre = this.snapshot();
     const ok = playCard(this.state, card.uid);
-    if (!ok) return;
+    if (!ok) {
+      this.refresh();
+      return;
+    }
+    this.emitDeltas(pre);
     if (card.def.target === 'enemy') this.shake(this.enemySprite, 6);
-    else if (card.def.target === 'self') this.flash(this.mech, COLORS.shield);
+    this.flashSteam();
     this.refresh();
+  }
+
+  // ===== Visual effect helpers =====
+
+  private snapshot() {
+    return {
+      playerHull: this.state.player.hull,
+      playerPlating: this.state.player.plating,
+      enemyHull: this.state.enemy.hull,
+      enemyPlating: this.state.enemy.plating
+    };
+  }
+
+  private emitDeltas(prev: ReturnType<typeof this.snapshot>) {
+    const cur = this.snapshot();
+    const enemyPos = { x: this.enemySprite.x, y: this.enemySprite.y };
+    const playerPos = { x: this.mech.x, y: this.mech.y };
+
+    // Enemy side
+    const eHullLoss = prev.enemyHull - cur.enemyHull;
+    const ePlatingLoss = prev.enemyPlating - cur.enemyPlating;
+    const ePlatingGain = cur.enemyPlating - prev.enemyPlating;
+    if (eHullLoss > 0) {
+      this.floatNumber(enemyPos.x, enemyPos.y - 60, `-${eHullLoss}`, COLORS.danger);
+      this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
+      this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 10);
+    }
+    if (ePlatingLoss > 0 && eHullLoss <= 0) {
+      this.floatNumber(enemyPos.x - 30, enemyPos.y - 40, `-${ePlatingLoss}`, COLORS.shield);
+      this.burst(enemyPos.x, enemyPos.y, COLORS.shield, 6);
+    }
+    if (ePlatingGain > 0) {
+      this.floatNumber(enemyPos.x + 30, enemyPos.y - 40, `+${ePlatingGain}`, COLORS.shield);
+    }
+    if (cur.enemyHull <= 0 && prev.enemyHull > 0) {
+      this.burst(enemyPos.x, enemyPos.y, COLORS.rust, 24);
+      this.hitRing(enemyPos.x, enemyPos.y, COLORS.danger);
+      this.cameras.main.shake(220, 0.008);
+    }
+
+    // Player side
+    const pHullLoss = prev.playerHull - cur.playerHull;
+    const pHullGain = cur.playerHull - prev.playerHull;
+    const pPlatingLoss = prev.playerPlating - cur.playerPlating;
+    const pPlatingGain = cur.playerPlating - prev.playerPlating;
+    if (pHullLoss > 0) {
+      this.floatNumber(playerPos.x, playerPos.y - 60, `-${pHullLoss}`, COLORS.danger);
+      this.hitRing(playerPos.x, playerPos.y, COLORS.danger);
+      this.burst(playerPos.x, playerPos.y, COLORS.rust, 10);
+      if (pHullLoss >= 10) this.cameras.main.shake(180, 0.006);
+    }
+    if (pHullGain > 0) {
+      this.floatNumber(playerPos.x, playerPos.y - 60, `+${pHullGain}`, COLORS.ok);
+    }
+    if (pPlatingLoss > 0 && pHullLoss <= 0) {
+      this.floatNumber(playerPos.x - 30, playerPos.y - 40, `-${pPlatingLoss}`, COLORS.shield);
+      this.burst(playerPos.x, playerPos.y, COLORS.shield, 6);
+    }
+    if (pPlatingGain > 0) {
+      this.floatNumber(playerPos.x + 30, playerPos.y - 40, `+${pPlatingGain}`, COLORS.shield);
+    }
+  }
+
+  private floatNumber(x: number, y: number, text: string, color: number) {
+    const t = this.add.text(x, y, text, {
+      fontFamily: FONTS.display,
+      fontSize: '30px',
+      color: hex(color),
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(900);
+    this.tweens.add({
+      targets: t,
+      y: y - 70,
+      alpha: 0,
+      duration: 850,
+      ease: 'Cubic.Out',
+      onComplete: () => t.destroy()
+    });
+  }
+
+  private burst(x: number, y: number, color: number, count = 8) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+      const speed = 70 + Math.random() * 80;
+      const size = 3 + Math.random() * 3;
+      const p = this.add.rectangle(x, y, size, size, color).setDepth(800);
+      this.tweens.add({
+        targets: p,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        scaleX: 0,
+        scaleY: 0,
+        duration: 450 + Math.random() * 250,
+        ease: 'Cubic.Out',
+        onComplete: () => p.destroy()
+      });
+    }
+  }
+
+  private hitRing(x: number, y: number, color: number) {
+    const ring = this.add.circle(x, y, 36, color, 0.18).setStrokeStyle(3, color).setDepth(800);
+    this.tweens.add({
+      targets: ring,
+      scaleX: 2.4,
+      scaleY: 2.4,
+      alpha: 0,
+      duration: 380,
+      ease: 'Cubic.Out',
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  private flashSteam() {
+    if (!this.steamText) return;
+    const orig = this.steamText.scale;
+    this.tweens.add({
+      targets: this.steamText,
+      scaleX: orig * 1.18,
+      scaleY: orig * 1.18,
+      duration: 90,
+      yoyo: true,
+      ease: 'Sine.Out'
+    });
   }
 
   private shake(target: Phaser.GameObjects.Container, mag: number) {
@@ -228,15 +377,6 @@ export class CombatScene extends Phaser.Scene {
       yoyo: true,
       repeat: 2,
       onComplete: () => (target.x = ox)
-    });
-  }
-
-  private flash(target: Phaser.GameObjects.Container, _color: number) {
-    this.tweens.add({
-      targets: target,
-      alpha: 0.5,
-      duration: 80,
-      yoyo: true
     });
   }
 

@@ -280,7 +280,14 @@ export function playCard(state: CombatState, uid: number): boolean {
   return true;
 }
 
-export function endTurn(state: CombatState) {
+export interface EndTurnHooks {
+  // Fires after enemy resolves but before plating is reset, so the scene can
+  // snapshot deltas and emit hit visuals without conflating "absorbed damage"
+  // with "end-of-turn plating decay".
+  afterEnemyResolve?: () => void;
+}
+
+export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (state.phase !== 'playerTurn') return;
   const p = state.player;
   while (p.hand.length > 0) p.discard.push(p.hand.pop()!);
@@ -292,6 +299,7 @@ export function endTurn(state: CombatState) {
   state.phase = 'enemyTurn';
   const c = ctx(state);
   state.enemy.nextAction.resolve(c);
+  hooks?.afterEnemyResolve?.();
   const phase: string = state.phase;
   if (phase === 'defeat' || phase === 'victory') return;
 

@@ -83,7 +83,45 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 12 — Difficulty rebalance *(current)*
+### Slice 13 — Visual polish *(current)*
+Every action now has weight — floating numbers, hit rings, particle
+bursts, screen shake on big hits, and a play-card flourish.
+
+New helpers in CombatScene:
+- `floatNumber(x, y, text, color)` — stroked text that floats up and
+  fades. Red for damage, green for heal, shield-blue for plating.
+- `burst(x, y, color, count)` — small rect particles spraying outward.
+- `hitRing(x, y, color)` — expanding/fading shockwave circle.
+- `flashSteam()` — quick scale pulse on the steam readout when a
+  card is played.
+
+State-delta driven:
+- `snapshot()` captures player + enemy hull/plating.
+- `emitDeltas(prev)` compares to current state and emits visuals
+  appropriate to what changed — hull drop → red number + ring + burst,
+  plating absorb → blue number + small burst, heal → green number,
+  plating gain → blue +N, enemy death → bigger burst + camera shake.
+- Player hull losses ≥ 10 trigger a screen shake (180 ms, 0.6%).
+
+Card-play flourish:
+- Clicking a card now plays a 170 ms lift + fade + scale-up tween
+  before the state change. The card disables interactivity during the
+  tween to prevent double-clicks.
+- Once the tween completes, `applyCardPlay()` runs: snapshot →
+  `playCard()` → `emitDeltas()` → `refresh()`. The deltas now show
+  the *exact* card-driven changes (not conflated with end-of-turn
+  plating reset).
+
+Engine change to support the above:
+- `endTurn(state, hooks?)` accepts an optional `afterEnemyResolve`
+  callback that fires after the enemy's action resolves but BEFORE
+  the next player turn starts (and plating resets). This lets the
+  scene snapshot/emit deltas without losing the absorbed-vs-decayed
+  plating distinction.
+
+No new content; existing combat just feels meatier.
+
+### Slice 12 — Difficulty rebalance
 Playtest feedback: both acts could be cleared without effort. Plating
 (8 block from 2x Brace) covered most enemy attacks (5–10 dmg), so the
 player rarely took net damage.
