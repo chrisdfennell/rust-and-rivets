@@ -83,7 +83,49 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 18 — Procedural SFX + mute toggles *(current)*
+### Slice 19 — Act 3: Above the Cloudline *(current)*
+The run loop now extends through a third and final act. Defeating
+the Iron Sovereign no longer ends the run — it transitions into
+**Above the Cloudline**, an airborne tier with sky-blue accents
+and lighter, sleeker silhouettes. Reaching and defeating
+**Stormheart** is the run's true win condition.
+
+**Act 3 regulars:**
+- **Stratus Drone** (45 HP) — bigger Sentinel/Slag drone variant
+  with delta wings and a 22-damage telegraphed Plasma Lance
+- **Sky Pirate** (52 HP) — caped boarder with cutlass + pistol;
+  Smoke Bomb buff (+12 plating + Vuln 1)
+- **Lightning Sprite** (38 HP) — fast electric harasser; opens
+  with Spark (7 dmg + Vuln 2), uses Surge (5x3) and Strike (12)
+
+**Act 3 elites:**
+- **Cloud Reaver** (78 HP) — heavy aerial bruiser; opens with
+  Heat Up (+14 plating + Weak 1); rotates Air Slam (22) /
+  Tempest (6x3) / Brace (+14)
+- **Sky Marshal** (85 HP) — fortress with sword + tower shield;
+  Riposte (14 + Weak), Iron Stance (+18), Hammer Down (20),
+  Stagger Volley (9 + Vuln 2)
+
+**Stormheart** (160 HP) — final boss:
+- Turn 1 Storm Cycle (+18 plating + Weak 2)
+- Telegraphed **Lightning Strike: 32** every few turns (Charging
+  Lightning... → next turn lands)
+- Static Pulse (6x3), Iron Sphere (+22 plating), Crackle
+  (10 + Vuln 2), Heavy Slam (18) as filler
+
+**Engine wiring** (mostly free thanks to the act-aware design):
+- `pickRegularEnemy(act)` / `pickEliteEnemy(act)` / `getActBoss(act)`
+  / `getActName(act)` extended to act 3
+- New `isFinalAct(act)` helper; `completeCombat` uses it to decide
+  "end the run" vs "trigger inter-act transition" — replaces the
+  hard-coded `r.act >= 2` check
+- Meta points still scale linearly: clearing all 3 acts banks 6
+  workshop points (1 + 2 + 3)
+- 6 new vector sprites for the act-3 enemies + boss, all in the
+  airborne aesthetic (sky-blue accents, hover halos, wing shapes,
+  storm-core glows on the boss)
+
+### Slice 18 — Procedural SFX + mute toggles
 Web-Audio-synthesized sound effects for every meaningful action,
 plus persisted mute prefs for music and SFX.
 

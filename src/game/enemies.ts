@@ -664,6 +664,306 @@ export const FOUNDRY_TYRANT: EnemyDef = {
   }
 };
 
+// ===== Act 3 — Above the Cloudline =====
+
+export const STRATUS_DRONE: EnemyDef = {
+  id: 'stratusDrone',
+  name: 'Stratus Drone',
+  maxHull: 45,
+  pickAction: ({ turn, rng, memory }): EnemyAction => {
+    if (memory.charging) {
+      memory.charging = false;
+      const dmg = 22;
+      return {
+        intent: { kind: 'attack', label: `Plasma Lance: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const roll = rng();
+    if (turn > 1 && roll < 0.3) {
+      memory.charging = true;
+      return {
+        intent: { kind: 'buff', label: 'Charging...' },
+        resolve: (ctx) => ctx.log('The drone howls, gathering charge.')
+      };
+    }
+    if (roll < 0.6) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Tracer: ${dmg} + Vuln`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (roll < 0.9) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Strafe: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Repair: +10' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 10)
+    };
+  }
+};
+
+export const SKY_PIRATE: EnemyDef = {
+  id: 'skyPirate',
+  name: 'Sky Pirate',
+  maxHull: 52,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 14;
+      return {
+        intent: { kind: 'attack', label: `Cutlass: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Smoke Bomb') && roll < 0.2) {
+      return {
+        intent: { kind: 'debuff', label: 'Smoke Bomb: +12 + Vuln' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 12);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (!last.startsWith('Boarding') && roll < 0.55) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Boarding: ${dmg}x2 + Weak`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (!last.startsWith('Pistol') && roll < 0.85) {
+      const dmg = 10;
+      return {
+        intent: { kind: 'attack', label: `Pistol Shot: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const dmg = 14;
+    return {
+      intent: { kind: 'attack', label: `Cutlass: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+export const LIGHTNING_SPRITE: EnemyDef = {
+  id: 'lightningSprite',
+  name: 'Lightning Sprite',
+  maxHull: 38,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'debuff', label: `Spark: ${dmg} + Vuln 2` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Spark') && roll < 0.3) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'debuff', label: `Spark: ${dmg} + Vuln 2` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (!last.startsWith('Surge') && roll < 0.65) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'attack', label: `Surge: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Strike') && roll < 0.9) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Recharge: +8' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 8)
+    };
+  }
+};
+
+export const CLOUD_REAVER: EnemyDef = {
+  id: 'cloudReaver',
+  name: 'Cloud Reaver',
+  maxHull: 78,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Heat Up: +14 + Weak' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 14);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Air Slam') && roll < 0.3) {
+      const dmg = 22;
+      return {
+        intent: { kind: 'attack', label: `Air Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Tempest') && roll < 0.7) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Tempest: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Brace: +14' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 14)
+    };
+  }
+};
+
+export const SKY_MARSHAL: EnemyDef = {
+  id: 'skyMarshal',
+  name: 'Sky Marshal',
+  maxHull: 85,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 14;
+      return {
+        intent: { kind: 'debuff', label: `Riposte: ${dmg} + Weak` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Iron Stance') && roll < 0.3) {
+      return {
+        intent: { kind: 'defend', label: 'Iron Stance: +18' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 18)
+      };
+    }
+    if (!last.startsWith('Stagger Volley') && roll < 0.6) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'debuff', label: `Stagger Volley: ${dmg} + Vuln 2` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const dmg = 20;
+    return {
+      intent: { kind: 'attack', label: `Hammer Down: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+export const STORMHEART: EnemyDef = {
+  id: 'stormheart',
+  name: 'Stormheart',
+  maxHull: 160,
+  pickAction: ({ turn, rng, memory, lastIntent }): EnemyAction => {
+    if (memory.charging) {
+      memory.charging = false;
+      const dmg = 32;
+      return {
+        intent: { kind: 'attack', label: `Lightning Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Storm Cycle: +18 + Weak 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 18);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Charging') && roll < 0.25) {
+      memory.charging = true;
+      return {
+        intent: { kind: 'buff', label: 'Charging Lightning...' },
+        resolve: (ctx) => ctx.log('Stormheart pulls cloud and current.')
+      };
+    }
+    if (!last.startsWith('Static Pulse') && roll < 0.5) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Static Pulse: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Iron Sphere') && roll < 0.7) {
+      return {
+        intent: { kind: 'defend', label: 'Iron Sphere: +22' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 22)
+      };
+    }
+    if (!last.startsWith('Crackle') && roll < 0.9) {
+      const dmg = 10;
+      return {
+        intent: { kind: 'debuff', label: `Crackle: ${dmg} + Vuln 2` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const dmg = 18;
+    return {
+      intent: { kind: 'attack', label: `Heavy Slam: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
 export const ACT1_POOL: EnemyDef[] = [
   SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
   RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
@@ -673,12 +973,19 @@ export const ACT1_ELITE_POOL: EnemyDef[] = [SLAG_WALKER, IRON_RECLAIMER];
 export const ACT2_POOL: EnemyDef[] = [CINDER_HOUND, SLAG_DRONE, FORGE_REAVER];
 export const ACT2_ELITE_POOL: EnemyDef[] = [MAGMA_SENTINEL, RECLAIMER_MK2];
 
+export const ACT3_POOL: EnemyDef[] = [STRATUS_DRONE, SKY_PIRATE, LIGHTNING_SPRITE];
+export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
+
 function regularPoolFor(act: number): EnemyDef[] {
-  return act >= 2 ? ACT2_POOL : ACT1_POOL;
+  if (act >= 3) return ACT3_POOL;
+  if (act === 2) return ACT2_POOL;
+  return ACT1_POOL;
 }
 
 function elitePoolFor(act: number): EnemyDef[] {
-  return act >= 2 ? ACT2_ELITE_POOL : ACT1_ELITE_POOL;
+  if (act >= 3) return ACT3_ELITE_POOL;
+  if (act === 2) return ACT2_ELITE_POOL;
+  return ACT1_ELITE_POOL;
 }
 
 export function pickRegularEnemy(act: number, rng: () => number): EnemyDef {
@@ -692,12 +999,19 @@ export function pickEliteEnemy(act: number, rng: () => number): EnemyDef {
 }
 
 export function getActBoss(act: number): EnemyDef {
-  return act >= 2 ? IRON_SOVEREIGN : FOUNDRY_TYRANT;
+  if (act >= 3) return STORMHEART;
+  if (act === 2) return IRON_SOVEREIGN;
+  return FOUNDRY_TYRANT;
 }
 
 export function getActName(act: number): string {
-  if (act >= 2) return 'THE FOUNDRY DEPTHS';
+  if (act >= 3) return 'ABOVE THE CLOUDLINE';
+  if (act === 2) return 'THE FOUNDRY DEPTHS';
   return 'ROAD TO THE FOUNDRY';
+}
+
+export function isFinalAct(act: number): boolean {
+  return act >= 3;
 }
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
@@ -715,5 +1029,11 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [FORGE_REAVER.id]: FORGE_REAVER,
   [MAGMA_SENTINEL.id]: MAGMA_SENTINEL,
   [RECLAIMER_MK2.id]: RECLAIMER_MK2,
-  [IRON_SOVEREIGN.id]: IRON_SOVEREIGN
+  [IRON_SOVEREIGN.id]: IRON_SOVEREIGN,
+  [STRATUS_DRONE.id]: STRATUS_DRONE,
+  [SKY_PIRATE.id]: SKY_PIRATE,
+  [LIGHTNING_SPRITE.id]: LIGHTNING_SPRITE,
+  [CLOUD_REAVER.id]: CLOUD_REAVER,
+  [SKY_MARSHAL.id]: SKY_MARSHAL,
+  [STORMHEART.id]: STORMHEART
 };

@@ -1,7 +1,7 @@
 import type { EnemyDef, PersistentPlayer } from './types';
 import { SHOP_POOL, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
 import { generateMap, type MapData, type MapNode } from './map';
-import { pickRegularEnemy, pickEliteEnemy, getActBoss } from './enemies';
+import { pickRegularEnemy, pickEliteEnemy, getActBoss, isFinalAct } from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints } from './meta';
@@ -233,10 +233,10 @@ export function completeCombat(survivingHull: number): number {
     // Award meta points scaled to the act being cleared:
     // act 1 boss → 1 pt, act 2 → 2 pts, etc.
     grantMetaPoints(r.act);
-    if (r.act >= 2) {
+    if (isFinalAct(r.act)) {
       r.result = 'victory';
     } else {
-      // Act 1 boss done — transition through InterActScene rather than ending the run
+      // Non-final act boss done — transition through InterActScene rather than ending the run
       r.awaitingInterAct = true;
     }
     persist();

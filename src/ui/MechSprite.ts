@@ -1172,6 +1172,429 @@ export function drawIronSovereign(scene: Phaser.Scene, x: number, y: number): Ph
   return c;
 }
 
+// ===== Act 3 — Above the Cloudline =====
+
+export function drawStratusDrone(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 30);
+  const g = scene.add.graphics();
+
+  // Hover halo
+  g.fillStyle(COLORS.shield, 0.15);
+  g.fillEllipse(0, 92, 130, 22);
+  g.fillStyle(COLORS.shield, 0.32);
+  g.fillEllipse(0, 92, 86, 12);
+
+  // Sleek delta wings
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-90, 8, -16, 0, -16, 30);
+  g.fillTriangle(90, 8, 16, 0, 16, 30);
+  g.fillStyle(COLORS.shield);
+  g.fillTriangle(-78, 8, -22, 4, -22, 22);
+  g.fillTriangle(78, 8, 22, 4, 22, 22);
+
+  // Inverted-triangle body (smaller than Sentinel/Slag drone)
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-44, -8, 44, -8, 0, 50);
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-36, -2, 36, -2, 0, 42);
+
+  // Top plate
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-46, -16, 92, 10);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, -22, 100, 8);
+
+  // Antenna with glowing blue tip
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-2, -50, 4, 28);
+  g.fillStyle(COLORS.shield);
+  g.fillCircle(0, -52, 4);
+
+  // Twin-eye sensor
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, 4, 44, 12);
+  g.fillStyle(COLORS.shield);
+  g.fillCircle(-12, 10, 4);
+  g.fillCircle(12, 10, 4);
+
+  // Side thrusters with sky-blue exhaust
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, 2, 16, 14);
+  g.fillRect(56, 2, 16, 14);
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-70, 14, 12, 4);
+  g.fillRect(58, 14, 12, 4);
+
+  c.add(g);
+
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 6,
+    duration: 1200,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+export function drawSkyPirate(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Legs (stocky, less hunched than Raider)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 60, 22, 70);
+  g.fillRect(10, 60, 22, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-36, 122, 30, 14);
+  g.fillRect(6, 122, 30, 14);
+
+  // Cape billowing behind
+  g.fillStyle(COLORS.brass, 0.7);
+  g.fillTriangle(-58, -10, 58, -10, 0, 90);
+  g.fillStyle(COLORS.brassDim, 0.8);
+  g.fillTriangle(-44, 0, 44, 0, 0, 80);
+
+  // Body (lean, longer than Raider)
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-46, -28, 92, 84);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-38, -18, 76, 18);
+
+  // Sash across the body
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-46, 8, 46, -8, 46, 0);
+  g.fillTriangle(-46, 8, -46, 16, 46, 0);
+
+  // Broad-brim helmet head
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, -56, 52, 22);
+  g.fillRect(-34, -42, 68, 6);  // brim
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-16, -50, 32, 6);  // visor slit
+
+  // Cutlass arm (left, raised)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, -16, 18, 50);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-78, -42, 10, 26);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(-76, -78, 6, 36);  // blade
+  g.fillStyle(COLORS.boneDim);
+  g.fillTriangle(-79, -84, -67, -84, -73, -78);  // tip
+
+  // Pistol arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(54, -10, 18, 50);
+  g.fillRect(72, 8, 22, 12);  // pistol body
+  g.fillStyle(COLORS.brass);
+  g.fillRect(94, 12, 10, 4);  // barrel
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(106, 14, 3);  // muzzle glow
+
+  c.add(g);
+  return c;
+}
+
+export function drawLightningSprite(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 14);
+  const g = scene.add.graphics();
+
+  // Hover field
+  g.fillStyle(COLORS.steam, 0.18);
+  g.fillEllipse(0, 80, 80, 14);
+
+  // Compact diamond body
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-30, 0, 30, 0, 0, -40);
+  g.fillTriangle(-30, 0, 30, 0, 0, 50);
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-22, 0, 22, 0, 0, -32);
+  g.fillTriangle(-22, 0, 22, 0, 0, 42);
+
+  // Glowing electric core
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, 4, 12);
+  g.fillStyle(COLORS.bone);
+  g.fillCircle(0, 4, 6);
+
+  // Lightning arc nodes (4 corners)
+  g.fillStyle(COLORS.steam);
+  for (const [px, py] of [[-30, -10], [30, -10], [-30, 10], [30, 10]]) {
+    g.fillCircle(px, py, 4);
+  }
+
+  // Crackling arcs (procedurally-drawn small lines)
+  g.lineStyle(2, COLORS.steam, 0.85);
+  g.beginPath();
+  g.moveTo(-30, -10); g.lineTo(-22, -2); g.lineTo(-26, 4); g.lineTo(-18, 10);
+  g.strokePath();
+  g.beginPath();
+  g.moveTo(30, -10); g.lineTo(22, -2); g.lineTo(26, 4); g.lineTo(18, 10);
+  g.strokePath();
+
+  c.add(g);
+
+  // Twitchy bobbing
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 4,
+    duration: 600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+  // Core pulse
+  const corePulse = scene.add.circle(0, 4, 14, COLORS.steam, 0.3);
+  c.add(corePulse);
+  scene.tweens.add({ targets: corePulse, scale: 1.5, alpha: 0, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.Out' });
+
+  return c;
+}
+
+export function drawCloudReaver(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 24);
+  const g = scene.add.graphics();
+
+  // Hover thrust glow
+  g.fillStyle(COLORS.steam, 0.18);
+  g.fillEllipse(0, 130, 200, 36);
+  g.fillStyle(COLORS.steam, 0.32);
+  g.fillEllipse(0, 130, 130, 22);
+
+  // Massive wings
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-130, 0, -30, -22, -30, 50);
+  g.fillTriangle(130, 0, 30, -22, 30, 50);
+  g.fillStyle(COLORS.shield);
+  g.fillTriangle(-118, 4, -36, -16, -36, 40);
+  g.fillTriangle(118, 4, 36, -16, 36, 40);
+  // Wing struts
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-118, 0, 86, 4);
+  g.fillRect(32, 0, 86, 4);
+
+  // Heavy body
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, -38, 116, 96);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, -32, 100, 12);
+  g.fillRect(-50, 46, 100, 12);
+
+  // Glowing chest core
+  g.fillStyle(COLORS.shield);
+  g.fillCircle(0, 8, 22);
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, 8, 12);
+
+  // Pauldrons + spikes
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-78, -42, 26, 22);
+  g.fillRect(52, -42, 26, 22);
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 3; i++) {
+    g.fillTriangle(-74 + i * 9, -42, -68 + i * 9, -42, -71 + i * 9, -54);
+    g.fillTriangle(54 + i * 9, -42, 60 + i * 9, -42, 57 + i * 9, -54);
+  }
+
+  // Helmet
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -64, 44, 26);
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-14, -56, 28, 5);
+
+  // Underwing thrusters
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-90, 38, 20, 18);
+  g.fillRect(70, 38, 20, 18);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-86, 56, 12, 8);
+  g.fillRect(74, 56, 12, 8);
+
+  c.add(g);
+
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 5,
+    duration: 1100,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+export function drawSkyMarshal(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 14);
+  const g = scene.add.graphics();
+
+  // Hover field
+  g.fillStyle(COLORS.shield, 0.18);
+  g.fillEllipse(0, 130, 180, 28);
+  g.fillStyle(COLORS.shield, 0.32);
+  g.fillEllipse(0, 130, 120, 18);
+
+  // Squat fortress body
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-72, -28, 144, 100);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-68, -22, 136, 8);
+  g.fillRect(-68, 64, 136, 8);
+  // Rivet grid
+  g.fillStyle(COLORS.brass);
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 8; col++) {
+      g.fillCircle(-58 + col * 18, -12 + row * 22, 2.8);
+    }
+  }
+
+  // Crown of points
+  g.fillStyle(COLORS.steelDark);
+  for (let i = 0; i < 5; i++) {
+    const cx = -36 + i * 18;
+    g.fillTriangle(cx - 6, -28, cx + 6, -28, cx, -50);
+  }
+  // Centered crown jewel
+  g.fillStyle(COLORS.shield);
+  g.fillCircle(0, -32, 5);
+
+  // Visor head
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-30, -22, 60, 26);
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-22, -10, 44, 5);
+
+  // Tower shield (left)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-94, -16, 24, 80);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-128, 0, 36, 84);
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 4; i++) g.fillRect(-126, 6 + i * 20, 32, 4);
+  // Shield emblem (winged)
+  g.fillStyle(COLORS.shield);
+  g.fillTriangle(-116, 38, -100, 38, -108, 58);
+  g.fillRect(-118, 30, 4, 12);
+  g.fillRect(-104, 30, 4, 12);
+
+  // Sword arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(70, -20, 24, 70);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(76, 50, 14, 10);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(78, -50, 10, 100);  // long blade
+  g.fillStyle(COLORS.boneDim);
+  g.fillTriangle(76, -56, 90, -56, 83, -68);
+
+  c.add(g);
+
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 4,
+    duration: 1300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+export function drawStormheart(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 30);
+  const g = scene.add.graphics();
+
+  // Storm clouds underneath (hover)
+  g.fillStyle(COLORS.shield, 0.2);
+  g.fillEllipse(0, 150, 280, 50);
+  g.fillStyle(COLORS.shield, 0.32);
+  g.fillEllipse(-40, 140, 110, 36);
+  g.fillEllipse(40, 144, 130, 40);
+  g.fillStyle(COLORS.steelDark, 0.8);
+  g.fillEllipse(0, 150, 240, 28);
+
+  // Massive central body — fortress in the sky
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-110, -60, 220, 130);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-100, -50, 200, 16);
+  g.fillRect(-100, 56, 200, 16);
+
+  // Wings — angular and broad
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-180, 10, -110, -30, -110, 50);
+  g.fillTriangle(180, 10, 110, -30, 110, 50);
+  g.fillStyle(COLORS.shield);
+  g.fillTriangle(-168, 14, -116, -22, -116, 42);
+  g.fillTriangle(168, 14, 116, -22, 116, 42);
+
+  // Storm core (huge glowing center)
+  g.fillStyle(COLORS.shield);
+  g.fillCircle(0, 8, 38);
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, 8, 24);
+  g.fillStyle(COLORS.bone);
+  g.fillCircle(-4, 4, 8);
+  // Lightning bolts inside
+  g.lineStyle(2, COLORS.bone, 0.9);
+  g.beginPath();
+  g.moveTo(-12, -8); g.lineTo(-4, 4); g.lineTo(-8, 8); g.lineTo(0, 18);
+  g.strokePath();
+  g.beginPath();
+  g.moveTo(12, -8); g.lineTo(4, 4); g.lineTo(8, 8); g.lineTo(0, 18);
+  g.strokePath();
+
+  // Crown of antenna rods around the body top
+  g.fillStyle(COLORS.steelDark);
+  for (const sx of [-86, -52, -18, 18, 52, 86]) {
+    g.fillRect(sx, -106, 8, 46);
+  }
+  g.fillStyle(COLORS.shield);
+  for (const sx of [-86, -52, -18, 18, 52, 86]) {
+    g.fillCircle(sx + 4, -110, 5);
+  }
+
+  // Side weapon batteries
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-138, 14, 30, 24);
+  g.fillRect(108, 38, 30, 24);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-148, 22, 12, 8);
+  g.fillRect(136, 46, 12, 8);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-140, 26, 3);
+  g.fillCircle(142, 50, 3);
+
+  // Brass rivets along the main body
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-100, -44], [98, -44], [-100, 60], [98, 60], [-100, 12], [98, 12]
+  ]) g.fillCircle(rx, ry, 4);
+
+  c.add(g);
+
+  // Storm core pulse
+  const corePulse = scene.add.circle(0, 8, 40, COLORS.shield, 0.3);
+  c.add(corePulse);
+  scene.tweens.add({ targets: corePulse, scale: 1.5, alpha: 0, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.Out' });
+
+  // Slow heavy hover bob
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 8,
+    duration: 1600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
@@ -1187,5 +1610,11 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   forgeReaver: drawForgeReaver,
   magmaSentinel: drawMagmaSentinel,
   reclaimerMk2: drawReclaimerMk2,
-  ironSovereign: drawIronSovereign
+  ironSovereign: drawIronSovereign,
+  stratusDrone: drawStratusDrone,
+  skyPirate: drawSkyPirate,
+  lightningSprite: drawLightningSprite,
+  cloudReaver: drawCloudReaver,
+  skyMarshal: drawSkyMarshal,
+  stormheart: drawStormheart
 };
