@@ -6,6 +6,7 @@ import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints } from './meta';
 import { getCharacter } from './characters';
+import { pickEventId } from './events';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
 
@@ -41,6 +42,8 @@ export interface RunState {
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
   awaitingInterAct: boolean;
+  pendingEventId: string | null;
+  pendingEventResult: string | null;
 }
 
 let state: RunState | null = null;
@@ -68,7 +71,9 @@ export function startRun(characterId: string = 'pilot'): RunState {
     pendingEnemy: null,
     pendingShop: null,
     pendingReward: null,
-    awaitingInterAct: false
+    awaitingInterAct: false,
+    pendingEventId: null,
+    pendingEventResult: null
   };
   // Apply the character's signature relics (with their onPickup hooks)
   for (const id of character.startingRelics) {
@@ -122,6 +127,8 @@ export function enterNode(nodeId: string): void {
   r.pendingEnemy = null;
   r.pendingShop = null;
   r.pendingReward = null;
+  r.pendingEventId = null;
+  r.pendingEventResult = null;
   if (node.kind === 'combat') {
     r.pendingEnemy = pickRegularEnemy(r.act, Math.random);
   } else if (node.kind === 'elite') {
@@ -130,6 +137,8 @@ export function enterNode(nodeId: string): void {
     r.pendingEnemy = getActBoss(r.act);
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
+  } else if (node.kind === 'event') {
+    r.pendingEventId = pickEventId(Math.random);
   }
   persist();
 }
@@ -199,6 +208,14 @@ export function completeNode(): void {
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
   r.pendingEnemy = null;
   r.pendingShop = null;
+  r.pendingEventId = null;
+  r.pendingEventResult = null;
+  persist();
+}
+
+export function resolveEvent(message: string): void {
+  const r = getRun();
+  r.pendingEventResult = message;
   persist();
 }
 

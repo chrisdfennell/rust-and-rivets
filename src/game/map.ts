@@ -1,4 +1,4 @@
-export type NodeKind = 'combat' | 'elite' | 'shop' | 'rest' | 'boss';
+export type NodeKind = 'combat' | 'elite' | 'shop' | 'rest' | 'event' | 'boss';
 
 export interface MapNode {
   id: string;
@@ -66,13 +66,15 @@ export function generateMap(rng: () => number = Math.random): MapData {
     const roll = rng();
     if (node.floor === 1) {
       // Smoother opening: no elites here
-      if (roll < 0.15) node.kind = 'shop';
-      else if (roll < 0.30) node.kind = 'rest';
+      if (roll < 0.12) node.kind = 'shop';
+      else if (roll < 0.24) node.kind = 'rest';
+      else if (roll < 0.36) node.kind = 'event';
       else node.kind = 'combat';
     } else {
-      if (roll < 0.16) node.kind = 'elite';
-      else if (roll < 0.32) node.kind = 'shop';
-      else if (roll < 0.48) node.kind = 'rest';
+      if (roll < 0.14) node.kind = 'elite';
+      else if (roll < 0.28) node.kind = 'shop';
+      else if (roll < 0.42) node.kind = 'rest';
+      else if (roll < 0.56) node.kind = 'event';
       else node.kind = 'combat';
     }
   }

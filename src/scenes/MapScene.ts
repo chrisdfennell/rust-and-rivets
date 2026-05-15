@@ -231,6 +231,7 @@ export class MapScene extends Phaser.Scene {
       elite: { fill: COLORS.danger, glyph: '*' },
       shop: { fill: COLORS.brass, glyph: '$' },
       rest: { fill: COLORS.buff, glyph: '+' },
+      event: { fill: COLORS.steam, glyph: '?' },
       boss: { fill: COLORS.danger, glyph: '!' }
     };
     const base = kindBase[node.kind];
@@ -327,6 +328,7 @@ export class MapScene extends Phaser.Scene {
     const sceneKey =
       node.kind === 'shop' ? 'Shop' :
       node.kind === 'rest' ? 'Rest' :
+      node.kind === 'event' ? 'Event' :
       'Combat';
     this.cameras.main.fadeOut(180, 20, 17, 15);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(sceneKey));

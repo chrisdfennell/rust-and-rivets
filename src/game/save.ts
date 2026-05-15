@@ -28,6 +28,8 @@ interface SavedRun {
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
   awaitingInterAct: boolean;
+  pendingEventId: string | null;
+  pendingEventResult: string | null;
 }
 
 function snapshot(state: RunState): SavedRun {
@@ -50,7 +52,9 @@ function snapshot(state: RunState): SavedRun {
     pendingEnemyId: state.pendingEnemy?.id ?? null,
     pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null,
     pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null,
-    awaitingInterAct: state.awaitingInterAct
+    awaitingInterAct: state.awaitingInterAct,
+    pendingEventId: state.pendingEventId,
+    pendingEventResult: state.pendingEventResult
   };
 }
 
@@ -81,7 +85,9 @@ function hydrate(saved: SavedRun): RunState {
     pendingEnemy,
     pendingShop: saved.pendingShop,
     pendingReward: saved.pendingReward ?? null,
-    awaitingInterAct: saved.awaitingInterAct ?? false
+    awaitingInterAct: saved.awaitingInterAct ?? false,
+    pendingEventId: saved.pendingEventId ?? null,
+    pendingEventResult: saved.pendingEventResult ?? null
   };
 }
 

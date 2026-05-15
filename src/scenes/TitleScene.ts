@@ -265,6 +265,7 @@ export class TitleScene extends Phaser.Scene {
       if (inProgressNode) {
         if (node.kind === 'shop') return 'Shop';
         if (node.kind === 'rest') return 'Rest';
+        if (node.kind === 'event') return 'Event';
         return 'Combat'; // combat, elite, or boss
       }
     }

@@ -83,7 +83,44 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 15 — Pause menu + CharacterSelect fix *(current)*
+### Slice 16 — Event nodes (?) *(current)*
+The map now has a fifth node kind: **event** (yellow `?` icon).
+Floor 1 gets ~12% events; mid floors get ~14%. Total combat density
+went down a touch to make room.
+
+Six events in [src/game/events.ts](src/game/events.ts), each with
+2–3 choice buttons that mutate the run state directly:
+- **Wreck of an Old Mech** — Salvage (rare card) / Scavenge (+30 scrap) / Leave
+- **Wandering Trader** — Buy Relic (-75 scrap, random un-owned relic) /
+  Buy Card (-40 scrap, uncommon card) / Leave. Buttons disable when
+  you can't afford or have everything.
+- **Old Veteran** — Spar (-8 Hull, gain uncommon) / Decline (+15 scrap)
+- **Glowing Pool** — Drink (coin-flip +25 Hull or -10 Hull) /
+  Bottle It (gain a common card) / Leave
+- **Hot Forge** — Temper (-5 Hull, gain an upgraded card) / Walk By
+- **Steam Vent** — Repair (+12 Hull) / Tap the Line (-5 Hull, +25 scrap) / Leave
+
+New **EventScene** with two phases:
+1. *Choices* — title, narrative body, 2–3 choice buttons with brief
+   descriptions. Disabled buttons (insufficient scrap, etc.) render
+   dimmed.
+2. *Result* — chosen outcome's message centered on screen + CONTINUE
+   button. Player must press CONTINUE to leave; double-applying a
+   choice is impossible because `pendingEventResult` is set on pick
+   and the scene routes straight to *Result* on entry if that field
+   is non-null (so refresh resumes the result, not the choices).
+
+Engine wiring:
+- `RunState` gained `pendingEventId` and `pendingEventResult` fields
+- `enterNode` picks a random event id when entering an event node
+- `resolveEvent(message)` stores the result text + persists
+- `completeNode` clears both fields
+- Save schema additive — old saves hydrate with `null` for the new
+  fields; no schema version bump needed
+- Status strip at the bottom of EventScene shows Hull/Scrap/Deck/Relics
+  so the player can judge cost choices at a glance
+
+### Slice 15 — Pause menu + CharacterSelect fix
 - New **PauseScene** that launches as a transparent overlay on top
   of any in-run scene via `scene.pause()` + `scene.launch('Pause')`.
 - ESC opens the pause menu; RESUME or ESC again closes it; QUIT TO
