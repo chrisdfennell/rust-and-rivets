@@ -840,11 +840,17 @@ export class CombatScene extends Phaser.Scene {
 
   private applyHitAreaDebug(v: CardView) {
     if (this.debugHitAreas) {
-      // Phaser draws the hit area's geometry as a green outline. Updates
-      // automatically when the card moves.
+      // Phaser's debug (green outline) — known to have offset issues for
+      // Container children in some versions.
       this.input.enableDebug(v, 0x00ff00);
+      // Our own debug (magenta outline) — lives inside the card's outer
+      // container so it always matches where the hit area logically is.
+      // If the green and magenta outlines disagree, Phaser is lying. If they
+      // agree but neither matches the card visual, the math is wrong.
+      v.setDebugHitAreaVisible(true);
     } else {
       this.input.removeDebug(v);
+      v.setDebugHitAreaVisible(false);
     }
   }
 

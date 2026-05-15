@@ -23,6 +23,11 @@ export class CardView extends Phaser.GameObjects.Container {
   private currentTween: Phaser.Tweens.Tween | null = null;
   private dragging = false;
   private onHoverChange?: (hovered: boolean, view: CardView) => void;
+  private hitDebug!: Phaser.GameObjects.Rectangle;
+
+  setDebugHitAreaVisible(visible: boolean) {
+    if (this.hitDebug) this.hitDebug.setVisible(visible);
+  }
 
   constructor(
     scene: Phaser.Scene,
@@ -97,6 +102,17 @@ export class CardView extends Phaser.GameObjects.Container {
       new Phaser.Geom.Rectangle(-CARD_W / 2, hitTop, CARD_W, hitH),
       Phaser.Geom.Rectangle.Contains
     );
+
+    // Manual hit-area visualization. Lives in the outer container so it
+    // moves and renders with the card itself (unlike scene.input.enableDebug,
+    // which has known offset issues for nested Container children). Hidden
+    // by default; CombatScene's D-key toggles visibility on every card.
+    this.hitDebug = scene.add
+      .rectangle(0, hitTop + hitH / 2, CARD_W, hitH)
+      .setStrokeStyle(2, 0xff00ff)
+      .setFillStyle()
+      .setVisible(false);
+    this.add(this.hitDebug);
 
     this.on('pointerover', () => {
       if (this.dragging) return;
