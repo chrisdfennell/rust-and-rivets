@@ -3,6 +3,7 @@ import { getRun, startRun, enterNode, isReachable } from '../game/run';
 import type { MapNode } from '../game/map';
 import { RELICS } from '../game/relics';
 import { getActName } from '../game/enemies';
+import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
@@ -87,8 +88,8 @@ export class MapScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
 
     // Game-end overlays
-    if (run.result === 'victory') this.showRunEnd('RUN COMPLETE', 'The Foundry burns. Press R to start a new run.', COLORS.ok);
-    else if (run.result === 'defeat') this.showRunEnd('RUN OVER', 'The wasteland claims your mech. Press R to try again.', COLORS.danger);
+    if (run.result === 'victory') this.showRunEnd('RUN COMPLETE', 'The Sovereign is undone. The Foundry burns.', COLORS.ok);
+    else if (run.result === 'defeat') this.showRunEnd('RUN OVER', 'The wasteland claims your mech.', COLORS.danger);
 
     if (this.input.keyboard) {
       this.input.keyboard.removeAllListeners('keydown-R');
@@ -328,9 +329,9 @@ export class MapScene extends Phaser.Scene {
 
   private showRunEnd(title: string, sub: string, color: number) {
     const { width, height } = this.scale;
-    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1000);
-    const t = this.add
-      .text(width / 2, height / 2 - 30, title, {
+    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1000);
+    this.add
+      .text(width / 2, height / 2 - 70, title, {
         fontFamily: FONTS.display,
         fontSize: '56px',
         color: hex(color),
@@ -338,15 +339,49 @@ export class MapScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(1001);
-    const s = this.add
-      .text(width / 2, height / 2 + 30, sub, {
+    this.add
+      .text(width / 2, height / 2 - 10, sub, {
         fontFamily: FONTS.body,
         fontSize: '16px',
         color: hex(COLORS.bone)
       })
       .setOrigin(0.5)
       .setDepth(1001);
-    // Keep references alive
-    void dim; void t; void s;
+
+    // Two-button choice: start fresh now, or step back to the title to
+    // spend Workshop points (the points are already saved).
+    const newRunBtn = new Button(
+      this,
+      width / 2 - 150,
+      height / 2 + 60,
+      'NEW RUN',
+      () => {
+        startRun();
+        this.scene.restart();
+      },
+      { width: 260, height: 56, fontSize: 18 }
+    );
+    this.add.existing(newRunBtn);
+    newRunBtn.setDepth(1001);
+
+    const titleBtn = new Button(
+      this,
+      width / 2 + 150,
+      height / 2 + 60,
+      'BACK TO TITLE',
+      () => this.scene.start('Title'),
+      { width: 260, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
+    );
+    this.add.existing(titleBtn);
+    titleBtn.setDepth(1001);
+
+    this.add
+      .text(width / 2, height / 2 + 110, 'R = New Run', {
+        fontFamily: FONTS.body,
+        fontSize: '11px',
+        color: hex(COLORS.boneDim)
+      })
+      .setOrigin(0.5)
+      .setDepth(1001);
   }
 }
