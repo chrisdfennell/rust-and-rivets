@@ -54,6 +54,7 @@ export class CombatScene extends Phaser.Scene {
   private endTurnTimer: Phaser.Time.TimerEvent | null = null;
   private drag: DragState | null = null;
   private inputBound = false;
+  private debugHitAreas = false;
 
   constructor() {
     super('Combat');
@@ -206,6 +207,9 @@ export class CombatScene extends Phaser.Scene {
         this.inputBound = false;
       });
     }
+
+    // Press D to toggle the green hit-area overlay on every card (debug aid).
+    this.input.keyboard?.on('keydown-D', () => this.toggleHitAreaDebug());
 
     this.refresh();
   }
@@ -777,6 +781,7 @@ export class CombatScene extends Phaser.Scene {
           (hov, v) => this.onCardHoverChange(hov, v)
         );
         this.handLayer.add(view);
+        if (this.debugHitAreas) this.applyHitAreaDebug(view);
       } else {
         existing.delete(card.uid);
       }
@@ -826,6 +831,21 @@ export class CombatScene extends Phaser.Scene {
     // On un-hover we restore the natural fan order so the just-hovered
     // card doesn't stay stuck at the top stealing pointer events.
     if (!hovered) this.restoreHandOrder();
+  }
+
+  private toggleHitAreaDebug() {
+    this.debugHitAreas = !this.debugHitAreas;
+    for (const v of this.cardViews) this.applyHitAreaDebug(v);
+  }
+
+  private applyHitAreaDebug(v: CardView) {
+    if (this.debugHitAreas) {
+      // Phaser draws the hit area's geometry as a green outline. Updates
+      // automatically when the card moves.
+      this.input.enableDebug(v, 0x00ff00);
+    } else {
+      this.input.removeDebug(v);
+    }
   }
 
   private showOverlay(title: string, sub: string, color: number) {
