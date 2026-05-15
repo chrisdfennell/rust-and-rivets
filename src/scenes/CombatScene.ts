@@ -809,6 +809,13 @@ export class CombatScene extends Phaser.Scene {
       const rot = t * rotMax * 2;
       const view = next[i];
       view.setHome(x, y, rot);
+      // Slot = card's visible portion. Left edge at the card's visual left
+      // edge (-CARD_W/2). Right edge at where the next card starts being
+      // drawn over this one (= spacing - CARD_W/2). The rightmost card has
+      // no neighbor on the right, so it gets the full half-card to its right.
+      const leftExtent = CARD_W / 2;
+      const rightExtent = i === n - 1 ? CARD_W / 2 : spacing - CARD_W / 2;
+      view.setSlot(leftExtent, rightExtent);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
 

@@ -29,6 +29,30 @@ export class CardView extends Phaser.GameObjects.Container {
     if (this.hitDebug) this.hitDebug.setVisible(visible);
   }
 
+  // Set the hit area to a slot that extends `leftExtent` px to the left of
+  // the card's center and `rightExtent` px to the right. The scene gives
+  // each card a slot that matches its visible portion exactly, so adjacent
+  // hit areas never overlap and click routing is unambiguous.
+  setSlot(leftExtent: number, rightExtent: number) {
+    this.applySlot(leftExtent, rightExtent);
+  }
+
+  private applySlot(leftExtent: number, rightExtent: number) {
+    const width = leftExtent + rightExtent;
+    const hitH = CARD_H + LIFT;
+    const hitTop = -CARD_H / 2 - LIFT;
+    const hitLeft = -leftExtent;
+    this.setSize(width, hitH);
+    this.setInteractive(
+      new Phaser.Geom.Rectangle(hitLeft, hitTop, width, hitH),
+      Phaser.Geom.Rectangle.Contains
+    );
+    if (this.hitDebug) {
+      this.hitDebug.setPosition(hitLeft + width / 2, hitTop + hitH / 2);
+      this.hitDebug.setSize(width, hitH);
+    }
+  }
+
   constructor(
     scene: Phaser.Scene,
     public readonly card: CardInstance,
@@ -93,22 +117,21 @@ export class CardView extends Phaser.GameObjects.Container {
     this.add(this.visual);
 
     // Hit area lives on the outer container, which never moves or scales.
-    // Make it tall enough to cover both the resting card AND the lifted-up card,
-    // so the pointer never leaves it mid-tween.
-    const hitH = CARD_H + LIFT;
-    const hitTop = -CARD_H / 2 - LIFT;
-    this.setSize(CARD_W, hitH);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(-CARD_W / 2, hitTop, CARD_W, hitH),
-      Phaser.Geom.Rectangle.Contains
-    );
+    // Default to a full CARD_W slot; the scene calls setSlot() per card to
+    // narrow the slot to exactly the card's visible portion (so adjacent
+    // hit areas never overlap and routing is unambiguous).
+    this.applySlot(CARD_W / 2, CARD_W / 2);
 
     // Manual hit-area visualization. Lives in the outer container so it
     // moves and renders with the card itself (unlike scene.input.enableDebug,
     // which has known offset issues for nested Container children). Hidden
     // by default; CombatScene's D-key toggles visibility on every card.
+    // Initial dimensions match the default full-CARD_W slot; applySlot
+    // resizes the debug rect whenever the hit area changes.
+    const initialHitH = CARD_H + LIFT;
+    const initialHitTop = -CARD_H / 2 - LIFT;
     this.hitDebug = scene.add
-      .rectangle(0, hitTop + hitH / 2, CARD_W, hitH)
+      .rectangle(0, initialHitTop + initialHitH / 2, CARD_W, initialHitH)
       .setStrokeStyle(2, 0xff00ff)
       .setFillStyle()
       .setVisible(false);
