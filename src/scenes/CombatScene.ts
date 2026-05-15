@@ -65,17 +65,20 @@ export class CombatScene extends Phaser.Scene {
     }
     this.state = createCombatState(run.pendingEnemy, run.player, run.relics);
 
-    this.mech = drawMech(this, width * 0.28, height * 0.5);
+    // Sprites sit higher in the viewport so their stat bars can fit cleanly
+    // above the card hand without overlap. Bars + labels share one row at y=0.62.
+    this.mech = drawMech(this, width * 0.28, height * 0.4);
     const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
-    this.enemySprite = drawEnemy(this, width * 0.72, height * 0.55);
+    this.enemySprite = drawEnemy(this, width * 0.72, height * 0.42);
 
-    this.playerBar = new StatBar(this, width * 0.28, height * 0.78, 200);
-    this.enemyBar = new StatBar(this, width * 0.72, height * 0.83, 200);
+    const barY = height * 0.62;
+    this.playerBar = new StatBar(this, width * 0.28, barY, 220);
+    this.enemyBar = new StatBar(this, width * 0.72, barY, 220);
     this.add.existing(this.playerBar);
     this.add.existing(this.enemyBar);
 
     this.add
-      .text(width * 0.28, height * 0.78 - 22, 'PILOT', {
+      .text(width * 0.28, barY - 22, 'PILOT', {
         fontFamily: FONTS.display,
         fontSize: '12px',
         color: hex(COLORS.boneDim)
@@ -83,14 +86,14 @@ export class CombatScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
 
     this.add
-      .text(width * 0.72, height * 0.83 - 22, this.state.enemy.def.name.toUpperCase(), {
+      .text(width * 0.72, barY - 22, this.state.enemy.def.name.toUpperCase(), {
         fontFamily: FONTS.display,
         fontSize: '12px',
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
 
-    this.intent = new IntentView(this, width * 0.72, height * 0.32);
+    this.intent = new IntentView(this, width * 0.72, height * 0.18);
     this.add.existing(this.intent);
 
     // Steam gauge
