@@ -58,7 +58,10 @@ export function createCombatState(
     cardsPlayedThisTurn: 0
   };
 
-  const enemies = enemyDefs.map((def) => makeEnemy(def, 1));
+  // Multi-enemy fights scale each enemy's hull down so a 2v1 doesn't drag.
+  // 1 enemy → 1.0x (unchanged), 2 → 0.7x each, 3+ → 0.6x each.
+  const hullScale = enemyDefs.length <= 1 ? 1 : enemyDefs.length === 2 ? 0.7 : 0.6;
+  const enemies = enemyDefs.map((def) => makeEnemy(def, 1, hullScale));
 
   const introLine =
     enemies.length === 1
@@ -81,13 +84,14 @@ export function createCombatState(
   return state;
 }
 
-function makeEnemy(def: EnemyDef, turn: number): EnemyState {
+function makeEnemy(def: EnemyDef, turn: number, hullScale: number = 1): EnemyState {
   const memory: Record<string, unknown> = {};
   const action = def.pickAction({ turn, rng, memory });
+  const scaled = Math.max(1, Math.round(def.maxHull * hullScale));
   return {
     def,
-    hull: def.maxHull,
-    maxHull: def.maxHull,
+    hull: scaled,
+    maxHull: scaled,
     plating: 0,
     vulnerable: 0,
     weak: 0,

@@ -1020,8 +1020,8 @@ export function getActBoss(act: number): EnemyDef {
 // Multi-enemy encounters are sprinkled in by these helpers. The 1-enemy
 // case stays the common path; groups appear roughly 1 in 4 regular fights.
 
-const REGULAR_GROUP_CHANCE = 0.22;
-const ELITE_GROUP_CHANCE = 0.18;
+const REGULAR_GROUP_CHANCE = 0.4;
+const ELITE_GROUP_CHANCE = 0.35;
 
 function regularGroupFor(act: number, rng: () => number): EnemyDef[] | null {
   if (rng() >= REGULAR_GROUP_CHANCE) return null;
