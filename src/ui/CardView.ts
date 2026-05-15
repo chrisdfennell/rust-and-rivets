@@ -21,7 +21,7 @@ export class CardView extends Phaser.GameObjects.Container {
   private homeY = 0;
   private homeRot = 0;
   private currentTween: Phaser.Tweens.Tween | null = null;
-  private slotWidth = CARD_W;
+  private layoutDepth = 0;
   private dragging = false;
 
   constructor(
@@ -113,7 +113,7 @@ export class CardView extends Phaser.GameObjects.Container {
     });
   }
 
-  setHome(x: number, y: number, rot: number, slotWidth?: number) {
+  setHome(x: number, y: number, rot: number, _slotWidth?: number) {
     this.homeX = x;
     this.homeY = y;
     if (!this.dragging) {
@@ -123,23 +123,21 @@ export class CardView extends Phaser.GameObjects.Container {
     this.homeRot = rot;
     // Outer container never rotates — only the visual does, so the hit area stays axis-aligned.
     this.rotation = 0;
-    // Resize the hit area so adjacent fanned cards don't fight over pointer events
-    // in their visual overlap. Each card "owns" a slot of width = card spacing.
-    if (slotWidth !== undefined && slotWidth !== this.slotWidth) {
-      this.slotWidth = slotWidth;
-      const hitH = CARD_H + LIFT;
-      const hitTop = -CARD_H / 2 - LIFT;
-      this.setSize(slotWidth, hitH);
-      this.setInteractive(
-        new Phaser.Geom.Rectangle(-slotWidth / 2, hitTop, slotWidth, hitH),
-        Phaser.Geom.Rectangle.Contains
-      );
-    }
+    // Hit area stays at full CARD_W regardless of fan spacing. Adjacent
+    // cards' hit areas overlap in their visual-overlap regions; Phaser
+    // routes pointer events to the visually-frontmost card via depth.
     if (!this.hovered && !this.dragging) {
       this.visual.rotation = rot;
       this.visual.y = 0;
       this.visual.scaleX = 1;
       this.visual.scaleY = 1;
+    }
+  }
+
+  setLayoutDepth(d: number) {
+    this.layoutDepth = d;
+    if (!this.hovered && !this.dragging) {
+      this.setDepth(d);
     }
   }
 
@@ -174,8 +172,7 @@ export class CardView extends Phaser.GameObjects.Container {
     this.visual.y = 0;
     this.visual.scaleX = 1.08;
     this.visual.scaleY = 1.08;
-    this.parentContainer?.bringToTop(this);
-    this.setDepth(950);
+    this.setDepth(1100);
   }
 
   setDragPos(x: number, y: number) {
@@ -186,7 +183,7 @@ export class CardView extends Phaser.GameObjects.Container {
   endDrag(animate = true): Promise<void> {
     if (!this.dragging) return Promise.resolve();
     this.dragging = false;
-    this.setDepth(0);
+    this.setDepth(this.layoutDepth);
     if (!animate) {
       this.x = this.homeX;
       this.y = this.homeY;
@@ -234,6 +231,10 @@ export class CardView extends Phaser.GameObjects.Container {
       duration: 120,
       ease: 'Sine.Out'
     });
-    if (this.hovered) this.parentContainer?.bringToTop(this);
+    // Hovered card jumps to the front of the z-stack so its lifted visual
+    // sits on top of neighbors. On pointerout we restore the card's natural
+    // layout depth — otherwise the just-hovered card stays stuck on top and
+    // steals pointer events from the visually-frontmost card.
+    this.setDepth(this.hovered ? 1000 : this.layoutDepth);
   }
 }

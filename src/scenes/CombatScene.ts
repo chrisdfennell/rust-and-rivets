@@ -30,7 +30,7 @@ interface DragState {
   hoveredIndex: number;
 }
 
-const DRAG_THRESHOLD = 6; // pixels of pointer movement before we treat it as a drag
+const DRAG_THRESHOLD = 12; // pixels of pointer movement before we treat it as a drag
 
 export class CombatScene extends Phaser.Scene {
   private state!: CombatState;
@@ -791,7 +791,6 @@ export class CombatScene extends Phaser.Scene {
     const startX = width / 2 - (spacing * (n - 1)) / 2;
     const arc = 16;
     const rotMax = 0.08;
-    const slotWidth = Math.min(CARD_W, n > 1 ? spacing : CARD_W);
 
     for (let i = 0; i < n; i++) {
       const t = n === 1 ? 0 : i / (n - 1) - 0.5;
@@ -799,7 +798,11 @@ export class CombatScene extends Phaser.Scene {
       const y = baseY + Math.abs(t) * arc * 2;
       const rot = t * rotMax * 2;
       const view = next[i];
-      view.setHome(x, y, rot, slotWidth);
+      view.setHome(x, y, rot);
+      // Left-to-right z-order: rightmost card is on top, matching the visual
+      // fan. Phaser routes pointer events to the topmost interactive object,
+      // so overlap regions hit the visually-frontmost card.
+      view.setLayoutDepth(i);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
   }
