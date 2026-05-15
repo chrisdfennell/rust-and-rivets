@@ -21,15 +21,17 @@ export class CardView extends Phaser.GameObjects.Container {
   private homeY = 0;
   private homeRot = 0;
   private currentTween: Phaser.Tweens.Tween | null = null;
-  private layoutDepth = 0;
   private dragging = false;
+  private onHoverChange?: (hovered: boolean, view: CardView) => void;
 
   constructor(
     scene: Phaser.Scene,
     public readonly card: CardInstance,
-    onPointerDown: (c: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) => void
+    onPointerDown: (c: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) => void,
+    onHoverChange?: (hovered: boolean, view: CardView) => void
   ) {
     super(scene, 0, 0);
+    this.onHoverChange = onHoverChange;
 
     // Inner container holds the visual — this is what we animate for hover.
     this.visual = scene.add.container(0, 0);
@@ -101,12 +103,14 @@ export class CardView extends Phaser.GameObjects.Container {
       if (this.hovered) return;
       this.hovered = true;
       this.applyTransform();
+      this.onHoverChange?.(true, this);
     });
     this.on('pointerout', () => {
       if (this.dragging) return;
       if (!this.hovered) return;
       this.hovered = false;
       this.applyTransform();
+      this.onHoverChange?.(false, this);
     });
     this.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.playable) onPointerDown(card, this, pointer);
@@ -124,20 +128,14 @@ export class CardView extends Phaser.GameObjects.Container {
     // Outer container never rotates — only the visual does, so the hit area stays axis-aligned.
     this.rotation = 0;
     // Hit area stays at full CARD_W regardless of fan spacing. Adjacent
-    // cards' hit areas overlap in their visual-overlap regions; Phaser
-    // routes pointer events to the visually-frontmost card via depth.
+    // cards' hit areas overlap in their visual-overlap regions; pointer
+    // events route to the visually-frontmost card via parent-container
+    // bringToTop ordering (Phaser's setDepth is a no-op inside Containers).
     if (!this.hovered && !this.dragging) {
       this.visual.rotation = rot;
       this.visual.y = 0;
       this.visual.scaleX = 1;
       this.visual.scaleY = 1;
-    }
-  }
-
-  setLayoutDepth(d: number) {
-    this.layoutDepth = d;
-    if (!this.hovered && !this.dragging) {
-      this.setDepth(d);
     }
   }
 
@@ -172,7 +170,7 @@ export class CardView extends Phaser.GameObjects.Container {
     this.visual.y = 0;
     this.visual.scaleX = 1.08;
     this.visual.scaleY = 1.08;
-    this.setDepth(1100);
+    this.parentContainer?.bringToTop(this);
   }
 
   setDragPos(x: number, y: number) {
@@ -183,7 +181,6 @@ export class CardView extends Phaser.GameObjects.Container {
   endDrag(animate = true): Promise<void> {
     if (!this.dragging) return Promise.resolve();
     this.dragging = false;
-    this.setDepth(this.layoutDepth);
     if (!animate) {
       this.x = this.homeX;
       this.y = this.homeY;
@@ -231,10 +228,11 @@ export class CardView extends Phaser.GameObjects.Container {
       duration: 120,
       ease: 'Sine.Out'
     });
-    // Hovered card jumps to the front of the z-stack so its lifted visual
-    // sits on top of neighbors. On pointerout we restore the card's natural
-    // layout depth — otherwise the just-hovered card stays stuck on top and
-    // steals pointer events from the visually-frontmost card.
-    this.setDepth(this.hovered ? 1000 : this.layoutDepth);
+    // Bringing the hovered card to the top of the parent container makes
+    // its lifted visual sit on top of neighbors AND routes pointer events
+    // to it (Phaser hit-tests container children in display order). The
+    // scene's onHoverChange restores left-to-right fan order on pointerout
+    // so a just-hovered card doesn't stay stuck at the top of the stack.
+    if (this.hovered) this.parentContainer?.bringToTop(this);
   }
 }

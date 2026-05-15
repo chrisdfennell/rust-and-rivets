@@ -770,7 +770,12 @@ export class CombatScene extends Phaser.Scene {
     for (const card of hand) {
       let view = existing.get(card.uid);
       if (!view) {
-        view = new CardView(this, card, (c, v, p) => this.onCardPointerDown(c, v, p));
+        view = new CardView(
+          this,
+          card,
+          (c, v, p) => this.onCardPointerDown(c, v, p),
+          (hov, v) => this.onCardHoverChange(hov, v)
+        );
         this.handLayer.add(view);
       } else {
         existing.delete(card.uid);
@@ -799,12 +804,28 @@ export class CombatScene extends Phaser.Scene {
       const rot = t * rotMax * 2;
       const view = next[i];
       view.setHome(x, y, rot);
-      // Left-to-right z-order: rightmost card is on top, matching the visual
-      // fan. Phaser routes pointer events to the topmost interactive object,
-      // so overlap regions hit the visually-frontmost card.
-      view.setLayoutDepth(i);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
+
+    this.restoreHandOrder();
+  }
+
+  // Re-establish the fan's z-order: left-to-right with rightmost on top.
+  // Phaser's setDepth is a no-op for objects inside a Container, so we
+  // walk the cardViews in layout order and bringToTop each one. After the
+  // loop, cardViews[0] is at the bottom of handLayer.list and
+  // cardViews[N-1] is at the top. Pointer events route to the topmost
+  // interactive child whose hit area contains the pointer — i.e. the
+  // visually-frontmost card.
+  private restoreHandOrder() {
+    for (const v of this.cardViews) this.handLayer.bringToTop(v);
+  }
+
+  private onCardHoverChange(hovered: boolean, _view: CardView) {
+    // CardView itself brings the hovered card to the top of handLayer.
+    // On un-hover we restore the natural fan order so the just-hovered
+    // card doesn't stay stuck at the top stealing pointer events.
+    if (!hovered) this.restoreHandOrder();
   }
 
   private showOverlay(title: string, sub: string, color: number) {
