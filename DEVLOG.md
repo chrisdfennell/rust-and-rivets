@@ -83,7 +83,28 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 10 — Multi-act progression *(current)*
+### Slice 11 — Meta-progression + save export/import *(current)*
+- **Workshop points** earned per-act-boss-kill, scaled to the act number:
+  act 1 boss = 1 pt, act 2 boss = 2 pts, ... act N boss = N pts. Persistent
+  across runs, stored in `localStorage["rust-and-rivets/meta/v1"]`.
+- **4 meta upgrades** applied to every fresh run after `startRun()`:
+  - **Reinforced Hull** — +5 max Hull / level (cost 1 each, max 5 levels)
+  - **Foundry Stipend** — start with 30 extra Scrap (cost 1, max 1)
+  - **Custom Loadout** — start with an Iron Hail in your deck (cost 1, max 1)
+  - **Salvager's Eye** — start each run with a random Relic (cost 2, max 1)
+  - Total max spend = 9 pts. Earned by clearing both acts = 3 pts per win.
+- **WorkshopScene** spends points on upgrades. Title-screen entry button.
+- **Export / Import saves** via base64-encoded `{run, meta}` bundle:
+  - `exportSaveString()` writes to clipboard (or falls back to a `prompt()`
+    dialog the user can copy from)
+  - `importSaveString(s)` validates + writes both run and meta; TitleScene
+    restarts itself to pick up the new state
+  - One bundle carries both the in-progress run and accumulated meta
+- **TitleScene** layout updated: 3-button primary row (CONTINUE / NEW RUN /
+  WORKSHOP), 2-button secondary row (EXPORT / IMPORT), points indicator
+  above the buttons. Toast helper for transient confirmations.
+
+### Slice 10 — Multi-act progression
 - **Two-act run loop**: defeat the Foundry Tyrant (act 1 boss) to advance
   into **Act 2 — The Foundry Depths**. Iron Sovereign (95 HP, telegraphed
   Cannon Volley) is the run-ending boss.

@@ -6,6 +6,7 @@ import {
   loadSavedRun,
   clearSavedRun
 } from '../game/run';
+import { loadMeta, exportSaveString, importSaveString } from '../game/meta';
 import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
@@ -90,37 +91,81 @@ export class TitleScene extends Phaser.Scene {
       }
     }
 
-    // Buttons
+    // Meta-progression banner (workshop points)
+    const meta = loadMeta();
+    this.add
+      .text(width / 2, height * 0.66, `WORKSHOP POINTS  ${meta.points}`, {
+        fontFamily: FONTS.display,
+        fontSize: '16px',
+        color: hex(meta.points > 0 ? COLORS.steam : COLORS.boneDim),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5);
+
+    // Primary buttons: CONTINUE / NEW RUN / WORKSHOP
+    const primaryY = height * 0.75;
     const continueBtn = new Button(
       this,
-      width / 2 - 130,
-      height * 0.75,
+      width / 2 - 240,
+      primaryY,
       'CONTINUE',
       () => this.continueRun(),
-      { width: 220, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
+      { width: 210, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
     );
     continueBtn.setEnabled(haveSave);
     this.add.existing(continueBtn);
 
     const newRunBtn = new Button(
       this,
-      width / 2 + 130,
-      height * 0.75,
+      width / 2,
+      primaryY,
       'NEW RUN',
       () => this.newRun(),
-      { width: 220, height: 56, fontSize: 18 }
+      { width: 210, height: 56, fontSize: 18 }
     );
     this.add.existing(newRunBtn);
 
+    const workshopBtn = new Button(
+      this,
+      width / 2 + 240,
+      primaryY,
+      'WORKSHOP',
+      () => this.openWorkshop(),
+      { width: 210, height: 56, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }
+    );
+    this.add.existing(workshopBtn);
+
     if (!haveSave) {
       this.add
-        .text(width / 2, height * 0.75 + 50, 'No saved run found.', {
+        .text(width / 2 - 240, primaryY + 36, 'No saved run found.', {
           fontFamily: FONTS.body,
-          fontSize: '12px',
+          fontSize: '11px',
           color: hex(COLORS.boneDim)
         })
         .setOrigin(0.5);
     }
+
+    // Secondary buttons: EXPORT / IMPORT
+    const secondaryY = primaryY + 90;
+    const exportBtn = new Button(
+      this,
+      width / 2 - 120,
+      secondaryY,
+      'EXPORT SAVE',
+      () => this.doExport(),
+      { width: 200, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(exportBtn);
+
+    const importBtn = new Button(
+      this,
+      width / 2 + 120,
+      secondaryY,
+      'IMPORT SAVE',
+      () => this.doImport(),
+      { width: 200, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(importBtn);
 
     this.add
       .text(width / 2, height - 24, 'Your run auto-saves between rooms.', {
@@ -129,6 +174,64 @@ export class TitleScene extends Phaser.Scene {
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
+  }
+
+  private openWorkshop() {
+    this.cameras.main.fadeOut(180, 20, 17, 15);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Workshop'));
+  }
+
+  private async doExport() {
+    const str = exportSaveString();
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(str);
+      copied = true;
+    } catch {
+      // Fall through to manual copy
+    }
+    if (copied) {
+      this.toast('Save copied to clipboard.');
+    } else {
+      // Clipboard API unavailable — show the string in a prompt so the user can copy
+      window.prompt('Copy this save string:', str);
+    }
+  }
+
+  private doImport() {
+    const input = window.prompt('Paste your save string:');
+    if (input == null) return;
+    const result = importSaveString(input);
+    this.toast(result.message);
+    if (result.ok) {
+      // Re-render to reflect the imported state
+      this.time.delayedCall(900, () => this.scene.restart());
+    }
+  }
+
+  private toast(message: string) {
+    const { width, height } = this.scale;
+    const y = height - 70;
+    const txt = this.add
+      .text(width / 2, y, message, {
+        fontFamily: FONTS.display,
+        fontSize: '14px',
+        color: hex(COLORS.bone),
+        backgroundColor: '#1f1a16',
+        padding: { x: 14, y: 8 },
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5)
+      .setDepth(2000)
+      .setAlpha(0);
+    this.tweens.add({
+      targets: txt,
+      alpha: 1,
+      duration: 150,
+      yoyo: true,
+      hold: 1400,
+      onComplete: () => txt.destroy()
+    });
   }
 
   private deepestVisitedFloor(visited: Set<string>, map: { nodes: Map<string, { floor: number }> }): number {

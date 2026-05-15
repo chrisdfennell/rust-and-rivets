@@ -4,6 +4,7 @@ import { generateMap, type MapData, type MapNode } from './map';
 import { pickRegularEnemy, pickEliteEnemy, getActBoss } from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
+import { applyMetaToRun, grantMetaPoints } from './meta';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
 
@@ -62,6 +63,9 @@ export function startRun(): RunState {
     pendingReward: null,
     awaitingInterAct: false
   };
+  // Apply any purchased meta upgrades before saving — they affect starting hull,
+  // scrap, deck, and relics.
+  applyMetaToRun(state);
   persist();
   return state;
 }
@@ -195,6 +199,9 @@ export function completeCombat(survivingHull: number): number {
 
   const node: MapNode | undefined = r.currentNodeId ? r.map.nodes.get(r.currentNodeId) : undefined;
   if (node?.kind === 'boss') {
+    // Award meta points scaled to the act being cleared:
+    // act 1 boss → 1 pt, act 2 → 2 pts, etc.
+    grantMetaPoints(r.act);
     if (r.act >= 2) {
       r.result = 'victory';
     } else {
