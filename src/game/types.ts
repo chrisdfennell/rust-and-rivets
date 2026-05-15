@@ -93,6 +93,7 @@ export interface PersistentPlayer {
   hull: number;
   maxHull: number;
   deck: string[];
+  characterId: string;
 }
 
 export type CombatPhase = 'playerTurn' | 'enemyTurn' | 'victory' | 'defeat';

@@ -1,10 +1,8 @@
 import Phaser from 'phaser';
 import {
   getRun,
-  startRun,
   hasSavedRun,
-  loadSavedRun,
-  clearSavedRun
+  loadSavedRun
 } from '../game/run';
 import { loadMeta, exportSaveString, importSaveString } from '../game/meta';
 import { Button } from '../ui/Button';
@@ -252,10 +250,9 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private newRun() {
-    clearSavedRun();
-    startRun();
+    // Route to pilot selection first; character pick triggers startRun()
     this.cameras.main.fadeOut(180, 20, 17, 15);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Map'));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('CharacterSelect'));
   }
 
   private routeForCurrentRun(r: ReturnType<typeof getRun>): string {

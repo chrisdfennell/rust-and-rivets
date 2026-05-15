@@ -1,10 +1,11 @@
 import type { EnemyDef, PersistentPlayer } from './types';
-import { SHOP_POOL, STARTER_DECK, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
+import { SHOP_POOL, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
 import { generateMap, type MapData, type MapNode } from './map';
 import { pickRegularEnemy, pickEliteEnemy, getActBoss } from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints } from './meta';
+import { getCharacter } from './characters';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
 
@@ -48,13 +49,19 @@ function persist() {
   if (state) writeSave(state);
 }
 
-export function startRun(): RunState {
-  state = {
+export function startRun(characterId: string = 'pilot'): RunState {
+  const character = getCharacter(characterId);
+  const fresh: RunState = {
     map: generateMap(),
     act: 1,
     currentNodeId: null,
     visitedNodeIds: new Set(),
-    player: { hull: 65, maxHull: 65, deck: STARTER_DECK.slice() },
+    player: {
+      hull: character.startingHull,
+      maxHull: character.startingHull,
+      deck: character.startingDeck.slice(),
+      characterId: character.id
+    },
     scrap: 0,
     relics: [],
     result: 'inProgress',
@@ -63,8 +70,15 @@ export function startRun(): RunState {
     pendingReward: null,
     awaitingInterAct: false
   };
-  // Apply any purchased meta upgrades before saving — they affect starting hull,
-  // scrap, deck, and relics.
+  // Apply the character's signature relics (with their onPickup hooks)
+  for (const id of character.startingRelics) {
+    const def = RELICS[id];
+    if (!def) continue;
+    fresh.relics.push(id);
+    def.onPickup?.(fresh);
+  }
+  state = fresh;
+  // Apply purchased meta upgrades on top — they stack with character baseline.
   applyMetaToRun(state);
   persist();
   return state;

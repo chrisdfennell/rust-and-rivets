@@ -3,7 +3,7 @@ import { createCombatState, endTurn, playCard, canPlay } from '../game/combat';
 import { getRun, completeCombat, failCombat } from '../game/run';
 import type { CombatState, CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
-import { drawMech, ENEMY_SPRITES } from '../ui/MechSprite';
+import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -102,7 +102,9 @@ export class CombatScene extends Phaser.Scene {
     this.add.existing(this.intent);
 
     // Sprites — pushed slightly lower than midline so the HUD has clear sky above.
-    this.mech = drawMech(this, width * 0.28, height * 0.48);
+    const characterId = run.player.characterId ?? 'pilot';
+    const drawCharacter = CHARACTER_SPRITES[characterId] ?? CHARACTER_SPRITES.pilot;
+    this.mech = drawCharacter(this, width * 0.28, height * 0.48);
     const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
     this.enemySprite = drawEnemy(this, width * 0.72, height * 0.5);
 

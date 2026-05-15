@@ -7,6 +7,7 @@ import { ShopScene } from './scenes/ShopScene';
 import { RestScene } from './scenes/RestScene';
 import { InterActScene } from './scenes/InterActScene';
 import { WorkshopScene } from './scenes/WorkshopScene';
+import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1280,
     height: 720
   },
-  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene],
+  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene],
   render: { pixelArt: false, antialias: true }
 };
 

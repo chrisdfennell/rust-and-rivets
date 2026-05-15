@@ -83,7 +83,51 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 13 — Visual polish *(current)*
+### Slice 14 — Characters *(current)*
+Three pilots, each with a distinct starter deck, hull pool, and a
+signature relic baked in for run start.
+
+- **THE PILOT** — Hull 65, classic deck (5 Auto-Cannon / 4 Brace /
+  1 Vent Steam), no signature relic. The baseline.
+- **THE ENGINEER** — Hull 60, defensive deck (3 Auto-Cannon / 5 Brace
+  / 1 Smoke Screen / 1 Repair Drone), starts each fight with
+  **Iron Plating** baked in (+4 Plating per combat).
+- **THE SABOTEUR** — Hull 55, aggressive deck (4 Auto-Cannon / 2 Brace
+  / 2 Vent Steam / 1 Hammer Strike / 1 Hydraulic Punch), starts each
+  fight with **Calibration Spike** (enemy spawns Vulnerable 1).
+
+Engine:
+- `CharacterDef` in [src/game/characters.ts](src/game/characters.ts)
+  carries name, tagline, description, starting hull, starting deck,
+  and starting relic ids.
+- `startRun(characterId?)` reads the character def, applies hull /
+  deck / relics, then layers meta upgrades on top. Defaults to
+  `'pilot'` so existing saves keep working.
+- `PersistentPlayer` gained a `characterId` field. Old `v3` saves
+  without it are hydrated with `characterId: 'pilot'` so resumed
+  runs render the right sprite.
+
+UI:
+- New **CharacterSelectScene** with three side-by-side cards. Each
+  card renders the actual mech sprite scaled down, plus name,
+  tagline, description, hull, deck size, and signature relic
+  description.
+- Title-screen NEW RUN now routes to CharacterSelect (not directly
+  to Map). Same for the run-end NEW RUN button on MapScene.
+- BACK button on CharacterSelect returns to title.
+- CombatScene reads `run.player.characterId` and picks the right
+  mech sprite from `CHARACTER_SPRITES` (default to pilot).
+
+Sprites:
+- `drawEngineerMech` — bulkier silhouette, riveted chest plate,
+  box-helmet, tower shield on the left arm, wrench-hammer on the
+  right.
+- `drawSaboteurMech` — slim tapered torso, single-optic visor head,
+  toxic green canisters on the back, spray-nozzle arms with
+  acid-drip detail.
+- `drawMech` is unchanged and serves as the Pilot.
+
+### Slice 13 — Visual polish
 Every action now has weight — floating numbers, hit rings, particle
 bursts, screen shake on big hits, and a play-card flourish.
 

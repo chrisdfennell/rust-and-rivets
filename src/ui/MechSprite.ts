@@ -60,6 +60,158 @@ export function drawMech(scene: Phaser.Scene, x: number, y: number): Phaser.Game
   return c;
 }
 
+export function drawEngineerMech(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Wider, sturdier legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, 56, 36, 78);
+  g.fillRect(22, 56, 36, 78);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-62, 126, 44, 18);
+  g.fillRect(18, 126, 44, 18);
+
+  // Reinforced hip
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-46, 46, 92, 22);
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 5; i++) g.fillCircle(-36 + i * 18, 57, 3);
+
+  // Boxy armored torso
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-68, -38, 136, 96);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-60, -32, 120, 8);
+  g.fillRect(-60, 48, 120, 8);
+
+  // Bolted chest plate
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-30, -16, 60, 56);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, -12, 52, 48);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-10, 4, 20, 20);
+  // Rivets on plate
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-26, -10], [22, -10], [-26, 32], [22, 32]
+  ]) g.fillCircle(rx, ry, 3);
+
+  // Box-helmet head
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -64, 44, 26);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-14, -55, 28, 5);
+
+  // Tower shield (left arm)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-98, -22, 22, 60);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-128, 4, 32, 76);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-126, 8, 28, 4);
+  g.fillRect(-126, 28, 28, 4);
+  g.fillRect(-126, 50, 28, 4);
+  g.fillRect(-126, 70, 28, 4);
+  // Shield boss
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(-112, 42, 8);
+
+  // Wrench-arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(74, -22, 22, 64);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(78, 38, 28, 14);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(98, 32, 14, 26);
+
+  // No smokestacks — workshop-styled vents instead
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, -60, 10, 22);
+  g.fillRect(34, -60, 10, 22);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-46, -62, 14, 4);
+  g.fillRect(32, -62, 14, 4);
+
+  c.add(g);
+  return c;
+}
+
+export function drawSaboteurMech(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Lean legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, 58, 22, 74);
+  g.fillRect(22, 58, 22, 74);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-48, 124, 30, 14);
+  g.fillRect(18, 124, 30, 14);
+  // Hydraulic pistons
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-32, 62, 4, 60);
+  g.fillRect(28, 62, 4, 60);
+
+  // Slim hip
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-32, 48, 64, 14);
+
+  // Tapered torso — lean, sleek
+  g.fillStyle(COLORS.rust);
+  g.fillTriangle(-44, -34, 44, -34, 56, 50);
+  g.fillTriangle(-44, -34, 44, -34, -56, 50);
+  g.fillRect(-44, -34, 88, 84);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-36, -22, 72, 16);
+
+  // Single-optic visor head
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-20, -64, 20, -64, 0, -34);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -50, 6);
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, -50, 3);
+
+  // Toxic canisters on the back (peek out)
+  g.fillStyle(COLORS.buff);
+  g.fillRect(-58, -20, 14, 50);
+  g.fillRect(44, -20, 14, 50);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, -22, 14, 4);
+  g.fillRect(44, -22, 14, 4);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-56, -16, 10, 4);
+  g.fillRect(46, -16, 10, 4);
+
+  // Spray-nozzle arms
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-80, -10, 18, 56);
+  g.fillRect(62, -10, 18, 56);
+  // Nozzles
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-92, 42, 14, 10);
+  g.fillRect(78, 42, 14, 10);
+  g.fillStyle(COLORS.buff, 0.6);
+  g.fillCircle(-86, 56, 4);
+  g.fillCircle(86, 56, 4);
+
+  // Acid drip glow
+  g.fillStyle(COLORS.buff, 0.4);
+  g.fillCircle(-86, 68, 3);
+  g.fillCircle(86, 70, 3);
+
+  c.add(g);
+  return c;
+}
+
+export const CHARACTER_SPRITES: Record<string, (scene: Phaser.Scene, x: number, y: number) => Phaser.GameObjects.Container> = {
+  pilot: drawMech,
+  engineer: drawEngineerMech,
+  saboteur: drawSaboteurMech
+};
+
 export type EnemyDraw = (scene: Phaser.Scene, x: number, y: number) => Phaser.GameObjects.Container;
 
 export function drawRaider(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {

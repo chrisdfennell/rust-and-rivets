@@ -65,12 +65,16 @@ function hydrate(saved: SavedRun): RunState {
     bossNodeId: saved.map.bossNodeId
   };
   const pendingEnemy = saved.pendingEnemyId ? ENEMY_DEFS[saved.pendingEnemyId] ?? null : null;
+  // Pre-character saves lack characterId — default to 'pilot' for back-compat.
+  const player: PersistentPlayer = saved.player.characterId
+    ? saved.player
+    : { ...saved.player, characterId: 'pilot' };
   return {
     map,
     act: saved.act ?? 1,
     currentNodeId: saved.currentNodeId,
     visitedNodeIds: new Set(saved.visitedNodeIds),
-    player: saved.player,
+    player,
     scrap: saved.scrap,
     relics: saved.relics ?? [],
     result: saved.result,

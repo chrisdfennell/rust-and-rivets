@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getRun, startRun, enterNode, isReachable } from '../game/run';
+import { getRun, enterNode, isReachable } from '../game/run';
 import type { MapNode } from '../game/map';
 import { RELICS } from '../game/relics';
 import { getActName } from '../game/enemies';
@@ -94,8 +94,11 @@ export class MapScene extends Phaser.Scene {
     if (this.input.keyboard) {
       this.input.keyboard.removeAllListeners('keydown-R');
       this.input.keyboard.on('keydown-R', () => {
-        startRun();
-        this.scene.restart();
+        // Only the R hotkey works mid-run (no run-end overlay). After a run
+        // ends, the buttons in showRunEnd handle restart so character pick
+        // happens.
+        if (getRun().result === 'inProgress') return;
+        this.scene.start('CharacterSelect');
       });
     }
   }
@@ -355,10 +358,7 @@ export class MapScene extends Phaser.Scene {
       width / 2 - 150,
       height / 2 + 60,
       'NEW RUN',
-      () => {
-        startRun();
-        this.scene.restart();
-      },
+      () => this.scene.start('CharacterSelect'),
       { width: 260, height: 56, fontSize: 18 }
     );
     this.add.existing(newRunBtn);
