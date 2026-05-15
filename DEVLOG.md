@@ -83,7 +83,56 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 11 — Meta-progression + save export/import *(current)*
+### Slice 12 — Difficulty rebalance *(current)*
+Playtest feedback: both acts could be cleared without effort. Plating
+(8 block from 2x Brace) covered most enemy attacks (5–10 dmg), so the
+player rarely took net damage.
+
+Tightened across the board:
+
+**Player baseline:**
+- Starting / max Hull: 70 → **65**
+
+**Act 1 regulars** (~20% HP, ~25% damage):
+- Scrap Raider: HP 38 → 46; Cleaver 7 → 9; Quick Slash 3x2 → 4x2; Scrap Wall 6 → 8
+- Junk Hound: HP 22 → 28; Bite 5 → 7; Frenzy 4x2 → 5x2; Rabid Lunge 8 → 11
+- Sentinel Drone: HP 32 → 38; Tracer 4 → 5; Plasma Lance 14 → 18; Repair 5 → 7
+- Rust Sprayer: HP 28 → 34; Spray 4 → 5; Acid Burst 3x2 → 4x2; Plating Mist 4 → 5
+- Pylon Crawler: HP 30 → 36; Anchor 8 → 10; Pylon Slam 9 → 11; Reinforce 12 → 14; Bash 7 → 9
+- Tinker Hawk: HP 24 → 30; Dive 3x2 → 4x2; Talons 2x4 → 3x4; Strike 8 → 10; Flutter 4 → 5
+
+**Act 1 elites:**
+- Slag Walker: HP 52 → 62; Heating Up 8 → 10; Heavy Slam 12 → 16; Sweep 4x3 → 5x3
+- Iron Reclaimer: HP 45 → 54; Bash 8 → 10; Reinforce 10 → 12; Stagger 5 → 6; Hammer Down 11 → 14
+
+**Foundry Tyrant** (act 1 boss):
+- HP: 70 → **90**
+- Forge Heat opener: +10 → **+12** plating
+- Piston Rain: 4x3 → 5x3
+- Slag Pour: 5 → 7
+- Furnace Slam: 14 → **18**
+
+**Act 2 regulars** (~25–30% HP, ~30% damage):
+- Cinder Hound: HP 32 → 42; Bite 7 → 9; Frenzy 5x2 → 6x2; Maul 10 → 14
+- Slag Drone: HP 40 → 50; Tracer 6 → 8; Plasma Lance 18 → 24; Repair 8 → 10
+- Forge Reaver: HP 45 → 58; Cleaver 9 → 12; Quick Slash 4x2 → 5x2; Smash 14 → 18; Brace 8 → 10
+
+**Act 2 elites:**
+- Magma Sentinel: HP 65 → 80; Heat Sink 12 → 14; Magma Slam 15 → 20; Ember Spray 5x3 → 6x3
+- Reclaimer Mk II: HP 60 → 75; Bash 9 → 12; Reinforce 14 → 16; Iron Stagger 6 → 8; Hammer Down 13 → 17
+
+**Iron Sovereign** (act 2 boss, hardest hit):
+- HP: 95 → **130**
+- Plasma Cleave: 10/12 → 14/16
+- Cannon Volley (telegraphed): 20 → **28**
+- Static Burst: 4x3 → 5x3
+- Heat Sink: 15 → 18
+
+No card or relic changes. The mods focus on enemy throughput so each
+fight forces a real tradeoff between blocking and pushing damage,
+and so the bosses can no longer be brute-forced in 4-5 turns.
+
+### Slice 11 — Meta-progression + save export/import
 - **Workshop points** earned per-act-boss-kill, scaled to the act number:
   act 1 boss = 1 pt, act 2 boss = 2 pts, ... act N boss = N pts. Persistent
   across runs, stored in `localStorage["rust-and-rivets/meta/v1"]`.

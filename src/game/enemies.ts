@@ -9,18 +9,18 @@ import {
 export const SCRAP_RAIDER: EnemyDef = {
   id: 'scrapRaider',
   name: 'Scrap Raider',
-  maxHull: 38,
+  maxHull: 46,
   pickAction: ({ turn, rng }): EnemyAction => {
     const roll = rng();
     if (turn === 1 || roll < 0.55) {
-      const dmg = 7;
+      const dmg = 9;
       return {
         intent: { kind: 'attack', label: `Cleaver: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx: ResolveCtx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     if (roll < 0.85) {
-      const dmg = 3;
+      const dmg = 4;
       return {
         intent: { kind: 'attack', label: `Quick Slash: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx: ResolveCtx) => {
@@ -29,7 +29,7 @@ export const SCRAP_RAIDER: EnemyDef = {
         }
       };
     }
-    const armor = 6;
+    const armor = 8;
     return {
       intent: { kind: 'defend', label: `Scrap Wall: +${armor}`, plating: armor },
       resolve: (ctx: ResolveCtx) => gainEnemyPlating(ctx, armor)
@@ -40,12 +40,12 @@ export const SCRAP_RAIDER: EnemyDef = {
 export const JUNK_HOUND: EnemyDef = {
   id: 'junkHound',
   name: 'Junk Hound',
-  maxHull: 22,
+  maxHull: 28,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     const roll = rng();
     // Always open with a bite so first turn is readable
     if (turn === 1) {
-      const dmg = 5;
+      const dmg = 7;
       return {
         intent: { kind: 'attack', label: `Bite: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -60,7 +60,7 @@ export const JUNK_HOUND: EnemyDef = {
       };
     }
     if (roll < 0.55) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Frenzy: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -70,13 +70,13 @@ export const JUNK_HOUND: EnemyDef = {
       };
     }
     if (roll < 0.85) {
-      const dmg = 5;
+      const dmg = 7;
       return {
         intent: { kind: 'attack', label: `Bite: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
-    const dmg = 8;
+    const dmg = 11;
     return {
       intent: { kind: 'attack', label: `Rabid Lunge: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -87,12 +87,12 @@ export const JUNK_HOUND: EnemyDef = {
 export const SENTINEL_DRONE: EnemyDef = {
   id: 'sentinelDrone',
   name: 'Sentinel Drone',
-  maxHull: 32,
+  maxHull: 38,
   pickAction: ({ turn, rng, memory }): EnemyAction => {
     // Telegraph cleared → fire the lance
     if (memory.charging) {
       memory.charging = false;
-      const dmg = 14;
+      const dmg = 18;
       return {
         intent: { kind: 'attack', label: `Plasma Lance: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -108,7 +108,7 @@ export const SENTINEL_DRONE: EnemyDef = {
       };
     }
     if (roll < 0.75) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Tracer: ${dmg} + Vuln`, damage: dmg, hits: 1 },
         resolve: (ctx) => {
@@ -117,7 +117,7 @@ export const SENTINEL_DRONE: EnemyDef = {
         }
       };
     }
-    const armor = 5;
+    const armor = 7;
     return {
       intent: { kind: 'defend', label: `Repair: +${armor}`, plating: armor },
       resolve: (ctx) => gainEnemyPlating(ctx, armor)
@@ -128,10 +128,10 @@ export const SENTINEL_DRONE: EnemyDef = {
 export const RUST_SPRAYER: EnemyDef = {
   id: 'rustSprayer',
   name: 'Rust Sprayer',
-  maxHull: 28,
+  maxHull: 34,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'debuff', label: `Spray: ${dmg} + Vuln` },
         resolve: (ctx) => {
@@ -143,7 +143,7 @@ export const RUST_SPRAYER: EnemyDef = {
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Spray') && roll < 0.3) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'debuff', label: `Spray: ${dmg} + Vuln` },
         resolve: (ctx) => {
@@ -153,7 +153,7 @@ export const RUST_SPRAYER: EnemyDef = {
       };
     }
     if (!last.startsWith('Acid Burst') && roll < 0.6) {
-      const dmg = 3;
+      const dmg = 4;
       return {
         intent: { kind: 'attack', label: `Acid Burst: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -172,8 +172,8 @@ export const RUST_SPRAYER: EnemyDef = {
       };
     }
     return {
-      intent: { kind: 'defend', label: 'Plating Mist: +4' },
-      resolve: (ctx) => gainEnemyPlating(ctx, 4)
+      intent: { kind: 'defend', label: 'Plating Mist: +5' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 5)
     };
   }
 };
@@ -181,24 +181,24 @@ export const RUST_SPRAYER: EnemyDef = {
 export const PYLON_CRAWLER: EnemyDef = {
   id: 'pylonCrawler',
   name: 'Pylon Crawler',
-  maxHull: 30,
+  maxHull: 36,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
-        intent: { kind: 'defend', label: 'Anchor: +8' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+        intent: { kind: 'defend', label: 'Anchor: +10' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 10)
       };
     }
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Anchor') && roll < 0.25) {
       return {
-        intent: { kind: 'defend', label: 'Anchor: +8' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+        intent: { kind: 'defend', label: 'Anchor: +10' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 10)
       };
     }
     if (!last.startsWith('Pylon Slam') && roll < 0.6) {
-      const dmg = 9;
+      const dmg = 11;
       return {
         intent: { kind: 'attack', label: `Pylon Slam: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -206,14 +206,14 @@ export const PYLON_CRAWLER: EnemyDef = {
     }
     if (!last.startsWith('Reinforce') && roll < 0.85) {
       return {
-        intent: { kind: 'defend', label: 'Reinforce: +12 + Weak' },
+        intent: { kind: 'defend', label: 'Reinforce: +14 + Weak' },
         resolve: (ctx) => {
-          gainEnemyPlating(ctx, 12);
+          gainEnemyPlating(ctx, 14);
           applyWeakToPlayer(ctx, 1);
         }
       };
     }
-    const dmg = 7;
+    const dmg = 9;
     return {
       intent: { kind: 'attack', label: `Bash: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -224,10 +224,10 @@ export const PYLON_CRAWLER: EnemyDef = {
 export const TINKER_HAWK: EnemyDef = {
   id: 'tinkerHawk',
   name: 'Tinker Hawk',
-  maxHull: 24,
+  maxHull: 30,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 3;
+      const dmg = 4;
       return {
         intent: { kind: 'attack', label: `Dive: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -239,7 +239,7 @@ export const TINKER_HAWK: EnemyDef = {
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Talons') && roll < 0.3) {
-      const dmg = 2;
+      const dmg = 3;
       return {
         intent: { kind: 'debuff', label: `Talons: ${dmg}x4 + Vuln`, damage: dmg, hits: 4 },
         resolve: (ctx) => {
@@ -249,7 +249,7 @@ export const TINKER_HAWK: EnemyDef = {
       };
     }
     if (!last.startsWith('Dive') && roll < 0.65) {
-      const dmg = 3;
+      const dmg = 4;
       return {
         intent: { kind: 'attack', label: `Dive: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -259,15 +259,15 @@ export const TINKER_HAWK: EnemyDef = {
       };
     }
     if (!last.startsWith('Strike') && roll < 0.9) {
-      const dmg = 8;
+      const dmg = 10;
       return {
         intent: { kind: 'attack', label: `Strike: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     return {
-      intent: { kind: 'defend', label: 'Flutter: +4' },
-      resolve: (ctx) => gainEnemyPlating(ctx, 4)
+      intent: { kind: 'defend', label: 'Flutter: +5' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 5)
     };
   }
 };
@@ -275,25 +275,25 @@ export const TINKER_HAWK: EnemyDef = {
 export const SLAG_WALKER: EnemyDef = {
   id: 'slagWalker',
   name: 'Slag Walker',
-  maxHull: 52,
+  maxHull: 62,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
-        intent: { kind: 'defend', label: 'Heating Up: +8' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+        intent: { kind: 'defend', label: 'Heating Up: +10' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 10)
       };
     }
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Heavy Slam') && roll < 0.35) {
-      const dmg = 12;
+      const dmg = 16;
       return {
         intent: { kind: 'attack', label: `Heavy Slam: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     if (!last.startsWith('Sweep') && roll < 0.7) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Sweep: ${dmg}x3`, damage: dmg, hits: 3 },
         resolve: (ctx) => {
@@ -304,8 +304,8 @@ export const SLAG_WALKER: EnemyDef = {
       };
     }
     return {
-      intent: { kind: 'defend', label: 'Heating Up: +6' },
-      resolve: (ctx) => gainEnemyPlating(ctx, 6)
+      intent: { kind: 'defend', label: 'Heating Up: +8' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 8)
     };
   }
 };
@@ -313,10 +313,10 @@ export const SLAG_WALKER: EnemyDef = {
 export const IRON_RECLAIMER: EnemyDef = {
   id: 'ironReclaimer',
   name: 'Iron Reclaimer',
-  maxHull: 45,
+  maxHull: 54,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 8;
+      const dmg = 10;
       return {
         intent: { kind: 'attack', label: `Bash: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -326,12 +326,12 @@ export const IRON_RECLAIMER: EnemyDef = {
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Reinforce') && roll < 0.35) {
       return {
-        intent: { kind: 'defend', label: 'Reinforce: +10' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 10)
+        intent: { kind: 'defend', label: 'Reinforce: +12' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 12)
       };
     }
     if (!last.startsWith('Stagger') && roll < 0.6) {
-      const dmg = 5;
+      const dmg = 6;
       return {
         intent: { kind: 'debuff', label: `Stagger: ${dmg} + Weak` },
         resolve: (ctx) => {
@@ -340,7 +340,7 @@ export const IRON_RECLAIMER: EnemyDef = {
         }
       };
     }
-    const dmg = 11;
+    const dmg = 14;
     return {
       intent: { kind: 'attack', label: `Hammer Down: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -353,10 +353,10 @@ export const IRON_RECLAIMER: EnemyDef = {
 export const CINDER_HOUND: EnemyDef = {
   id: 'cinderHound',
   name: 'Cinder Hound',
-  maxHull: 32,
+  maxHull: 42,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 7;
+      const dmg = 9;
       return {
         intent: { kind: 'attack', label: `Bite: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -371,7 +371,7 @@ export const CINDER_HOUND: EnemyDef = {
       };
     }
     if (!last.startsWith('Frenzy') && roll < 0.55) {
-      const dmg = 5;
+      const dmg = 6;
       return {
         intent: { kind: 'attack', label: `Frenzy: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -381,13 +381,13 @@ export const CINDER_HOUND: EnemyDef = {
       };
     }
     if (roll < 0.85) {
-      const dmg = 7;
+      const dmg = 9;
       return {
         intent: { kind: 'attack', label: `Bite: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
-    const dmg = 10;
+    const dmg = 14;
     return {
       intent: { kind: 'attack', label: `Maul: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -398,11 +398,11 @@ export const CINDER_HOUND: EnemyDef = {
 export const SLAG_DRONE: EnemyDef = {
   id: 'slagDrone',
   name: 'Slag Drone',
-  maxHull: 40,
+  maxHull: 50,
   pickAction: ({ turn, rng, memory }): EnemyAction => {
     if (memory.charging) {
       memory.charging = false;
-      const dmg = 18;
+      const dmg = 24;
       return {
         intent: { kind: 'attack', label: `Plasma Lance: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -417,7 +417,7 @@ export const SLAG_DRONE: EnemyDef = {
       };
     }
     if (roll < 0.7) {
-      const dmg = 6;
+      const dmg = 8;
       return {
         intent: { kind: 'attack', label: `Tracer: ${dmg} + Vuln`, damage: dmg, hits: 1 },
         resolve: (ctx) => {
@@ -426,7 +426,7 @@ export const SLAG_DRONE: EnemyDef = {
         }
       };
     }
-    const armor = 8;
+    const armor = 10;
     return {
       intent: { kind: 'defend', label: `Repair: +${armor}`, plating: armor },
       resolve: (ctx) => gainEnemyPlating(ctx, armor)
@@ -437,10 +437,10 @@ export const SLAG_DRONE: EnemyDef = {
 export const FORGE_REAVER: EnemyDef = {
   id: 'forgeReaver',
   name: 'Forge Reaver',
-  maxHull: 45,
+  maxHull: 58,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 9;
+      const dmg = 12;
       return {
         intent: { kind: 'attack', label: `Cleaver: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -449,14 +449,14 @@ export const FORGE_REAVER: EnemyDef = {
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Cleaver') && roll < 0.4) {
-      const dmg = 9;
+      const dmg = 12;
       return {
         intent: { kind: 'attack', label: `Cleaver: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     if (!last.startsWith('Quick Slash') && roll < 0.7) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Quick Slash: ${dmg}x2`, damage: dmg, hits: 2 },
         resolve: (ctx) => {
@@ -466,13 +466,13 @@ export const FORGE_REAVER: EnemyDef = {
       };
     }
     if (!last.startsWith('Smash') && roll < 0.9) {
-      const dmg = 14;
+      const dmg = 18;
       return {
         intent: { kind: 'attack', label: `Smash: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
-    const armor = 8;
+    const armor = 10;
     return {
       intent: { kind: 'defend', label: `Brace: +${armor}` },
       resolve: (ctx) => gainEnemyPlating(ctx, armor)
@@ -483,25 +483,25 @@ export const FORGE_REAVER: EnemyDef = {
 export const MAGMA_SENTINEL: EnemyDef = {
   id: 'magmaSentinel',
   name: 'Magma Sentinel',
-  maxHull: 65,
+  maxHull: 80,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
-        intent: { kind: 'defend', label: 'Heat Sink: +12' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 12)
+        intent: { kind: 'defend', label: 'Heat Sink: +14' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 14)
       };
     }
     const roll = rng();
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Magma Slam') && roll < 0.3) {
-      const dmg = 15;
+      const dmg = 20;
       return {
         intent: { kind: 'attack', label: `Magma Slam: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     if (!last.startsWith('Ember Spray') && roll < 0.65) {
-      const dmg = 5;
+      const dmg = 6;
       return {
         intent: { kind: 'attack', label: `Ember Spray: ${dmg}x3`, damage: dmg, hits: 3 },
         resolve: (ctx) => {
@@ -512,8 +512,8 @@ export const MAGMA_SENTINEL: EnemyDef = {
       };
     }
     return {
-      intent: { kind: 'defend', label: 'Heat Sink: +10' },
-      resolve: (ctx) => gainEnemyPlating(ctx, 10)
+      intent: { kind: 'defend', label: 'Heat Sink: +12' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 12)
     };
   }
 };
@@ -521,10 +521,10 @@ export const MAGMA_SENTINEL: EnemyDef = {
 export const RECLAIMER_MK2: EnemyDef = {
   id: 'reclaimerMk2',
   name: 'Reclaimer Mk II',
-  maxHull: 60,
+  maxHull: 75,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
-      const dmg = 9;
+      const dmg = 12;
       return {
         intent: { kind: 'attack', label: `Bash: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -534,12 +534,12 @@ export const RECLAIMER_MK2: EnemyDef = {
     const last = lastIntent?.label ?? '';
     if (!last.startsWith('Reinforce') && roll < 0.35) {
       return {
-        intent: { kind: 'defend', label: 'Reinforce: +14' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 14)
+        intent: { kind: 'defend', label: 'Reinforce: +16' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 16)
       };
     }
     if (!last.startsWith('Iron Stagger') && roll < 0.65) {
-      const dmg = 6;
+      const dmg = 8;
       return {
         intent: { kind: 'debuff', label: `Iron Stagger: ${dmg} + Weak 2` },
         resolve: (ctx) => {
@@ -548,7 +548,7 @@ export const RECLAIMER_MK2: EnemyDef = {
         }
       };
     }
-    const dmg = 13;
+    const dmg = 17;
     return {
       intent: { kind: 'attack', label: `Hammer Down: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -559,18 +559,18 @@ export const RECLAIMER_MK2: EnemyDef = {
 export const IRON_SOVEREIGN: EnemyDef = {
   id: 'ironSovereign',
   name: 'Iron Sovereign',
-  maxHull: 95,
+  maxHull: 130,
   pickAction: ({ turn, rng, memory, lastIntent }): EnemyAction => {
     if (memory.charging) {
       memory.charging = false;
-      const dmg = 20;
+      const dmg = 28;
       return {
         intent: { kind: 'attack', label: `Cannon Volley: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
       };
     }
     if (turn === 1) {
-      const dmg = 10;
+      const dmg = 14;
       return {
         intent: { kind: 'attack', label: `Plasma Cleave: ${dmg}`, damage: dmg, hits: 1 },
         resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -587,7 +587,7 @@ export const IRON_SOVEREIGN: EnemyDef = {
       };
     }
     if (!last.startsWith('Static Burst') && roll < 0.5) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Static Burst: ${dmg}x3`, damage: dmg, hits: 3 },
         resolve: (ctx) => {
@@ -599,11 +599,11 @@ export const IRON_SOVEREIGN: EnemyDef = {
     }
     if (!last.startsWith('Heat Sink') && roll < 0.75) {
       return {
-        intent: { kind: 'defend', label: 'Heat Sink: +15' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 15)
+        intent: { kind: 'defend', label: 'Heat Sink: +18' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 18)
       };
     }
-    const dmg = 12;
+    const dmg = 16;
     return {
       intent: { kind: 'attack', label: `Plasma Cleave: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
@@ -614,14 +614,14 @@ export const IRON_SOVEREIGN: EnemyDef = {
 export const FOUNDRY_TYRANT: EnemyDef = {
   id: 'foundryTyrant',
   name: 'Foundry Tyrant',
-  maxHull: 70,
+  maxHull: 90,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     // Telegraphed opener — gives the player a turn to set up
     if (turn === 1) {
       return {
-        intent: { kind: 'defend', label: 'Forge Heat: +10' },
+        intent: { kind: 'defend', label: 'Forge Heat: +12' },
         resolve: (ctx) => {
-          gainEnemyPlating(ctx, 10);
+          gainEnemyPlating(ctx, 12);
           applyWeakToPlayer(ctx, 1);
         }
       };
@@ -630,7 +630,7 @@ export const FOUNDRY_TYRANT: EnemyDef = {
     const last = lastIntent?.label ?? '';
 
     if (!last.startsWith('Piston Rain') && roll < 0.25) {
-      const dmg = 4;
+      const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Piston Rain: ${dmg}x3`, damage: dmg, hits: 3 },
         resolve: (ctx) => {
@@ -641,7 +641,7 @@ export const FOUNDRY_TYRANT: EnemyDef = {
       };
     }
     if (!last.startsWith('Slag Pour') && roll < 0.5) {
-      const dmg = 5;
+      const dmg = 7;
       return {
         intent: { kind: 'debuff', label: `Slag Pour: ${dmg} + Weak` },
         resolve: (ctx) => {
@@ -652,11 +652,11 @@ export const FOUNDRY_TYRANT: EnemyDef = {
     }
     if (!last.startsWith('Forge Heat') && roll < 0.7) {
       return {
-        intent: { kind: 'defend', label: 'Forge Heat: +8' },
-        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+        intent: { kind: 'defend', label: 'Forge Heat: +10' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 10)
       };
     }
-    const dmg = 14;
+    const dmg = 18;
     return {
       intent: { kind: 'attack', label: `Furnace Slam: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)

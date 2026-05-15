@@ -54,7 +54,7 @@ export function startRun(): RunState {
     act: 1,
     currentNodeId: null,
     visitedNodeIds: new Set(),
-    player: { hull: 70, maxHull: 70, deck: STARTER_DECK.slice() },
+    player: { hull: 65, maxHull: 65, deck: STARTER_DECK.slice() },
     scrap: 0,
     relics: [],
     result: 'inProgress',
