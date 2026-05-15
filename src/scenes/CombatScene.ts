@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { createCombatState, endTurn, playCard, canPlay } from '../game/combat';
 import { getRun, completeCombat, failCombat } from '../game/run';
 import type { CombatState, CardInstance } from '../game/types';
-import { CardView, CARD_W } from '../ui/CardView';
+import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { drawMech, ENEMY_SPRITES } from '../ui/MechSprite';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
@@ -26,6 +26,10 @@ export class CombatScene extends Phaser.Scene {
   private cardViews: CardView[] = [];
   private overlay!: Phaser.GameObjects.Container;
   private endHandled = false;
+  private endTurnBg!: Phaser.GameObjects.Rectangle;
+  private endTurnTxt!: Phaser.GameObjects.Text;
+  private endTurnPending = false;
+  private endTurnTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super('Combat');
@@ -36,6 +40,8 @@ export class CombatScene extends Phaser.Scene {
     // so class-field initializers don't re-run. Reset per-combat state here.
     this.endHandled = false;
     this.cardViews = [];
+    this.endTurnPending = false;
+    this.endTurnTimer = null;
 
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
@@ -176,25 +182,59 @@ export class CombatScene extends Phaser.Scene {
 
   private makeEndTurnButton(x: number, y: number): Phaser.GameObjects.Container {
     const c = this.add.container(x, y);
-    const bg = this.add.rectangle(0, 0, 160, 60, COLORS.rust).setStrokeStyle(3, COLORS.brass);
-    const txt = this.add
+    this.endTurnBg = this.add.rectangle(0, 0, 170, 64, COLORS.rust).setStrokeStyle(3, COLORS.brass);
+    this.endTurnTxt = this.add
       .text(0, 0, 'END TURN', {
         fontFamily: FONTS.display,
-        fontSize: '18px',
+        fontSize: '17px',
         color: hex(COLORS.bone),
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        align: 'center'
       })
       .setOrigin(0.5);
-    c.add([bg, txt]);
-    bg.setInteractive({ useHandCursor: true });
-    bg.on('pointerover', () => bg.setFillStyle(COLORS.danger));
-    bg.on('pointerout', () => bg.setFillStyle(COLORS.rust));
-    bg.on('pointerdown', () => this.onEndTurn());
+    c.add([this.endTurnBg, this.endTurnTxt]);
+    this.endTurnBg.setInteractive({ useHandCursor: true });
+    this.endTurnBg.on('pointerover', () => {
+      if (!this.endTurnPending) this.endTurnBg.setFillStyle(COLORS.danger);
+    });
+    this.endTurnBg.on('pointerout', () => {
+      if (!this.endTurnPending) this.endTurnBg.setFillStyle(COLORS.rust);
+    });
+    this.endTurnBg.on('pointerdown', () => this.onEndTurn());
     return c;
+  }
+
+  private startEndTurnConfirm() {
+    this.endTurnPending = true;
+    const steam = this.state.player.steam;
+    this.endTurnTxt.setText(`CONFIRM?\n${steam} Steam unspent`);
+    this.endTurnTxt.setColor(hex(COLORS.steelDark));
+    this.endTurnBg.setFillStyle(COLORS.steam);
+    if (this.endTurnTimer) this.endTurnTimer.remove();
+    this.endTurnTimer = this.time.delayedCall(2000, () => this.cancelEndTurnConfirm());
+  }
+
+  private cancelEndTurnConfirm() {
+    if (!this.endTurnPending) return;
+    this.endTurnPending = false;
+    this.endTurnTxt.setText('END TURN');
+    this.endTurnTxt.setColor(hex(COLORS.bone));
+    this.endTurnBg.setFillStyle(COLORS.rust);
+    if (this.endTurnTimer) {
+      this.endTurnTimer.remove();
+      this.endTurnTimer = null;
+    }
   }
 
   private onEndTurn() {
     if (this.state.phase !== 'playerTurn') return;
+    // If the player has steam left, require a second click to confirm.
+    // The pending state auto-clears after 2 seconds.
+    if (this.state.player.steam > 0 && !this.endTurnPending) {
+      this.startEndTurnConfirm();
+      return;
+    }
+    this.cancelEndTurnConfirm();
     const pre = this.snapshot();
     endTurn(this.state, {
       afterEnemyResolve: () => this.emitDeltas(pre)
@@ -208,6 +248,7 @@ export class CombatScene extends Phaser.Scene {
 
   private onPlayCard(card: CardInstance) {
     if (!canPlay(this.state, card.uid)) return;
+    this.cancelEndTurnConfirm();
     const view = this.cardViews.find((v) => v.card.uid === card.uid);
     if (view) {
       // Disable further hit testing on this card so a rapid second click
@@ -446,7 +487,9 @@ export class CombatScene extends Phaser.Scene {
     this.cardViews = next;
 
     const { width, height } = this.scale;
-    const baseY = height - CARD_W * 0.6;
+    // Card center y so the card's bottom edge stays inside the viewport
+    // (arc offset adds up to ~16px more for edge cards — included in the margin).
+    const baseY = height - CARD_H * 0.5 - 16;
     const n = next.length;
     if (n === 0) return;
 

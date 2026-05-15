@@ -3,7 +3,7 @@ import type { CardInstance } from '../game/types';
 import { COLORS, FONTS, hex } from './theme';
 
 export const CARD_W = 140;
-export const CARD_H = 190;
+export const CARD_H = 170;
 const LIFT = 40;
 
 export class CardView extends Phaser.GameObjects.Container {
