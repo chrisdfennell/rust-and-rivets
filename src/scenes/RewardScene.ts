@@ -5,6 +5,7 @@ import { RELICS } from '../game/relics';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
+import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RewardScene extends Phaser.Scene {
@@ -13,6 +14,7 @@ export class RewardScene extends Phaser.Scene {
   }
 
   create() {
+    setupPause(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 

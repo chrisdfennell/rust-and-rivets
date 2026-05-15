@@ -48,7 +48,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     const startX = (width - totalW) / 2 + cardW / 2;
 
     CHARACTERS.forEach((c, i) => {
-      this.drawCharacterCard(c, startX + i * (cardW + gap), 360, cardW);
+      this.drawCharacterCard(c, startX + i * (cardW + gap), 390, cardW);
     });
 
     // Back button (top-left)
@@ -64,7 +64,8 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private drawCharacterCard(c: CharacterDef, x: number, y: number, w: number) {
-    const h = 480;
+    const h = 560;
+    const leftX = x - w / 2 + 24;
     // Panel
     this.add
       .rectangle(x, y, w, h, COLORS.bgPanel)
@@ -72,12 +73,12 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // Sprite (scaled down so it fits in the card)
     const drawFn = CHARACTER_SPRITES[c.id] ?? CHARACTER_SPRITES.pilot;
-    const sprite = drawFn(this, x, y - 130);
-    sprite.setScale(0.7);
+    const sprite = drawFn(this, x, y - 180);
+    sprite.setScale(0.6);
 
     // Name
     this.add
-      .text(x, y + 32, c.name, {
+      .text(x, y - 50, c.name, {
         fontFamily: FONTS.display,
         fontSize: '22px',
         color: hex(COLORS.brass),
@@ -87,16 +88,16 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // Tagline
     this.add
-      .text(x, y + 56, c.tagline, {
+      .text(x, y - 24, c.tagline, {
         fontFamily: FONTS.body,
         fontSize: '12px',
         color: hex(COLORS.steam)
       })
       .setOrigin(0.5);
 
-    // Description
+    // Description (top-aligned, wraps)
     this.add
-      .text(x, y + 92, c.description, {
+      .text(x, y - 4, c.description, {
         fontFamily: FONTS.body,
         fontSize: '12px',
         color: hex(COLORS.bone),
@@ -107,9 +108,8 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     // Stats block
-    const statsY = y + 165;
     this.add
-      .text(x - w / 2 + 24, statsY, `Hull   ${c.startingHull}`, {
+      .text(leftX, y + 70, `Hull   ${c.startingHull}`, {
         fontFamily: FONTS.display,
         fontSize: '13px',
         color: hex(COLORS.bone),
@@ -117,7 +117,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
     this.add
-      .text(x - w / 2 + 24, statsY + 22, `Deck   ${c.startingDeck.length} cards`, {
+      .text(leftX, y + 90, `Deck   ${c.startingDeck.length} cards`, {
         fontFamily: FONTS.display,
         fontSize: '13px',
         color: hex(COLORS.bone),
@@ -127,7 +127,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // Signature relic block
     this.add
-      .text(x - w / 2 + 24, statsY + 56, 'SIGNATURE', {
+      .text(leftX, y + 118, 'SIGNATURE', {
         fontFamily: FONTS.display,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
@@ -136,7 +136,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     if (c.startingRelics.length === 0) {
       this.add
-        .text(x - w / 2 + 24, statsY + 72, 'none — pure baseline', {
+        .text(leftX, y + 136, 'none — pure baseline', {
           fontFamily: FONTS.body,
           fontSize: '12px',
           color: hex(COLORS.boneDim),
@@ -147,7 +147,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const def = RELICS[c.startingRelics[0]];
       if (def) {
         this.add
-          .text(x - w / 2 + 24, statsY + 72, `★ ${def.name}`, {
+          .text(leftX, y + 136, `★ ${def.name}`, {
             fontFamily: FONTS.display,
             fontSize: '13px',
             color: hex(COLORS.steam),
@@ -155,7 +155,7 @@ export class CharacterSelectScene extends Phaser.Scene {
           })
           .setOrigin(0, 0);
         this.add
-          .text(x - w / 2 + 24, statsY + 90, def.description, {
+          .text(leftX, y + 156, def.description, {
             fontFamily: FONTS.body,
             fontSize: '11px',
             color: hex(COLORS.bone),
@@ -166,7 +166,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       }
     }
 
-    // SELECT button
+    // SELECT button anchored at the bottom of the panel
     const btn = new Button(
       this,
       x,

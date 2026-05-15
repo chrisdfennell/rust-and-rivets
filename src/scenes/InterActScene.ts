@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getRun, advanceAct, type InterActBoon } from '../game/run';
 import { RELICS } from '../game/relics';
 import { Button } from '../ui/Button';
+import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 interface BoonOption {
@@ -18,6 +19,7 @@ export class InterActScene extends Phaser.Scene {
   }
 
   create() {
+    setupPause(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 

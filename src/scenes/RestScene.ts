@@ -10,6 +10,7 @@ import { CARDS, isUpgradable } from '../game/cards';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
+import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RestScene extends Phaser.Scene {
@@ -22,6 +23,7 @@ export class RestScene extends Phaser.Scene {
   }
 
   create() {
+    setupPause(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 

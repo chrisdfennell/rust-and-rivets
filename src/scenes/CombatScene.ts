@@ -4,6 +4,7 @@ import { getRun, completeCombat, failCombat } from '../game/run';
 import type { CombatState, CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
+import { setupPause } from '../ui/setupPause';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -42,6 +43,8 @@ export class CombatScene extends Phaser.Scene {
     this.cardViews = [];
     this.endTurnPending = false;
     this.endTurnTimer = null;
+
+    setupPause(this);
 
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);

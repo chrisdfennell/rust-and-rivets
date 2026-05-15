@@ -4,6 +4,7 @@ import type { MapNode } from '../game/map';
 import { RELICS } from '../game/relics';
 import { getActName } from '../game/enemies';
 import { Button } from '../ui/Button';
+import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
@@ -18,6 +19,7 @@ export class MapScene extends Phaser.Scene {
 
   create() {
     this.nodeViews = new Map();
+    setupPause(this);
 
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);

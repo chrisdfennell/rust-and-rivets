@@ -83,7 +83,25 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 14 — Characters *(current)*
+### Slice 15 — Pause menu + CharacterSelect fix *(current)*
+- New **PauseScene** that launches as a transparent overlay on top
+  of any in-run scene via `scene.pause()` + `scene.launch('Pause')`.
+- ESC opens the pause menu; RESUME or ESC again closes it; QUIT TO
+  TITLE stops the underlying scene and returns to the title screen
+  (the run is already auto-saved, so it can be resumed from there).
+- `setupPause(scene)` helper in [src/ui/setupPause.ts](src/ui/setupPause.ts)
+  wires the ESC binding. Called from Combat, Map, Shop, Rest,
+  Reward, and InterAct scenes' `create()`. Title / Workshop /
+  CharacterSelect deliberately skip — they're already menus.
+
+Bug fix in CharacterSelectScene: the SELECT button was overlapping
+the SIGNATURE block because the panel was too short and the button
+was positioned mid-content. Card panel height bumped 480 → 560 and
+all the field positions re-staked top-to-bottom so the button now
+sits at the bottom edge with clear space above. Sprite scale 0.7
+→ 0.6 also tightens the visual footprint slightly.
+
+### Slice 14 — Characters
 Three pilots, each with a distinct starter deck, hull pool, and a
 signature relic baked in for run start.
 
