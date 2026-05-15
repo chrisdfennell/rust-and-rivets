@@ -1,5 +1,6 @@
-import type { CombatState } from './types';
+import type { CardDef, CombatState } from './types';
 import type { RunState } from './run';
+import { drawCards, dealDamageToEnemy } from './combat';
 
 export interface Relic {
   id: string;
@@ -8,6 +9,8 @@ export interface Relic {
   onCombatStart?: (state: CombatState) => void;
   onCombatEnd?: (run: RunState) => void;
   onPickup?: (run: RunState) => void;
+  onTurnStart?: (state: CombatState) => void;
+  onCardPlayed?: (state: CombatState, card: CardDef, indexInTurn: number) => void;
 }
 
 const PRESSURE_GAUGE: Relic = {
@@ -66,13 +69,77 @@ const CALIBRATION_SPIKE: Relic = {
   }
 };
 
+const BRASS_KNUCKLES: Relic = {
+  id: 'brassKnuckles',
+  name: 'Brass Knuckles',
+  description: 'First attack each turn deals +3 damage.',
+  onTurnStart: (state) => {
+    state.player.firstAttackBonus = 3;
+  }
+};
+
+const BOILER_VENT: Relic = {
+  id: 'boilerVent',
+  name: 'Boiler Vent',
+  description: 'First card each turn costs 0 Steam.',
+  onTurnStart: (state) => {
+    state.player.firstCardFree = true;
+  }
+};
+
+const QUICKDRAW_SPRING: Relic = {
+  id: 'quickdrawSpring',
+  name: 'Quickdraw Spring',
+  description: 'Draw 1 additional card at the start of each turn.',
+  onTurnStart: (state) => {
+    drawCards(state, 1);
+  }
+};
+
+const IRON_RESOLVE: Relic = {
+  id: 'ironResolve',
+  name: 'Iron Resolve',
+  description: 'Heal 3 Hull at the start of each turn.',
+  onTurnStart: (state) => {
+    const p = state.player;
+    p.hull = Math.min(p.maxHull, p.hull + 3);
+  }
+};
+
+const PNEUMATIC_STRIKE: Relic = {
+  id: 'pneumaticStrike',
+  name: 'Pneumatic Strike',
+  description: 'Every 3rd card played deals 5 damage to the enemy.',
+  onCardPlayed: (state, _card, indexInTurn) => {
+    if ((indexInTurn + 1) % 3 === 0) {
+      dealDamageToEnemy({ state, log: (m) => state.log.push(m) }, 5);
+    }
+  }
+};
+
+const SLAG_WRENCH: Relic = {
+  id: 'slagWrench',
+  name: 'Slag Wrench',
+  description: 'Gain 2 max Hull after each non-boss combat.',
+  onCombatEnd: (run) => {
+    run.player.maxHull += 2;
+    run.player.hull += 2;
+  }
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
   [ENGINE_OIL.id]: ENGINE_OIL,
   [HEAVY_FRAME.id]: HEAVY_FRAME,
   [SALVAGE_LOOP.id]: SALVAGE_LOOP,
-  [CALIBRATION_SPIKE.id]: CALIBRATION_SPIKE
+  [CALIBRATION_SPIKE.id]: CALIBRATION_SPIKE,
+  [BRASS_KNUCKLES.id]: BRASS_KNUCKLES,
+  [BOILER_VENT.id]: BOILER_VENT,
+  [QUICKDRAW_SPRING.id]: QUICKDRAW_SPRING,
+  [IRON_RESOLVE.id]: IRON_RESOLVE,
+  [PNEUMATIC_STRIKE.id]: PNEUMATIC_STRIKE,
+  [SLAG_WRENCH.id]: SLAG_WRENCH
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);

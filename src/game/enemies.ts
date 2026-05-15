@@ -125,6 +125,153 @@ export const SENTINEL_DRONE: EnemyDef = {
   }
 };
 
+export const RUST_SPRAYER: EnemyDef = {
+  id: 'rustSprayer',
+  name: 'Rust Sprayer',
+  maxHull: 28,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'debuff', label: `Spray: ${dmg} + Vuln` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Spray') && roll < 0.3) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'debuff', label: `Spray: ${dmg} + Vuln` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (!last.startsWith('Acid Burst') && roll < 0.6) {
+      const dmg = 3;
+      return {
+        intent: { kind: 'attack', label: `Acid Burst: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Corrode') && roll < 0.85) {
+      return {
+        intent: { kind: 'debuff', label: 'Corrode: Weak + Vuln' },
+        resolve: (ctx) => {
+          applyWeakToPlayer(ctx, 2);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Plating Mist: +4' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 4)
+    };
+  }
+};
+
+export const PYLON_CRAWLER: EnemyDef = {
+  id: 'pylonCrawler',
+  name: 'Pylon Crawler',
+  maxHull: 30,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Anchor: +8' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Anchor') && roll < 0.25) {
+      return {
+        intent: { kind: 'defend', label: 'Anchor: +8' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+      };
+    }
+    if (!last.startsWith('Pylon Slam') && roll < 0.6) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'attack', label: `Pylon Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Reinforce') && roll < 0.85) {
+      return {
+        intent: { kind: 'defend', label: 'Reinforce: +12 + Weak' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 12);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const dmg = 7;
+    return {
+      intent: { kind: 'attack', label: `Bash: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+export const TINKER_HAWK: EnemyDef = {
+  id: 'tinkerHawk',
+  name: 'Tinker Hawk',
+  maxHull: 24,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 3;
+      return {
+        intent: { kind: 'attack', label: `Dive: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Talons') && roll < 0.3) {
+      const dmg = 2;
+      return {
+        intent: { kind: 'debuff', label: `Talons: ${dmg}x4 + Vuln`, damage: dmg, hits: 4 },
+        resolve: (ctx) => {
+          for (let i = 0; i < 4; i++) dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (!last.startsWith('Dive') && roll < 0.65) {
+      const dmg = 3;
+      return {
+        intent: { kind: 'attack', label: `Dive: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Strike') && roll < 0.9) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'attack', label: `Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Flutter: +4' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 4)
+    };
+  }
+};
+
 export const SLAG_WALKER: EnemyDef = {
   id: 'slagWalker',
   name: 'Slag Walker',
@@ -254,7 +401,10 @@ export const FOUNDRY_TYRANT: EnemyDef = {
   }
 };
 
-export const ACT1_POOL: EnemyDef[] = [SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE];
+export const ACT1_POOL: EnemyDef[] = [
+  SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
+  RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
+];
 export const ELITE_POOL: EnemyDef[] = [SLAG_WALKER, IRON_RECLAIMER];
 
 export function pickAct1Enemy(rng: () => number): EnemyDef {
@@ -269,6 +419,9 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [SCRAP_RAIDER.id]: SCRAP_RAIDER,
   [JUNK_HOUND.id]: JUNK_HOUND,
   [SENTINEL_DRONE.id]: SENTINEL_DRONE,
+  [RUST_SPRAYER.id]: RUST_SPRAYER,
+  [PYLON_CRAWLER.id]: PYLON_CRAWLER,
+  [TINKER_HAWK.id]: TINKER_HAWK,
   [SLAG_WALKER.id]: SLAG_WALKER,
   [IRON_RECLAIMER.id]: IRON_RECLAIMER,
   [FOUNDRY_TYRANT.id]: FOUNDRY_TYRANT

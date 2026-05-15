@@ -67,7 +67,37 @@ export const CARDS: Record<string, CardDef> = {
   smokeScreen: card('smokeScreen', 'Smoke Screen', 1, 'self', 'Gain 6 Plating. Apply 1 Weak.',
     [{ kind: 'plating', amount: 6 }, { kind: 'applyWeak', amount: 1 }], false, 'common'),
   'smokeScreen+': card('smokeScreen+', 'Smoke Screen+', 1, 'self', 'Gain 9 Plating. Apply 2 Weak.',
-    [{ kind: 'plating', amount: 9 }, { kind: 'applyWeak', amount: 2 }], false, 'common')
+    [{ kind: 'plating', amount: 9 }, { kind: 'applyWeak', amount: 2 }], false, 'common'),
+
+  counterStrike: card('counterStrike', 'Counter-Strike', 1, 'enemy', 'Deal 4 damage. Gain 4 Plating.',
+    [{ kind: 'damage', amount: 4 }, { kind: 'plating', amount: 4 }], false, 'common'),
+  'counterStrike+': card('counterStrike+', 'Counter-Strike+', 1, 'enemy', 'Deal 6 damage. Gain 6 Plating.',
+    [{ kind: 'damage', amount: 6 }, { kind: 'plating', amount: 6 }], false, 'common'),
+
+  hammerStrike: card('hammerStrike', 'Hammer Strike', 1, 'enemy', 'Deal 5 damage. Apply 1 Vulnerable.',
+    [{ kind: 'damage', amount: 5 }, { kind: 'applyVulnerable', amount: 1 }], false, 'common'),
+  'hammerStrike+': card('hammerStrike+', 'Hammer Strike+', 1, 'enemy', 'Deal 7 damage. Apply 2 Vulnerable.',
+    [{ kind: 'damage', amount: 7 }, { kind: 'applyVulnerable', amount: 2 }], false, 'common'),
+
+  drillBit: card('drillBit', 'Drill Bit', 1, 'enemy', 'Deal 6 damage. Deal 6 more if enemy has Plating.',
+    [{ kind: 'damageIfEnemyPlated', amount: 6 }, { kind: 'damage', amount: 6 }], false, 'uncommon'),
+  'drillBit+': card('drillBit+', 'Drill Bit+', 1, 'enemy', 'Deal 8 damage. Deal 8 more if enemy has Plating.',
+    [{ kind: 'damageIfEnemyPlated', amount: 8 }, { kind: 'damage', amount: 8 }], false, 'uncommon'),
+
+  sledgehammer: card('sledgehammer', 'Sledgehammer', 2, 'enemy', 'Deal 16 damage. Lose 3 Hull.',
+    [{ kind: 'damage', amount: 16 }, { kind: 'loseHull', amount: 3 }], false, 'uncommon'),
+  'sledgehammer+': card('sledgehammer+', 'Sledgehammer+', 2, 'enemy', 'Deal 22 damage. Lose 3 Hull.',
+    [{ kind: 'damage', amount: 22 }, { kind: 'loseHull', amount: 3 }], false, 'uncommon'),
+
+  steamSurge: card('steamSurge', 'Steam Surge', 1, 'enemy', 'Deal 4 damage. Gain 1 Steam.',
+    [{ kind: 'damage', amount: 4 }, { kind: 'gainSteam', amount: 1 }], false, 'uncommon'),
+  'steamSurge+': card('steamSurge+', 'Steam Surge+', 1, 'enemy', 'Deal 5 damage. Gain 2 Steam.',
+    [{ kind: 'damage', amount: 5 }, { kind: 'gainSteam', amount: 2 }], false, 'uncommon'),
+
+  pressureBurst: card('pressureBurst', 'Pressure Burst', 2, 'enemy', 'Deal damage equal to your Plating. Lose all Plating.',
+    [{ kind: 'damageEqualToPlating', bonus: 0 }, { kind: 'losePlating' }], false, 'rare'),
+  'pressureBurst+': card('pressureBurst+', 'Pressure Burst+', 2, 'enemy', 'Deal damage equal to your Plating + 4. Lose all Plating.',
+    [{ kind: 'damageEqualToPlating', bonus: 4 }, { kind: 'losePlating' }], false, 'rare')
 };
 
 export const STARTER_DECK: string[] = [
@@ -78,7 +108,9 @@ export const STARTER_DECK: string[] = [
 
 export const SHOP_POOL: string[] = [
   'ironHail', 'bulwark', 'recalibrate', 'overdrive',
-  'hydraulicPunch', 'steamLance', 'repairDrone', 'smokeScreen'
+  'hydraulicPunch', 'steamLance', 'repairDrone', 'smokeScreen',
+  'counterStrike', 'hammerStrike', 'drillBit', 'sledgehammer',
+  'steamSurge', 'pressureBurst'
 ];
 
 export function isUpgradable(cardId: string): boolean {

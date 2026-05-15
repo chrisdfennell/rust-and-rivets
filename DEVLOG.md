@@ -83,7 +83,40 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 8 — Rewards + relics + elites *(current)*
+### Slice 9 — Content depth *(current)*
+- **6 new cards** (with upgrades), bringing the buyable pool to 14:
+  - **Counter-Strike** (1c common) — Deal 4. Gain 4 Plating.
+  - **Hammer Strike** (1c common) — Deal 5. Apply 1 Vulnerable.
+  - **Drill Bit** (1c uncommon) — Deal 6. Deal 6 more if enemy is plated.
+  - **Sledgehammer** (2c uncommon) — Deal 16. Lose 3 Hull.
+  - **Steam Surge** (1c uncommon) — Deal 4. Gain 1 Steam.
+  - **Pressure Burst** (2c rare) — Deal damage = your Plating. Lose all Plating.
+- **3 new act-1 enemies** added to ACT1_POOL (now 6 total):
+  - **Rust Sprayer** (28 HP) — debuff specialist (Vuln/Weak spam)
+  - **Pylon Crawler** (30 HP) — turtle with Anchor/Reinforce
+  - **Tinker Hawk** (24 HP) — fast, multi-hit Talons + Dive
+- **6 new relics** (now 12 total) using new in-combat hooks:
+  - **Brass Knuckles** — First attack each turn deals +3 damage (`onTurnStart`)
+  - **Boiler Vent** — First card each turn costs 0 (`onTurnStart`)
+  - **Quickdraw Spring** — Draw 1 extra card at turn start (`onTurnStart`)
+  - **Iron Resolve** — Heal 3 Hull at turn start (`onTurnStart`)
+  - **Pneumatic Strike** — Every 3rd card played deals 5 damage (`onCardPlayed`)
+  - **Slag Wrench** — +2 max Hull after each non-boss combat (`onCombatEnd`)
+- New `CardEffect` kinds: `loseHull`, `damageIfEnemyPlated`,
+  `damageEqualToPlating`, `losePlating`
+- New `PlayerState` fields: `firstAttackBonus`, `firstCardFree`,
+  `cardsPlayedThisTurn` — all reset in `startPlayerTurn`
+- `CombatState.relicIds` carried into combat so per-turn / per-card-play
+  hooks can fire without combat needing to import the run singleton
+- `Relic` interface gained `onTurnStart` and `onCardPlayed(state, card,
+  indexInTurn)` hooks. `drawCards` and `dealDamageToEnemy` are now
+  exported from `combat.ts` so relics can call them
+- Known limitation: cards still show their base steam cost on the badge
+  when `firstCardFree` is active. The card becomes playable correctly
+  (canPlay respects the discount), but the visible "1" doesn't drop to
+  "0". Cosmetic. Punt for now
+
+### Slice 8 — Rewards + relics + elites
 - **Card rewards** after every non-boss combat: pick 1 of 3 cards or skip
   - Cards rolled from the buyable pool, weighted by rarity
   - **Card rarity tiers**: common / uncommon / rare (classified on

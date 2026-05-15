@@ -237,6 +237,155 @@ export function drawSentinelDrone(scene: Phaser.Scene, x: number, y: number): Ph
   return c;
 }
 
+export function drawRustSprayer(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y + 4);
+  const g = scene.add.graphics();
+
+  // Tracks (no legs — moves on treads)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, 60, 116, 28);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 8; i++) g.fillRect(-54 + i * 14, 64, 8, 20);
+
+  // Squat oxidized body
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-50, -10, 100, 70);
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 4; i++) g.fillCircle(-40 + i * 26, 0, 2.5);
+  for (let i = 0; i < 4; i++) g.fillCircle(-40 + i * 26, 50, 2.5);
+
+  // Sickly green oxide patches
+  g.fillStyle(COLORS.buff, 0.5);
+  g.fillCircle(-20, 20, 12);
+  g.fillCircle(18, 6, 8);
+  g.fillCircle(30, 40, 10);
+
+  // Twin nozzle pods on top
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, -40, 30, 36);
+  g.fillRect(14, -40, 30, 36);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, -10, 16, 10);
+  g.fillRect(34, -10, 16, 10);
+
+  // Spray nozzles
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-60, -4, 4);
+  g.fillCircle(60, -4, 4);
+
+  // Drips of acid
+  g.fillStyle(COLORS.buff, 0.7);
+  g.fillCircle(-60, 8, 3);
+  g.fillCircle(60, 12, 3);
+  g.fillCircle(-58, 18, 2);
+
+  // Tiny optic on top
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, -36, 8);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -36, 4);
+
+  c.add(g);
+  return c;
+}
+
+export function drawPylonCrawler(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Six low legs
+  g.fillStyle(COLORS.steelDark);
+  for (let i = 0; i < 3; i++) {
+    g.fillRect(-50 + i * 20, 36, 8, 50);
+    g.fillRect(22 + i * 14, 36, 8, 50);
+  }
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 3; i++) {
+    g.fillRect(-52 + i * 20, 80, 12, 8);
+    g.fillRect(20 + i * 14, 80, 12, 8);
+  }
+
+  // Wide low body
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-58, -10, 116, 50);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-58, -10, 116, 6);
+
+  // Heavy plate edges
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-60, 32, 120, 10);
+
+  // Central antenna spire
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-4, -64, 8, 56);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -68, 5);
+  // Crossbar
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-20, -52, 40, 4);
+
+  // Twin lateral guns
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-90, 8, 30, 10);
+  g.fillRect(60, 8, 30, 10);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-94, 6, 6, 14);
+  g.fillRect(88, 6, 6, 14);
+
+  c.add(g);
+  return c;
+}
+
+export function drawTinkerHawk(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 20);
+  const g = scene.add.graphics();
+
+  // Hover glow
+  g.fillStyle(COLORS.steam, 0.18);
+  g.fillEllipse(0, 80, 90, 16);
+
+  // Wings spread wide
+  g.fillStyle(COLORS.brassDim);
+  g.fillTriangle(-90, 0, -20, -10, -20, 20);
+  g.fillTriangle(90, 0, 20, -10, 20, 20);
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-82, 0, -28, -4, -28, 14);
+  g.fillTriangle(82, 0, 28, -4, 28, 14);
+
+  // Streamlined body
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-22, -16, 44, 50);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-18, -12, 36, 14);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-12, -8, 24, 4);
+
+  // Beak/nose
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-14, 34, 14, 34, 0, 54);
+  g.fillStyle(COLORS.danger);
+  g.fillTriangle(-8, 38, 8, 38, 0, 48);
+
+  // Talons
+  g.fillStyle(COLORS.boneDim);
+  g.fillTriangle(-16, 50, -10, 50, -13, 62);
+  g.fillTriangle(10, 50, 16, 50, 13, 62);
+
+  c.add(g);
+
+  // Idle hover bob
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 5,
+    duration: 900,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 export function drawSlagWalker(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
@@ -467,6 +616,9 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
   sentinelDrone: drawSentinelDrone,
+  rustSprayer: drawRustSprayer,
+  pylonCrawler: drawPylonCrawler,
+  tinkerHawk: drawTinkerHawk,
   slagWalker: drawSlagWalker,
   ironReclaimer: drawIronReclaimer,
   foundryTyrant: drawFoundryTyrant

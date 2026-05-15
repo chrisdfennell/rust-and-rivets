@@ -47,7 +47,10 @@ export function createCombatState(
     draw: shuffle(persistent.deck.map(instance)),
     hand: [],
     discard: [],
-    exhaust: []
+    exhaust: [],
+    firstAttackBonus: 0,
+    firstCardFree: false,
+    cardsPlayedThisTurn: 0
   };
 
   const enemy = makeEnemy(enemyDef, 1);
@@ -57,7 +60,8 @@ export function createCombatState(
     turn: 1,
     player,
     enemy,
-    log: [`A ${enemy.def.name} blocks the road.`]
+    log: [`A ${enemy.def.name} blocks the road.`],
+    relicIds: relicIds.slice()
   };
 
   startPlayerTurn(state);
@@ -91,7 +95,7 @@ function ctx(state: CombatState): ResolveCtx {
   return { state, log: (m) => logTo(state, m) };
 }
 
-function drawCards(state: CombatState, n: number) {
+export function drawCards(state: CombatState, n: number) {
   const p = state.player;
   for (let i = 0; i < n; i++) {
     if (p.draw.length === 0) {
@@ -108,16 +112,27 @@ function startPlayerTurn(state: CombatState) {
   const p = state.player;
   p.steam = p.maxSteam;
   p.plating = 0;
+  p.firstAttackBonus = 0;
+  p.firstCardFree = false;
+  p.cardsPlayedThisTurn = 0;
   drawCards(state, 5);
   state.phase = 'playerTurn';
   logTo(state, `— Turn ${state.turn} —`);
+  // Relic onTurnStart hooks may grant first-attack bonus, free first card, draw extra cards, heal, etc.
+  for (const id of state.relicIds) RELICS[id]?.onTurnStart?.(state);
 }
 
 export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
   const e = c.state.enemy;
+  const p = c.state.player;
   let dmg = raw;
+  // Brass Knuckles / first-attack bonus applies to the first damaging hit each turn
+  if (p.firstAttackBonus > 0) {
+    dmg += p.firstAttackBonus;
+    p.firstAttackBonus = 0;
+  }
   if (e.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
-  if (c.state.player.weak > 0) dmg = Math.floor(dmg * 0.75);
+  if (p.weak > 0) dmg = Math.floor(dmg * 0.75);
   const absorbed = Math.min(e.plating, dmg);
   e.plating -= absorbed;
   const through = dmg - absorbed;
@@ -193,14 +208,48 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       if (healed > 0) logTo(state, `Repair systems restore ${healed} hull.`);
       break;
     }
+    case 'loseHull': {
+      // Self-damage bypasses plating
+      const p = state.player;
+      p.hull = Math.max(0, p.hull - eff.amount);
+      logTo(state, `You strain the mech for ${eff.amount} hull.`);
+      if (p.hull <= 0) {
+        state.phase = 'defeat';
+        logTo(state, 'Your mech goes dark.');
+      }
+      break;
+    }
+    case 'damageIfEnemyPlated': {
+      if (state.enemy.plating > 0) {
+        dealDamageToEnemy(ctx(state), eff.amount);
+      }
+      break;
+    }
+    case 'damageEqualToPlating': {
+      const dmg = state.player.plating + eff.bonus;
+      dealDamageToEnemy(ctx(state), dmg);
+      break;
+    }
+    case 'losePlating': {
+      const lost = state.player.plating;
+      state.player.plating = 0;
+      if (lost > 0) logTo(state, `Vented ${lost} plating.`);
+      break;
+    }
   }
+}
+
+function effectiveCost(state: CombatState, baseCost: number): number {
+  const p = state.player;
+  if (p.firstCardFree && p.cardsPlayedThisTurn === 0) return 0;
+  return baseCost;
 }
 
 export function canPlay(state: CombatState, uid: number): boolean {
   if (state.phase !== 'playerTurn') return false;
   const card = state.player.hand.find((c) => c.uid === uid);
   if (!card) return false;
-  return state.player.steam >= card.def.cost;
+  return state.player.steam >= effectiveCost(state, card.def.cost);
 }
 
 export function playCard(state: CombatState, uid: number): boolean {
@@ -209,12 +258,21 @@ export function playCard(state: CombatState, uid: number): boolean {
   const idx = p.hand.findIndex((c) => c.uid === uid);
   if (idx < 0) return false;
   const card = p.hand[idx];
-  p.steam -= card.def.cost;
+  const cost = effectiveCost(state, card.def.cost);
+  p.steam -= cost;
+  if (p.firstCardFree && p.cardsPlayedThisTurn === 0) p.firstCardFree = false;
   p.hand.splice(idx, 1);
 
   for (const eff of card.def.effects) {
     applyEffect(state, eff);
     if (state.phase === 'victory' || state.phase === 'defeat') break;
+  }
+
+  const indexInTurn = p.cardsPlayedThisTurn;
+  p.cardsPlayedThisTurn += 1;
+  // Relic onCardPlayed hooks run after effects so they can react to the played card
+  if (state.phase === 'playerTurn') {
+    for (const id of state.relicIds) RELICS[id]?.onCardPlayed?.(state, card.def, indexInTurn);
   }
 
   if (card.def.exhaust) p.exhaust.push(card);

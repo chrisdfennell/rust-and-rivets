@@ -9,7 +9,11 @@ export type CardEffect =
   | { kind: 'gainSteam'; amount: number }
   | { kind: 'applyVulnerable'; amount: number }
   | { kind: 'applyWeak'; amount: number }
-  | { kind: 'heal'; amount: number };
+  | { kind: 'heal'; amount: number }
+  | { kind: 'loseHull'; amount: number }
+  | { kind: 'damageIfEnemyPlated'; amount: number }
+  | { kind: 'damageEqualToPlating'; bonus: number }
+  | { kind: 'losePlating' };
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 
@@ -80,6 +84,9 @@ export interface PlayerState extends Combatant {
   hand: CardInstance[];
   discard: CardInstance[];
   exhaust: CardInstance[];
+  firstAttackBonus: number;
+  firstCardFree: boolean;
+  cardsPlayedThisTurn: number;
 }
 
 export interface PersistentPlayer {
@@ -96,6 +103,7 @@ export interface CombatState {
   player: PlayerState;
   enemy: EnemyState;
   log: string[];
+  relicIds: string[];
 }
 
 export interface ResolveCtx {
