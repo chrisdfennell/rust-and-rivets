@@ -383,14 +383,17 @@ export class CombatScene extends Phaser.Scene {
       d.view.beginDrag();
     }
     d.view.setDragPos(pointer.x, pointer.y);
-    // Highlight whichever drop zone the pointer is over (only matters for
-    // enemy-target cards; self/none cards just dim the highlights).
+    // Highlight drop zones based on card target:
+    //   'enemy'      → only the hovered enemy glows
+    //   'allEnemies' → every alive enemy glows (visual confirmation it's AoE)
+    //   'self'/'none'→ no glow
     const idx = this.enemyIndexAt(pointer.x, pointer.y);
     const isEnemyCard = d.card.def.target === 'enemy';
+    const isAoeCard = d.card.def.target === 'allEnemies';
     for (let i = 0; i < this.enemyUIs.length; i++) {
       const ui = this.enemyUIs[i];
       const alive = this.state.enemies[i].hull > 0;
-      const on = isEnemyCard && alive && i === idx;
+      const on = (isEnemyCard && alive && i === idx) || (isAoeCard && alive);
       ui.highlight.setStrokeStyle(3, COLORS.danger, on ? 1 : 0);
       ui.highlight.setFillStyle(COLORS.danger, on ? 0.12 : 0);
     }
@@ -503,6 +506,13 @@ export class CombatScene extends Phaser.Scene {
     this.emitDeltas(pre);
     if (card.def.target === 'enemy' && targetIndex !== undefined && this.enemyUIs[targetIndex]) {
       this.shake(this.enemyUIs[targetIndex].sprite, 6);
+    } else if (card.def.target === 'allEnemies') {
+      for (let i = 0; i < this.state.enemies.length; i++) {
+        // Use prev snapshot so we still shake an enemy that just died this play.
+        if (pre.enemies[i] && pre.enemies[i].hull > 0 && this.enemyUIs[i]) {
+          this.shake(this.enemyUIs[i].sprite, 5);
+        }
+      }
     }
     this.flashSteam();
     this.refresh();

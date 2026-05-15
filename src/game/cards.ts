@@ -128,7 +128,28 @@ export const CARDS: Record<string, CardDef> = {
   ironWill: card('ironWill', 'Iron Will', 2, 'self', 'Gain 2 Strength. Gain 2 Dexterity. Exhaust.',
     [{ kind: 'gainStrength', amount: 2 }, { kind: 'gainDexterity', amount: 2 }], true, 'rare'),
   'ironWill+': card('ironWill+', 'Iron Will+', 2, 'self', 'Gain 3 Strength. Gain 3 Dexterity. Exhaust.',
-    [{ kind: 'gainStrength', amount: 3 }, { kind: 'gainDexterity', amount: 3 }], true, 'rare')
+    [{ kind: 'gainStrength', amount: 3 }, { kind: 'gainDexterity', amount: 3 }], true, 'rare'),
+
+  // ===== Slice 22: AoE cards (target: 'allEnemies') =====
+  shrapnelBurst: card('shrapnelBurst', 'Shrapnel Burst', 1, 'allEnemies', 'Deal 6 damage to ALL enemies.',
+    [{ kind: 'damageAll', amount: 6 }], false, 'uncommon'),
+  'shrapnelBurst+': card('shrapnelBurst+', 'Shrapnel Burst+', 1, 'allEnemies', 'Deal 9 damage to ALL enemies.',
+    [{ kind: 'damageAll', amount: 9 }], false, 'uncommon'),
+
+  forgeWave: card('forgeWave', 'Forge Wave', 2, 'allEnemies', 'Deal 10 damage to ALL enemies. Apply 1 Vulnerable to all.',
+    [{ kind: 'damageAll', amount: 10 }, { kind: 'applyVulnerableAll', amount: 1 }], false, 'rare'),
+  'forgeWave+': card('forgeWave+', 'Forge Wave+', 2, 'allEnemies', 'Deal 13 damage to ALL enemies. Apply 2 Vulnerable to all.',
+    [{ kind: 'damageAll', amount: 13 }, { kind: 'applyVulnerableAll', amount: 2 }], false, 'rare'),
+
+  acidMist: card('acidMist', 'Acid Mist', 1, 'allEnemies', 'Apply 4 Burn to ALL enemies.',
+    [{ kind: 'applyBurnAll', amount: 4 }], false, 'uncommon'),
+  'acidMist+': card('acidMist+', 'Acid Mist+', 1, 'allEnemies', 'Apply 6 Burn to ALL enemies.',
+    [{ kind: 'applyBurnAll', amount: 6 }], false, 'uncommon'),
+
+  concussion: card('concussion', 'Concussion', 1, 'allEnemies', 'Deal 4 damage to ALL enemies. Apply 1 Weak to all.',
+    [{ kind: 'damageAll', amount: 4 }, { kind: 'applyWeakAll', amount: 1 }], false, 'common'),
+  'concussion+': card('concussion+', 'Concussion+', 1, 'allEnemies', 'Deal 6 damage to ALL enemies. Apply 2 Weak to all.',
+    [{ kind: 'damageAll', amount: 6 }, { kind: 'applyWeakAll', amount: 2 }], false, 'common')
 };
 
 export const STARTER_DECK: string[] = [
@@ -143,7 +164,8 @@ export const SHOP_POOL: string[] = [
   'counterStrike', 'hammerStrike', 'drillBit', 'sledgehammer',
   'steamSurge', 'pressureBurst',
   'battleForge', 'bufferPlate', 'pyroCharge', 'cinderRound',
-  'spikePlating', 'ironWill'
+  'spikePlating', 'ironWill',
+  'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion'
 ];
 
 export function isUpgradable(cardId: string): boolean {

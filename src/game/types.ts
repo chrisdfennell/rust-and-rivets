@@ -1,6 +1,6 @@
 export type CardId = string;
 
-export type Target = 'enemy' | 'self' | 'none';
+export type Target = 'enemy' | 'self' | 'none' | 'allEnemies';
 
 export type CardEffect =
   | { kind: 'damage'; amount: number }
@@ -17,7 +17,11 @@ export type CardEffect =
   | { kind: 'gainStrength'; amount: number }
   | { kind: 'gainDexterity'; amount: number }
   | { kind: 'gainThorns'; amount: number }
-  | { kind: 'applyBurn'; amount: number };
+  | { kind: 'applyBurn'; amount: number }
+  | { kind: 'damageAll'; amount: number }
+  | { kind: 'applyVulnerableAll'; amount: number }
+  | { kind: 'applyWeakAll'; amount: number }
+  | { kind: 'applyBurnAll'; amount: number };
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 

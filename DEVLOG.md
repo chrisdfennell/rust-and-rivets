@@ -83,7 +83,47 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 21 — Multi-enemy combat + click-drag targeting *(current)*
+### Slice 22 — AoE cards *(current)*
+Multi-enemy fights now have a counterplay: cards that hit every enemy
+at once. Four new cards, four new effect kinds, and a `target:
+'allEnemies'` shape that bypasses the drag-to-target flow.
+
+**Engine**
+- New `Target` shape: `'allEnemies'`. Joins `enemy / self / none`.
+- New `CardEffect` kinds: `damageAll`, `applyVulnerableAll`,
+  `applyWeakAll`, `applyBurnAll`. Each iterates `state.enemies` and
+  skips already-dead targets.
+- `damageAll` calls the existing `dealDamageToEnemy(c, raw, i)` per
+  enemy, so Strength, per-target Vulnerable multipliers, Brass
+  Knuckles (consumes once on the first hit), and player Thorns
+  retaliation all flow through correctly. The handler bails early
+  if the player goes down to retaliation mid-sweep.
+- Status-applying AoE effects (`applyVulnerableAll` etc.) increment
+  each enemy's counter directly — they're cheap and don't trigger
+  any retaliation logic.
+
+**Cards** (4 new + upgrades, all enter `SHOP_POOL`)
+- **Shrapnel Burst** (1c uncommon) — Deal 6 damage to ALL (9+)
+- **Forge Wave** (2c rare) — Deal 10 damage to ALL. Apply 1 Vuln
+  to all (13/2+)
+- **Acid Mist** (1c uncommon) — Apply 4 Burn to ALL (6+)
+- **Concussion** (1c common) — Deal 4 damage to ALL. Apply 1 Weak
+  to all (6/2+)
+
+**UI**
+- AoE cards play on click (no specific target needed). The drag
+  pipeline still accepts them — release anywhere triggers the play.
+- While dragging an AoE card, every alive enemy's drop-zone glows
+  red (vs. just the hovered one for single-target cards). Visual
+  confirmation that the card is going to land on all of them.
+- `applyCardPlay` shakes every-enemy-that-was-alive sprite when the
+  card resolves. Dying enemies still shake on the killing blow
+  because the shake reads from the pre-snapshot.
+- Floating damage numbers and hit rings on each enemy come for
+  free — `emitDeltas` already diffs the full enemies array per
+  card play.
+
+### Slice 21 — Multi-enemy combat + click-drag targeting
 Combat is no longer 1v1. Regular and elite rooms can now spawn 2-enemy
 encounters, and enemy-target cards are played by dragging them onto the
 specific enemy you want to hit.

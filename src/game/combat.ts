@@ -367,6 +367,42 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       }
       break;
     }
+    case 'damageAll': {
+      // Hit each alive enemy. Player Thorns retaliation could kill us mid-sweep;
+      // bail early if we go down. firstAttackBonus only triggers on the first
+      // damaging hit because dealDamageToEnemy consumes it once.
+      for (let i = 0; i < state.enemies.length; i++) {
+        if (!isAlive(state.enemies[i])) continue;
+        dealDamageToEnemy(c, eff.amount, i);
+        const phaseNow: string = state.phase;
+        if (phaseNow === 'defeat') break;
+      }
+      break;
+    }
+    case 'applyVulnerableAll': {
+      for (const e of state.enemies) {
+        if (!isAlive(e)) continue;
+        e.vulnerable += eff.amount;
+      }
+      logTo(state, `All foes Vulnerable (+${eff.amount}).`);
+      break;
+    }
+    case 'applyWeakAll': {
+      for (const e of state.enemies) {
+        if (!isAlive(e)) continue;
+        e.weak += eff.amount;
+      }
+      logTo(state, `All foes Weak (+${eff.amount}).`);
+      break;
+    }
+    case 'applyBurnAll': {
+      for (const e of state.enemies) {
+        if (!isAlive(e)) continue;
+        e.burn += eff.amount;
+      }
+      logTo(state, `All foes Burning (+${eff.amount}).`);
+      break;
+    }
   }
 }
 
