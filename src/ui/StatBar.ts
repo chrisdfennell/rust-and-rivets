@@ -50,7 +50,17 @@ export class StatBar extends Phaser.GameObjects.Container {
     this.add([this.bg, this.fill, this.label, this.platingBadge, this.statusText]);
   }
 
-  update(hull: number, max: number, plating: number, vulnerable: number, weak: number) {
+  update(
+    hull: number,
+    max: number,
+    plating: number,
+    vulnerable: number,
+    weak: number,
+    strength: number = 0,
+    dexterity: number = 0,
+    burn: number = 0,
+    thorns: number = 0
+  ) {
     const ratio = Math.max(0, hull / max);
     this.fill.width = (this.barWidth - 4) * ratio;
     this.label.setText(`${hull} / ${max}`);
@@ -63,6 +73,10 @@ export class StatBar extends Phaser.GameObjects.Container {
     const stat: string[] = [];
     if (vulnerable > 0) stat.push(`Vuln ${vulnerable}`);
     if (weak > 0) stat.push(`Weak ${weak}`);
+    if (burn > 0) stat.push(`Burn ${burn}`);
+    if (strength > 0) stat.push(`Str +${strength}`);
+    if (dexterity > 0) stat.push(`Dex +${dexterity}`);
+    if (thorns > 0) stat.push(`Thorns ${thorns}`);
     this.statusText.setText(stat.join('  '));
   }
 }

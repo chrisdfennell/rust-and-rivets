@@ -127,6 +127,36 @@ const SLAG_WRENCH: Relic = {
   }
 };
 
+const POWER_CELL: Relic = {
+  id: 'powerCell',
+  name: 'Power Cell',
+  description: 'Start each combat with 1 Strength.',
+  onCombatStart: (state) => {
+    state.player.strength += 1;
+    state.log.push('Power Cell: +1 Strength.');
+  }
+};
+
+const BUFFER_COIL: Relic = {
+  id: 'bufferCoil',
+  name: 'Buffer Coil',
+  description: 'Start each combat with 1 Dexterity.',
+  onCombatStart: (state) => {
+    state.player.dexterity += 1;
+    state.log.push('Buffer Coil: +1 Dexterity.');
+  }
+};
+
+const SPIKE_MANTLE: Relic = {
+  id: 'spikeMantle',
+  name: 'Spike Mantle',
+  description: 'Start each combat with 3 Thorns.',
+  onCombatStart: (state) => {
+    state.player.thorns += 3;
+    state.log.push('Spike Mantle: +3 Thorns.');
+  }
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
@@ -139,7 +169,10 @@ export const RELICS: Record<string, Relic> = {
   [QUICKDRAW_SPRING.id]: QUICKDRAW_SPRING,
   [IRON_RESOLVE.id]: IRON_RESOLVE,
   [PNEUMATIC_STRIKE.id]: PNEUMATIC_STRIKE,
-  [SLAG_WRENCH.id]: SLAG_WRENCH
+  [SLAG_WRENCH.id]: SLAG_WRENCH,
+  [POWER_CELL.id]: POWER_CELL,
+  [BUFFER_COIL.id]: BUFFER_COIL,
+  [SPIKE_MANTLE.id]: SPIKE_MANTLE
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);

@@ -42,6 +42,10 @@ export function createCombatState(
     plating: 0,
     vulnerable: 0,
     weak: 0,
+    strength: 0,
+    dexterity: 0,
+    burn: 0,
+    thorns: 0,
     steam: 0,
     maxSteam: 3,
     draw: shuffle(persistent.deck.map(instance)),
@@ -81,6 +85,10 @@ function makeEnemy(def: EnemyDef, turn: number) {
     plating: 0,
     vulnerable: 0,
     weak: 0,
+    strength: 0,
+    dexterity: 0,
+    burn: 0,
+    thorns: 0,
     nextAction: action,
     memory
   };
@@ -125,7 +133,7 @@ function startPlayerTurn(state: CombatState) {
 export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
   const e = c.state.enemy;
   const p = c.state.player;
-  let dmg = raw;
+  let dmg = raw + (p.strength > 0 ? p.strength : 0);
   // Brass Knuckles / first-attack bonus applies to the first damaging hit each turn
   if (p.firstAttackBonus > 0) {
     dmg += p.firstAttackBonus;
@@ -142,13 +150,27 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number) {
   if (e.hull <= 0) {
     c.state.phase = 'victory';
     c.log(`${e.def.name} collapses into scrap.`);
+    return;
+  }
+  // Thorns: every attack against an enemy with thorns lashes back at the player
+  // (bypasses player plating, classic Slay-the-Spire convention).
+  if (e.thorns > 0) {
+    const back = e.thorns;
+    p.hull = Math.max(0, p.hull - back);
+    c.log(`Thorns lash back for ${back}.`);
+    if (p.hull <= 0) {
+      c.state.phase = 'defeat';
+      c.log('Your mech goes dark.');
+    }
   }
 }
 
 export function dealDamageToPlayer(c: ResolveCtx, raw: number) {
   const p = c.state.player;
-  let dmg = raw;
+  const e = c.state.enemy;
+  let dmg = raw + (e.strength > 0 ? e.strength : 0);
   if (p.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
+  if (e.weak > 0) dmg = Math.floor(dmg * 0.75);
   const absorbed = Math.min(p.plating, dmg);
   p.plating -= absorbed;
   const through = dmg - absorbed;
@@ -158,6 +180,17 @@ export function dealDamageToPlayer(c: ResolveCtx, raw: number) {
   if (p.hull <= 0) {
     c.state.phase = 'defeat';
     c.log('Your mech goes dark.');
+    return;
+  }
+  // Thorns on the player retaliate against the attacking enemy (bypasses plating).
+  if (p.thorns > 0) {
+    const back = p.thorns;
+    e.hull = Math.max(0, e.hull - back);
+    c.log(`Spikes punish ${e.def.name} for ${back}.`);
+    if (e.hull <= 0) {
+      c.state.phase = 'victory';
+      c.log(`${e.def.name} collapses into scrap.`);
+    }
   }
 }
 
@@ -176,16 +209,24 @@ export function applyWeakToPlayer(c: ResolveCtx, n: number) {
   c.log(`You are Weak (${n}).`);
 }
 
+export function applyBurnToPlayer(c: ResolveCtx, n: number) {
+  c.state.player.burn += n;
+  c.log(`You are Burning (${c.state.player.burn}).`);
+}
+
 function applyEffect(state: CombatState, eff: CardEffect) {
   const c = ctx(state);
   switch (eff.kind) {
     case 'damage':
       dealDamageToEnemy(c, eff.amount);
       break;
-    case 'plating':
-      state.player.plating += eff.amount;
-      logTo(state, `Reinforce plating (+${eff.amount}).`);
+    case 'plating': {
+      const bonus = state.player.dexterity > 0 ? state.player.dexterity : 0;
+      const gained = eff.amount + bonus;
+      state.player.plating += gained;
+      logTo(state, `Reinforce plating (+${gained}).`);
       break;
+    }
     case 'draw':
       drawCards(state, eff.amount);
       break;
@@ -234,6 +275,26 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       const lost = state.player.plating;
       state.player.plating = 0;
       if (lost > 0) logTo(state, `Vented ${lost} plating.`);
+      break;
+    }
+    case 'gainStrength': {
+      state.player.strength += eff.amount;
+      logTo(state, `Gain ${eff.amount} Strength.`);
+      break;
+    }
+    case 'gainDexterity': {
+      state.player.dexterity += eff.amount;
+      logTo(state, `Gain ${eff.amount} Dexterity.`);
+      break;
+    }
+    case 'gainThorns': {
+      state.player.thorns += eff.amount;
+      logTo(state, `Gain ${eff.amount} Thorns.`);
+      break;
+    }
+    case 'applyBurn': {
+      state.enemy.burn += eff.amount;
+      logTo(state, `${state.enemy.def.name} is Burning (${state.enemy.burn}).`);
       break;
     }
   }
@@ -292,6 +353,18 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   const p = state.player;
   while (p.hand.length > 0) p.discard.push(p.hand.pop()!);
 
+  // Burn ticks at the end of the owner's turn, before debuff decay. Bypasses plating.
+  if (p.burn > 0) {
+    const tick = p.burn;
+    p.hull = Math.max(0, p.hull - tick);
+    logTo(state, `Burn sears you for ${tick}.`);
+    p.burn--;
+    if (p.hull <= 0) {
+      state.phase = 'defeat';
+      logTo(state, 'Your mech goes dark.');
+      return;
+    }
+  }
   // Decay player debuffs at end of player's own turn
   if (p.vulnerable > 0) p.vulnerable--;
   if (p.weak > 0) p.weak--;
@@ -299,12 +372,24 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   state.phase = 'enemyTurn';
   const c = ctx(state);
   state.enemy.nextAction.resolve(c);
+  const e = state.enemy;
+  // Tick enemy burn before the visual delta callback so it shows up as part of "the turn".
+  const phaseAfterEnemyAction: string = state.phase;
+  if (phaseAfterEnemyAction !== 'defeat' && phaseAfterEnemyAction !== 'victory' && e.burn > 0) {
+    const tick = e.burn;
+    e.hull = Math.max(0, e.hull - tick);
+    logTo(state, `Burn sears ${e.def.name} for ${tick}.`);
+    e.burn--;
+    if (e.hull <= 0) {
+      state.phase = 'victory';
+      logTo(state, `${e.def.name} collapses into scrap.`);
+    }
+  }
   hooks?.afterEnemyResolve?.();
   const phase: string = state.phase;
   if (phase === 'defeat' || phase === 'victory') return;
 
   // Decay enemy debuffs at end of enemy's own turn
-  const e = state.enemy;
   if (e.vulnerable > 0) e.vulnerable--;
   if (e.weak > 0) e.weak--;
 

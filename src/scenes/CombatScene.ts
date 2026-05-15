@@ -438,8 +438,16 @@ export class CombatScene extends Phaser.Scene {
 
   private refresh() {
     const s = this.state;
-    this.playerBar.update(s.player.hull, s.player.maxHull, s.player.plating, s.player.vulnerable, s.player.weak);
-    this.enemyBar.update(s.enemy.hull, s.enemy.maxHull, s.enemy.plating, s.enemy.vulnerable, s.enemy.weak);
+    this.playerBar.update(
+      s.player.hull, s.player.maxHull, s.player.plating,
+      s.player.vulnerable, s.player.weak,
+      s.player.strength, s.player.dexterity, s.player.burn, s.player.thorns
+    );
+    this.enemyBar.update(
+      s.enemy.hull, s.enemy.maxHull, s.enemy.plating,
+      s.enemy.vulnerable, s.enemy.weak,
+      s.enemy.strength, s.enemy.dexterity, s.enemy.burn, s.enemy.thorns
+    );
     this.intent.update(s.enemy.nextAction.intent);
     this.steamLabel.setText(`${s.player.steam}/${s.player.maxSteam}`);
     this.turnText.setText(`TURN ${s.turn}`);

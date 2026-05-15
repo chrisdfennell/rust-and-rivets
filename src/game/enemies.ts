@@ -3,7 +3,8 @@ import {
   dealDamageToPlayer,
   gainEnemyPlating,
   applyVulnerableToPlayer,
-  applyWeakToPlayer
+  applyWeakToPlayer,
+  applyBurnToPlayer
 } from './combat';
 
 export const SCRAP_RAIDER: EnemyDef = {
@@ -791,7 +792,17 @@ export const LIGHTNING_SPRITE: EnemyDef = {
         }
       };
     }
-    if (!last.startsWith('Surge') && roll < 0.65) {
+    if (!last.startsWith('Ignite') && roll < 0.5) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Ignite: ${dmg} + Burn 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (!last.startsWith('Surge') && roll < 0.7) {
       const dmg = 5;
       return {
         intent: { kind: 'attack', label: `Surge: ${dmg}x3`, damage: dmg, hits: 3 },

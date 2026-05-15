@@ -13,7 +13,11 @@ export type CardEffect =
   | { kind: 'loseHull'; amount: number }
   | { kind: 'damageIfEnemyPlated'; amount: number }
   | { kind: 'damageEqualToPlating'; bonus: number }
-  | { kind: 'losePlating' };
+  | { kind: 'losePlating' }
+  | { kind: 'gainStrength'; amount: number }
+  | { kind: 'gainDexterity'; amount: number }
+  | { kind: 'gainThorns'; amount: number }
+  | { kind: 'applyBurn'; amount: number };
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 
@@ -68,6 +72,10 @@ export interface Combatant {
   plating: number;
   vulnerable: number;
   weak: number;
+  strength: number;
+  dexterity: number;
+  burn: number;
+  thorns: number;
 }
 
 export interface EnemyState extends Combatant {

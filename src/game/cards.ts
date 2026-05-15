@@ -97,7 +97,38 @@ export const CARDS: Record<string, CardDef> = {
   pressureBurst: card('pressureBurst', 'Pressure Burst', 2, 'enemy', 'Deal damage equal to your Plating. Lose all Plating.',
     [{ kind: 'damageEqualToPlating', bonus: 0 }, { kind: 'losePlating' }], false, 'rare'),
   'pressureBurst+': card('pressureBurst+', 'Pressure Burst+', 2, 'enemy', 'Deal damage equal to your Plating + 4. Lose all Plating.',
-    [{ kind: 'damageEqualToPlating', bonus: 4 }, { kind: 'losePlating' }], false, 'rare')
+    [{ kind: 'damageEqualToPlating', bonus: 4 }, { kind: 'losePlating' }], false, 'rare'),
+
+  // ===== Slice 20: status-effect cards =====
+  battleForge: card('battleForge', 'Battle Forge', 1, 'self', 'Gain 2 Strength. Exhaust.',
+    [{ kind: 'gainStrength', amount: 2 }], true, 'uncommon'),
+  'battleForge+': card('battleForge+', 'Battle Forge+', 1, 'self', 'Gain 3 Strength. Exhaust.',
+    [{ kind: 'gainStrength', amount: 3 }], true, 'uncommon'),
+
+  bufferPlate: card('bufferPlate', 'Buffer Plate', 1, 'self', 'Gain 2 Dexterity. Exhaust.',
+    [{ kind: 'gainDexterity', amount: 2 }], true, 'uncommon'),
+  'bufferPlate+': card('bufferPlate+', 'Buffer Plate+', 1, 'self', 'Gain 3 Dexterity. Exhaust.',
+    [{ kind: 'gainDexterity', amount: 3 }], true, 'uncommon'),
+
+  pyroCharge: card('pyroCharge', 'Pyro Charge', 1, 'enemy', 'Deal 4 damage. Apply 4 Burn.',
+    [{ kind: 'damage', amount: 4 }, { kind: 'applyBurn', amount: 4 }], false, 'uncommon'),
+  'pyroCharge+': card('pyroCharge+', 'Pyro Charge+', 1, 'enemy', 'Deal 5 damage. Apply 6 Burn.',
+    [{ kind: 'damage', amount: 5 }, { kind: 'applyBurn', amount: 6 }], false, 'uncommon'),
+
+  cinderRound: card('cinderRound', 'Cinder Round', 2, 'enemy', 'Deal 8 damage. Apply 8 Burn. Exhaust.',
+    [{ kind: 'damage', amount: 8 }, { kind: 'applyBurn', amount: 8 }], true, 'rare'),
+  'cinderRound+': card('cinderRound+', 'Cinder Round+', 2, 'enemy', 'Deal 10 damage. Apply 11 Burn. Exhaust.',
+    [{ kind: 'damage', amount: 10 }, { kind: 'applyBurn', amount: 11 }], true, 'rare'),
+
+  spikePlating: card('spikePlating', 'Spike Plating', 1, 'self', 'Gain 4 Plating. Gain 3 Thorns.',
+    [{ kind: 'plating', amount: 4 }, { kind: 'gainThorns', amount: 3 }], false, 'common'),
+  'spikePlating+': card('spikePlating+', 'Spike Plating+', 1, 'self', 'Gain 6 Plating. Gain 4 Thorns.',
+    [{ kind: 'plating', amount: 6 }, { kind: 'gainThorns', amount: 4 }], false, 'common'),
+
+  ironWill: card('ironWill', 'Iron Will', 2, 'self', 'Gain 2 Strength. Gain 2 Dexterity. Exhaust.',
+    [{ kind: 'gainStrength', amount: 2 }, { kind: 'gainDexterity', amount: 2 }], true, 'rare'),
+  'ironWill+': card('ironWill+', 'Iron Will+', 2, 'self', 'Gain 3 Strength. Gain 3 Dexterity. Exhaust.',
+    [{ kind: 'gainStrength', amount: 3 }, { kind: 'gainDexterity', amount: 3 }], true, 'rare')
 };
 
 export const STARTER_DECK: string[] = [
@@ -110,7 +141,9 @@ export const SHOP_POOL: string[] = [
   'ironHail', 'bulwark', 'recalibrate', 'overdrive',
   'hydraulicPunch', 'steamLance', 'repairDrone', 'smokeScreen',
   'counterStrike', 'hammerStrike', 'drillBit', 'sledgehammer',
-  'steamSurge', 'pressureBurst'
+  'steamSurge', 'pressureBurst',
+  'battleForge', 'bufferPlate', 'pyroCharge', 'cinderRound',
+  'spikePlating', 'ironWill'
 ];
 
 export function isUpgradable(cardId: string): boolean {

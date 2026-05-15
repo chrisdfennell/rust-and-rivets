@@ -83,7 +83,54 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 19 — Act 3: Above the Cloudline *(current)*
+### Slice 20 — Status effects: Strength / Dexterity / Burn / Thorns *(current)*
+Four new keyword statuses, plus the cards and relics that exercise them.
+
+**Engine**
+- `Combatant` gained `strength`, `dexterity`, `burn`, `thorns` fields.
+- New `CardEffect` kinds: `gainStrength`, `gainDexterity`, `gainThorns`,
+  `applyBurn`.
+- **Strength** — adds flat damage to every player attack (inside
+  `dealDamageToEnemy`, before Vuln/Weak multipliers). Permanent within
+  combat.
+- **Dexterity** — adds flat plating to every player plating gain (inside
+  the `plating` effect handler). Permanent within combat.
+- **Burn** — at end of owner's turn, owner takes `burn` hull damage
+  (bypasses plating), then `burn--`. Lives on both sides.
+- **Thorns** — when bearer takes attack damage, attacker takes `thorns`
+  hull damage (bypasses plating). Permanent within combat. Retaliation
+  fires per damage instance, so multi-hit cards trigger thorns multiple
+  times.
+- Bug fix: enemy `Weak` was previously ignored in `dealDamageToPlayer`.
+  Player-applied Weak now correctly reduces the enemy's outgoing damage
+  by 25%, matching the Vuln-on-enemy symmetry.
+
+**Cards** (6 new + upgrades, all enter SHOP_POOL)
+- **Battle Forge** (1c uncommon, exhaust) — Gain 2 Strength (3+)
+- **Buffer Plate** (1c uncommon, exhaust) — Gain 2 Dexterity (3+)
+- **Pyro Charge** (1c uncommon) — Deal 4. Apply 4 Burn (5/6+)
+- **Cinder Round** (2c rare, exhaust) — Deal 8. Apply 8 Burn (10/11+)
+- **Spike Plating** (1c common) — Gain 4 Plating. Gain 3 Thorns (6/4+)
+- **Iron Will** (2c rare, exhaust) — Gain 2 Strength. Gain 2 Dexterity (3/3+)
+
+**Relics** (3 new — pool now 15)
+- **Power Cell** — start each combat with 1 Strength
+- **Buffer Coil** — start each combat with 1 Dexterity
+- **Spike Mantle** — start each combat with 3 Thorns
+
+**Enemy** — Lightning Sprite's Surge branch split: it now has an
+`Ignite: 5 + Burn 2` debuff variant so player Burn is exercised in real
+combat, not just hypothetical against itself.
+
+**UI** — `StatBar.update()` extended with strength/dex/burn/thorns
+parameters; status row below each side's hull bar can now read
+`Vuln 2  Weak 1  Burn 3  Str +2  Dex +1  Thorns 3`. Display order:
+debuffs first, then buffs.
+
+No save schema bump — none of the new fields persist outside a single
+`CombatState` instance.
+
+### Slice 19 — Act 3: Above the Cloudline
 The run loop now extends through a third and final act. Defeating
 the Iron Sovereign no longer ends the run — it transitions into
 **Above the Cloudline**, an airborne tier with sky-blue accents
