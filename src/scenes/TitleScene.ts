@@ -6,6 +6,7 @@ import {
 } from '../game/run';
 import { loadMeta, exportSaveString, importSaveString } from '../game/meta';
 import { Button } from '../ui/Button';
+import { preloadMusic, startMusic } from '../audio/music';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class TitleScene extends Phaser.Scene {
@@ -13,7 +14,12 @@ export class TitleScene extends Phaser.Scene {
     super('Title');
   }
 
+  preload() {
+    preloadMusic(this);
+  }
+
   create() {
+    startMusic(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 

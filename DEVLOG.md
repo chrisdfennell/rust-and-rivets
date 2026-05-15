@@ -83,7 +83,26 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 16 — Event nodes (?) *(current)*
+### Slice 17 — Ambient music *(current)*
+- `assets/industrial_ambiance.mp3` plays as a looping background track
+  from the title screen onward. Single instance owned by Phaser's
+  global SoundManager, so the loop survives scene transitions (title
+  → character select → combat → map → ...) without resetting.
+- New `src/audio/music.ts` exposes `preloadMusic(scene)` and
+  `startMusic(scene)`. TitleScene's new `preload()` queues the mp3
+  via Vite's asset-URL import; `create()` calls `startMusic(this)`
+  which is a one-shot — subsequent calls are no-ops.
+- Volume defaults to 0.32. `setMusicVolume(v)` and `isMusicMuted()`
+  helpers are in place for a future mute toggle / settings panel.
+- Browser autoplay policy: Phaser queues the play call until the
+  first user gesture (clicking any title button unlocks it). No
+  explicit handling needed.
+- New `src/types/assets.d.ts` declares `*.mp3`, `*.ogg`, `*.wav`
+  modules so TypeScript accepts the Vite asset imports.
+- File is ~13 MB. Works fine but adds noticeable first-load latency
+  on Pages; consider re-encoding to ~3-4 MB ogg if needed later.
+
+### Slice 16 — Event nodes (?)
 The map now has a fifth node kind: **event** (yellow `?` icon).
 Floor 1 gets ~12% events; mid floors get ~14%. Total combat density
 went down a touch to make room.
