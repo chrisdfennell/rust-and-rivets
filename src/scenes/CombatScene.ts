@@ -228,9 +228,11 @@ export class CombatScene extends Phaser.Scene {
 
   private onEndTurn() {
     if (this.state.phase !== 'playerTurn') return;
-    // If the player has steam left, require a second click to confirm.
-    // The pending state auto-clears after 2 seconds.
-    if (this.state.player.steam > 0 && !this.endTurnPending) {
+    // Require a second click to confirm only if the player has Steam left
+    // AND at least one card in hand is actually playable. If nothing can be
+    // played, the Steam is wasted no matter what — no point asking.
+    const canPlayAnything = this.state.player.hand.some((c) => canPlay(this.state, c.uid));
+    if (this.state.player.steam > 0 && canPlayAnything && !this.endTurnPending) {
       this.startEndTurnConfirm();
       return;
     }
