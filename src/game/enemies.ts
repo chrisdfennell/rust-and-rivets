@@ -125,6 +125,82 @@ export const SENTINEL_DRONE: EnemyDef = {
   }
 };
 
+export const SLAG_WALKER: EnemyDef = {
+  id: 'slagWalker',
+  name: 'Slag Walker',
+  maxHull: 52,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Heating Up: +8' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Heavy Slam') && roll < 0.35) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Heavy Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Sweep') && roll < 0.7) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Sweep: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Heating Up: +6' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 6)
+    };
+  }
+};
+
+export const IRON_RECLAIMER: EnemyDef = {
+  id: 'ironReclaimer',
+  name: 'Iron Reclaimer',
+  maxHull: 45,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'attack', label: `Bash: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Reinforce') && roll < 0.35) {
+      return {
+        intent: { kind: 'defend', label: 'Reinforce: +10' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 10)
+      };
+    }
+    if (!last.startsWith('Stagger') && roll < 0.6) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Stagger: ${dmg} + Weak` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const dmg = 11;
+    return {
+      intent: { kind: 'attack', label: `Hammer Down: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
 export const FOUNDRY_TYRANT: EnemyDef = {
   id: 'foundryTyrant',
   name: 'Foundry Tyrant',
@@ -179,14 +255,21 @@ export const FOUNDRY_TYRANT: EnemyDef = {
 };
 
 export const ACT1_POOL: EnemyDef[] = [SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE];
+export const ELITE_POOL: EnemyDef[] = [SLAG_WALKER, IRON_RECLAIMER];
 
 export function pickAct1Enemy(rng: () => number): EnemyDef {
   return ACT1_POOL[Math.floor(rng() * ACT1_POOL.length)];
+}
+
+export function pickEliteEnemy(rng: () => number): EnemyDef {
+  return ELITE_POOL[Math.floor(rng() * ELITE_POOL.length)];
 }
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [SCRAP_RAIDER.id]: SCRAP_RAIDER,
   [JUNK_HOUND.id]: JUNK_HOUND,
   [SENTINEL_DRONE.id]: SENTINEL_DRONE,
+  [SLAG_WALKER.id]: SLAG_WALKER,
+  [IRON_RECLAIMER.id]: IRON_RECLAIMER,
   [FOUNDRY_TYRANT.id]: FOUNDRY_TYRANT
 };

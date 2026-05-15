@@ -1,4 +1,4 @@
-export type NodeKind = 'combat' | 'shop' | 'rest' | 'boss';
+export type NodeKind = 'combat' | 'elite' | 'shop' | 'rest' | 'boss';
 
 export interface MapNode {
   id: string;
@@ -54,8 +54,8 @@ export function generateMap(rng: () => number = Math.random): MapData {
     connect(prev, boss);
   }
 
-  // Assign room kinds. Floor 0 = combat (entries). Pre-boss floor = rest (safety net).
-  // Middle floors = weighted random.
+  // Assign room kinds. Floor 0 = combat (entries). Pre-boss floor = rest.
+  // Floor 1 = combat-heavy. Floors 2..FLOORS-3 = full mix with elites.
   for (const node of nodes.values()) {
     if (node.kind === 'boss') continue;
     if (node.floor === 0) continue;
@@ -64,9 +64,17 @@ export function generateMap(rng: () => number = Math.random): MapData {
       continue;
     }
     const roll = rng();
-    if (roll < 0.18) node.kind = 'shop';
-    else if (roll < 0.34) node.kind = 'rest';
-    else node.kind = 'combat';
+    if (node.floor === 1) {
+      // Smoother opening: no elites here
+      if (roll < 0.15) node.kind = 'shop';
+      else if (roll < 0.30) node.kind = 'rest';
+      else node.kind = 'combat';
+    } else {
+      if (roll < 0.16) node.kind = 'elite';
+      else if (roll < 0.32) node.kind = 'shop';
+      else if (roll < 0.48) node.kind = 'rest';
+      else node.kind = 'combat';
+    }
   }
 
   const entryNodeIds = Array.from(nodes.values())

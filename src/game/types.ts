@@ -11,6 +11,8 @@ export type CardEffect =
   | { kind: 'applyWeak'; amount: number }
   | { kind: 'heal'; amount: number };
 
+export type CardRarity = 'common' | 'uncommon' | 'rare';
+
 export interface CardDef {
   id: CardId;
   name: string;
@@ -19,6 +21,7 @@ export interface CardDef {
   description: string;
   effects: CardEffect[];
   exhaust?: boolean;
+  rarity?: CardRarity;
 }
 
 export interface CardInstance {

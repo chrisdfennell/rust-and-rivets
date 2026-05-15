@@ -63,7 +63,7 @@ export class CombatScene extends Phaser.Scene {
       this.scene.start('Map');
       return;
     }
-    this.state = createCombatState(run.pendingEnemy, run.player);
+    this.state = createCombatState(run.pendingEnemy, run.player, run.relics);
 
     this.mech = drawMech(this, width * 0.28, height * 0.5);
     const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
@@ -249,21 +249,26 @@ export class CombatScene extends Phaser.Scene {
     if (s.phase === 'victory' && !this.endHandled) {
       this.endHandled = true;
       const reward = completeCombat(s.player.hull);
-      const rewardLine = reward > 0 ? ` +${reward} scrap salvaged.` : '';
-      this.showOverlay('VICTORY', `${s.enemy.def.name} falls.${rewardLine} Press SPACE to continue.`, COLORS.ok);
-      this.bindContinue();
+      const run = getRun();
+      const isBoss = run.result === 'victory';
+      const rewardLine = reward > 0 ? ` +${reward} scrap.` : '';
+      const continueLine = isBoss
+        ? 'Press SPACE to return to the road.'
+        : 'Press SPACE to claim rewards.';
+      this.showOverlay('VICTORY', `${s.enemy.def.name} falls.${rewardLine} ${continueLine}`, COLORS.ok);
+      this.bindContinue(isBoss ? 'Map' : 'Reward');
     } else if (s.phase === 'defeat' && !this.endHandled) {
       this.endHandled = true;
       failCombat(s.player.hull);
       this.showOverlay('DEFEAT', 'Your mech is scrap. Press SPACE to view the map.', COLORS.danger);
-      this.bindContinue();
+      this.bindContinue('Map');
     }
   }
 
-  private bindContinue() {
+  private bindContinue(nextScene: string) {
     if (!this.input.keyboard) return;
     this.input.keyboard.removeAllListeners('keydown-SPACE');
-    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Map'));
+    this.input.keyboard.once('keydown-SPACE', () => this.scene.start(nextScene));
   }
 
   private layoutHand() {

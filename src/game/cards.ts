@@ -1,4 +1,4 @@
-import type { CardDef } from './types';
+import type { CardDef, CardRarity } from './types';
 
 const card = (
   id: string,
@@ -7,8 +7,9 @@ const card = (
   target: CardDef['target'],
   description: string,
   effects: CardDef['effects'],
-  exhaust?: boolean
-): CardDef => ({ id, name, cost, target, description, effects, exhaust });
+  exhaust?: boolean,
+  rarity?: CardRarity
+): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity });
 
 export const CARDS: Record<string, CardDef> = {
   // ===== Starter =====
@@ -29,44 +30,44 @@ export const CARDS: Record<string, CardDef> = {
 
   // ===== Buyable =====
   ironHail: card('ironHail', 'Iron Hail', 1, 'enemy', 'Deal 8 damage.',
-    [{ kind: 'damage', amount: 8 }]),
+    [{ kind: 'damage', amount: 8 }], false, 'common'),
   'ironHail+': card('ironHail+', 'Iron Hail+', 1, 'enemy', 'Deal 11 damage.',
-    [{ kind: 'damage', amount: 11 }]),
+    [{ kind: 'damage', amount: 11 }], false, 'common'),
 
   bulwark: card('bulwark', 'Bulwark', 2, 'self', 'Gain 12 Plating.',
-    [{ kind: 'plating', amount: 12 }]),
+    [{ kind: 'plating', amount: 12 }], false, 'uncommon'),
   'bulwark+': card('bulwark+', 'Bulwark+', 2, 'self', 'Gain 16 Plating.',
-    [{ kind: 'plating', amount: 16 }]),
+    [{ kind: 'plating', amount: 16 }], false, 'uncommon'),
 
   recalibrate: card('recalibrate', 'Recalibrate', 1, 'none', 'Draw 2 cards.',
-    [{ kind: 'draw', amount: 2 }]),
+    [{ kind: 'draw', amount: 2 }], false, 'uncommon'),
   'recalibrate+': card('recalibrate+', 'Recalibrate+', 0, 'none', 'Draw 2 cards.',
-    [{ kind: 'draw', amount: 2 }]),
+    [{ kind: 'draw', amount: 2 }], false, 'uncommon'),
 
   overdrive: card('overdrive', 'Overdrive', 0, 'none', 'Gain 2 Steam. Exhaust.',
-    [{ kind: 'gainSteam', amount: 2 }], true),
+    [{ kind: 'gainSteam', amount: 2 }], true, 'uncommon'),
   'overdrive+': card('overdrive+', 'Overdrive+', 0, 'none', 'Gain 3 Steam. Exhaust.',
-    [{ kind: 'gainSteam', amount: 3 }], true),
+    [{ kind: 'gainSteam', amount: 3 }], true, 'uncommon'),
 
   hydraulicPunch: card('hydraulicPunch', 'Hydraulic Punch', 1, 'enemy', 'Deal 10 damage. Apply 1 Weak.',
-    [{ kind: 'damage', amount: 10 }, { kind: 'applyWeak', amount: 1 }]),
+    [{ kind: 'damage', amount: 10 }, { kind: 'applyWeak', amount: 1 }], false, 'uncommon'),
   'hydraulicPunch+': card('hydraulicPunch+', 'Hydraulic Punch+', 1, 'enemy', 'Deal 14 damage. Apply 2 Weak.',
-    [{ kind: 'damage', amount: 14 }, { kind: 'applyWeak', amount: 2 }]),
+    [{ kind: 'damage', amount: 14 }, { kind: 'applyWeak', amount: 2 }], false, 'uncommon'),
 
   steamLance: card('steamLance', 'Steam Lance', 2, 'enemy', 'Deal 14 damage.',
-    [{ kind: 'damage', amount: 14 }]),
+    [{ kind: 'damage', amount: 14 }], false, 'rare'),
   'steamLance+': card('steamLance+', 'Steam Lance+', 2, 'enemy', 'Deal 18 damage.',
-    [{ kind: 'damage', amount: 18 }]),
+    [{ kind: 'damage', amount: 18 }], false, 'rare'),
 
   repairDrone: card('repairDrone', 'Repair Drone', 1, 'self', 'Heal 5 Hull. Exhaust.',
-    [{ kind: 'heal', amount: 5 }], true),
+    [{ kind: 'heal', amount: 5 }], true, 'uncommon'),
   'repairDrone+': card('repairDrone+', 'Repair Drone+', 1, 'self', 'Heal 8 Hull. Exhaust.',
-    [{ kind: 'heal', amount: 8 }], true),
+    [{ kind: 'heal', amount: 8 }], true, 'uncommon'),
 
   smokeScreen: card('smokeScreen', 'Smoke Screen', 1, 'self', 'Gain 6 Plating. Apply 1 Weak.',
-    [{ kind: 'plating', amount: 6 }, { kind: 'applyWeak', amount: 1 }]),
+    [{ kind: 'plating', amount: 6 }, { kind: 'applyWeak', amount: 1 }], false, 'common'),
   'smokeScreen+': card('smokeScreen+', 'Smoke Screen+', 1, 'self', 'Gain 9 Plating. Apply 2 Weak.',
-    [{ kind: 'plating', amount: 9 }, { kind: 'applyWeak', amount: 2 }])
+    [{ kind: 'plating', amount: 9 }, { kind: 'applyWeak', amount: 2 }], false, 'common')
 };
 
 export const STARTER_DECK: string[] = [
@@ -87,3 +88,30 @@ export function isUpgradable(cardId: string): boolean {
 export function upgradeCardId(cardId: string): string {
   return isUpgradable(cardId) ? cardId + '+' : cardId;
 }
+
+export const REWARD_POOL: string[] = SHOP_POOL.slice();
+
+const RARITY_WEIGHTS_COMBAT: Record<CardRarity, number> = { common: 70, uncommon: 25, rare: 5 };
+const RARITY_WEIGHTS_ELITE: Record<CardRarity, number> = { common: 30, uncommon: 50, rare: 20 };
+
+export function pickRewardCards(count: number, isElite: boolean, rng: () => number = Math.random): string[] {
+  const weights = isElite ? RARITY_WEIGHTS_ELITE : RARITY_WEIGHTS_COMBAT;
+  const pool = REWARD_POOL.slice();
+  const picked: string[] = [];
+  for (let i = 0; i < count && pool.length > 0; i++) {
+    const choices = pool.map((id) => ({ id, w: weights[CARDS[id].rarity ?? 'common'] }));
+    const total = choices.reduce((a, b) => a + b.w, 0);
+    let roll = rng() * total;
+    let chosen = choices[choices.length - 1].id;
+    for (const c of choices) {
+      roll -= c.w;
+      if (roll <= 0) { chosen = c.id; break; }
+    }
+    picked.push(chosen);
+    pool.splice(pool.indexOf(chosen), 1);
+  }
+  return picked;
+}
+
+// Allow runtime imports of CardRarity for tooling that needs it
+export type { CardRarity };

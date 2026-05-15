@@ -1,10 +1,10 @@
 import type { MapData, MapNode } from './map';
 import { ENEMY_DEFS } from './enemies';
-import type { RunState, ShopState, RunResult } from './run';
+import type { RunState, ShopState, RunResult, PendingReward } from './run';
 import type { PersistentPlayer } from './types';
 
-const KEY = 'rust-and-rivets/save/v1';
-const SCHEMA_VERSION = 1;
+const KEY = 'rust-and-rivets/save/v2';
+const SCHEMA_VERSION = 2;
 
 interface SavedMap {
   floors: number;
@@ -21,9 +21,11 @@ interface SavedRun {
   visitedNodeIds: string[];
   player: PersistentPlayer;
   scrap: number;
+  relics: string[];
   result: RunResult;
   pendingEnemyId: string | null;
   pendingShop: ShopState | null;
+  pendingReward: PendingReward | null;
 }
 
 function snapshot(state: RunState): SavedRun {
@@ -40,9 +42,11 @@ function snapshot(state: RunState): SavedRun {
     visitedNodeIds: Array.from(state.visitedNodeIds),
     player: { ...state.player, deck: state.player.deck.slice() },
     scrap: state.scrap,
+    relics: state.relics.slice(),
     result: state.result,
     pendingEnemyId: state.pendingEnemy?.id ?? null,
-    pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null
+    pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null,
+    pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null
   };
 }
 
@@ -63,9 +67,11 @@ function hydrate(saved: SavedRun): RunState {
     visitedNodeIds: new Set(saved.visitedNodeIds),
     player: saved.player,
     scrap: saved.scrap,
+    relics: saved.relics ?? [],
     result: saved.result,
     pendingEnemy,
-    pendingShop: saved.pendingShop
+    pendingShop: saved.pendingShop,
+    pendingReward: saved.pendingReward ?? null
   };
 }
 

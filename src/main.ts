@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TitleScene } from './scenes/TitleScene';
 import { MapScene } from './scenes/MapScene';
 import { CombatScene } from './scenes/CombatScene';
+import { RewardScene } from './scenes/RewardScene';
 import { ShopScene } from './scenes/ShopScene';
 import { RestScene } from './scenes/RestScene';
 
@@ -15,7 +16,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1280,
     height: 720
   },
-  scene: [TitleScene, MapScene, CombatScene, ShopScene, RestScene],
+  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene],
   render: { pixelArt: false, antialias: true }
 };
 

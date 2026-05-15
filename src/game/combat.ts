@@ -1,4 +1,5 @@
 import { CARDS } from './cards';
+import { RELICS } from './relics';
 import type {
   CardInstance,
   CombatState,
@@ -30,7 +31,11 @@ function instance(cardId: string): CardInstance {
   return { uid: nextUid++, def };
 }
 
-export function createCombatState(enemyDef: EnemyDef, persistent: PersistentPlayer): CombatState {
+export function createCombatState(
+  enemyDef: EnemyDef,
+  persistent: PersistentPlayer,
+  relicIds: string[] = []
+): CombatState {
   const player: PlayerState = {
     hull: persistent.hull,
     maxHull: persistent.maxHull,
@@ -56,6 +61,9 @@ export function createCombatState(enemyDef: EnemyDef, persistent: PersistentPlay
   };
 
   startPlayerTurn(state);
+  // Relic onCombatStart hooks run AFTER startPlayerTurn so they can stack
+  // plating, steam, etc. on top of the freshly-initialized turn state.
+  for (const id of relicIds) RELICS[id]?.onCombatStart?.(state);
   return state;
 }
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getRun, startRun, enterNode, isReachable } from '../game/run';
 import type { MapNode } from '../game/map';
+import { RELICS } from '../game/relics';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
@@ -70,6 +71,8 @@ export class MapScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
 
+    this.drawRelics(24, 50);
+
     this.drawMap();
 
     // Hint text bottom
@@ -93,6 +96,59 @@ export class MapScene extends Phaser.Scene {
         this.scene.restart();
       });
     }
+  }
+
+  private drawRelics(x: number, y: number) {
+    const run = getRun();
+    if (run.relics.length === 0) return;
+    this.add
+      .text(x, y, 'RELICS', {
+        fontFamily: FONTS.body,
+        fontSize: '11px',
+        color: hex(COLORS.boneDim)
+      })
+      .setOrigin(0, 0);
+
+    const slotSize = 28;
+    const gap = 6;
+    run.relics.forEach((id, i) => {
+      const def = RELICS[id];
+      const cx = x + slotSize / 2 + i * (slotSize + gap);
+      const cy = y + 22 + slotSize / 2;
+      const bg = this.add.circle(cx, cy, slotSize / 2, COLORS.bgPanel).setStrokeStyle(2, COLORS.brass);
+      const glyph = this.add
+        .text(cx, cy, '★', {
+          fontFamily: FONTS.display,
+          fontSize: '16px',
+          color: hex(COLORS.steam),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5);
+      // Hover tooltip
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerover', () => {
+        const tip = this.add.container(cx + slotSize, cy);
+        const tipBg = this.add.rectangle(150, 0, 300, 50, COLORS.bgPanel).setStrokeStyle(2, COLORS.brassDim);
+        const name = this.add
+          .text(8, -12, def?.name ?? id, {
+            fontFamily: FONTS.display,
+            fontSize: '13px',
+            color: hex(COLORS.bone),
+            fontStyle: 'bold'
+          });
+        const desc = this.add
+          .text(8, 6, def?.description ?? '', {
+            fontFamily: FONTS.body,
+            fontSize: '11px',
+            color: hex(COLORS.boneDim),
+            wordWrap: { width: 280 }
+          });
+        tip.add([tipBg, name, desc]);
+        tip.setDepth(500);
+        bg.once('pointerout', () => tip.destroy());
+      });
+      void glyph;
+    });
   }
 
   private nodeXY(node: MapNode): { x: number; y: number } {
@@ -156,7 +212,8 @@ export class MapScene extends Phaser.Scene {
     const run = getRun();
     const container = this.add.container(x, y);
     const isBoss = node.kind === 'boss';
-    const r = isBoss ? BOSS_R : NODE_R;
+    const isElite = node.kind === 'elite';
+    const r = isBoss ? BOSS_R : isElite ? NODE_R + 6 : NODE_R;
     const visited = run.visitedNodeIds.has(node.id);
     const isCurrent = run.currentNodeId === node.id;
     const reachable = isReachable(node.id);
@@ -164,6 +221,7 @@ export class MapScene extends Phaser.Scene {
     // Kind-specific base colors
     const kindBase: Record<string, { fill: number; glyph: string }> = {
       combat: { fill: COLORS.rust, glyph: 'X' },
+      elite: { fill: COLORS.danger, glyph: '*' },
       shop: { fill: COLORS.brass, glyph: '$' },
       rest: { fill: COLORS.buff, glyph: '+' },
       boss: { fill: COLORS.danger, glyph: '!' }

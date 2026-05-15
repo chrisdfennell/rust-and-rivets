@@ -237,6 +237,128 @@ export function drawSentinelDrone(scene: Phaser.Scene, x: number, y: number): Ph
   return c;
 }
 
+export function drawSlagWalker(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Thick legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, 56, 26, 76);
+  g.fillRect(18, 56, 26, 76);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-50, 126, 38, 18);
+  g.fillRect(12, 126, 38, 18);
+
+  // Torso — wider, hunched
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-70, -30, 140, 90);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-60, -20, 120, 18);
+
+  // Glowing slag vents (chest)
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-30, 8, 16, 28);
+  g.fillRect(14, 8, 16, 28);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-26, 12, 8, 20);
+  g.fillRect(18, 12, 8, 20);
+
+  // Shoulder pauldrons with spikes
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-86, -36, 32, 22);
+  g.fillRect(54, -36, 32, 22);
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 3; i++) {
+    g.fillTriangle(-82 + i * 10, -36, -76 + i * 10, -36, -79 + i * 10, -48);
+    g.fillTriangle(58 + i * 10, -36, 64 + i * 10, -36, 61 + i * 10, -48);
+  }
+
+  // Head — angled visor
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -56, 44, 26);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-16, -48, 32, 6);
+
+  // Heavy arms with mauls
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-100, -18, 24, 60);
+  g.fillRect(76, -18, 24, 60);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-110, 38, 44, 26);
+  g.fillRect(66, 38, 44, 26);
+
+  // Smokestack
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-6, -78, 12, 28);
+  g.fillStyle(COLORS.boneDim, 0.45);
+  g.fillCircle(0, -90, 9);
+
+  c.add(g);
+
+  // Subtle furnace flicker via alpha
+  const flicker = scene.add.rectangle(-22, 22, 8, 22, COLORS.steam, 0.6);
+  flicker.setAlpha(0.5);
+  c.add(flicker);
+  scene.tweens.add({ targets: flicker, alpha: 1, duration: 320, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+
+  return c;
+}
+
+export function drawIronReclaimer(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Squat thick legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-36, 50, 24, 60);
+  g.fillRect(12, 50, 24, 60);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-40, 104, 32, 22);
+  g.fillRect(8, 104, 32, 22);
+
+  // Squat torso — armored slab
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-60, -20, 120, 78);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-56, -16, 112, 6);
+  g.fillRect(-56, 50, 112, 6);
+
+  // Rivets all over the armor
+  g.fillStyle(COLORS.brass);
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 6; col++) {
+      g.fillCircle(-46 + col * 19, -8 + row * 20, 2.5);
+    }
+  }
+
+  // Helmet
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -46, 44, 28);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-14, -36, 28, 4);
+
+  // Big shield arm (left)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-86, -22, 22, 60);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-110, 14, 30, 50);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-108, 18, 26, 4);
+  g.fillRect(-108, 38, 26, 4);
+  g.fillRect(-108, 58, 26, 4);
+
+  // Hammer arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(64, -22, 22, 60);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(70, 40, 30, 32);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(74, 42, 22, 6);
+
+  c.add(g);
+  return c;
+}
+
 export function drawFoundryTyrant(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
   const c = scene.add.container(x, y - 10);
   const g = scene.add.graphics();
@@ -345,5 +467,7 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
   sentinelDrone: drawSentinelDrone,
+  slagWalker: drawSlagWalker,
+  ironReclaimer: drawIronReclaimer,
   foundryTyrant: drawFoundryTyrant
 };

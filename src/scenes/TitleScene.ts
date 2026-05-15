@@ -156,13 +156,14 @@ export class TitleScene extends Phaser.Scene {
 
   private routeForCurrentRun(r: ReturnType<typeof getRun>): string {
     if (r.result !== 'inProgress') return 'Map';
+    if (r.pendingReward) return 'Reward';
     if (r.currentNodeId) {
       const node = r.map.nodes.get(r.currentNodeId);
       const inProgressNode = node && !r.visitedNodeIds.has(node.id);
       if (inProgressNode) {
         if (node.kind === 'shop') return 'Shop';
         if (node.kind === 'rest') return 'Rest';
-        return 'Combat'; // combat or boss
+        return 'Combat'; // combat, elite, or boss
       }
     }
     return 'Map';

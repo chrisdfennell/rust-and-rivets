@@ -1,7 +1,8 @@
 import type { EnemyDef, PersistentPlayer } from './types';
-import { SHOP_POOL, STARTER_DECK, isUpgradable, upgradeCardId } from './cards';
+import { SHOP_POOL, STARTER_DECK, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
 import { generateMap, type MapData, type MapNode } from './map';
-import { pickAct1Enemy, FOUNDRY_TYRANT } from './enemies';
+import { pickAct1Enemy, pickEliteEnemy, FOUNDRY_TYRANT } from './enemies';
+import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
@@ -18,15 +19,24 @@ export interface ShopState {
   removalUsed: boolean;
 }
 
+export interface PendingReward {
+  cards: string[];
+  relicId: string | null;
+  scrap: number;
+  fromElite: boolean;
+}
+
 export interface RunState {
   map: MapData;
   currentNodeId: string | null;
   visitedNodeIds: Set<string>;
   player: PersistentPlayer;
   scrap: number;
+  relics: string[];
   result: RunResult;
   pendingEnemy: EnemyDef | null;
   pendingShop: ShopState | null;
+  pendingReward: PendingReward | null;
 }
 
 let state: RunState | null = null;
@@ -42,9 +52,11 @@ export function startRun(): RunState {
     visitedNodeIds: new Set(),
     player: { hull: 70, maxHull: 70, deck: STARTER_DECK.slice() },
     scrap: 0,
+    relics: [],
     result: 'inProgress',
     pendingEnemy: null,
-    pendingShop: null
+    pendingShop: null,
+    pendingReward: null
   };
   persist();
   return state;
@@ -87,8 +99,11 @@ export function enterNode(nodeId: string): void {
   r.currentNodeId = nodeId;
   r.pendingEnemy = null;
   r.pendingShop = null;
+  r.pendingReward = null;
   if (node.kind === 'combat') {
     r.pendingEnemy = pickAct1Enemy(Math.random);
+  } else if (node.kind === 'elite') {
+    r.pendingEnemy = pickEliteEnemy(Math.random);
   } else if (node.kind === 'boss') {
     r.pendingEnemy = FOUNDRY_TYRANT;
   } else if (node.kind === 'shop') {
@@ -170,16 +185,74 @@ export function completeCombat(survivingHull: number): number {
   r.player.hull = survivingHull;
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
   r.pendingEnemy = null;
+
+  // Engine Oil and similar onCombatEnd hooks tick before reward calc
+  for (const id of r.relics) RELICS[id]?.onCombatEnd?.(r);
+
   const node: MapNode | undefined = r.currentNodeId ? r.map.nodes.get(r.currentNodeId) : undefined;
   if (node?.kind === 'boss') {
     r.result = 'victory';
     persist();
     return 0;
   }
-  const reward = 12 + Math.floor(Math.random() * 8); // 12-19
+
+  const isElite = node?.kind === 'elite';
+  const baseReward = isElite ? 25 + Math.floor(Math.random() * 11) : 12 + Math.floor(Math.random() * 8);
+  const bonus = r.relics.includes('salvageLoop') ? 5 : 0;
+  const reward = baseReward + bonus;
   r.scrap += reward;
+
+  // Stage a card reward (and a relic if elite)
+  const cards = pickRewardCards(3, isElite);
+  let relicId: string | null = null;
+  if (isElite) {
+    relicId = pickRelicFor(new Set(r.relics));
+  }
+  r.pendingReward = {
+    cards,
+    relicId,
+    scrap: reward,
+    fromElite: isElite
+  };
+
   persist();
   return reward;
+}
+
+export function takeRewardCard(cardId: string): boolean {
+  const r = getRun();
+  const rew = r.pendingReward;
+  if (!rew) return false;
+  if (!rew.cards.includes(cardId)) return false;
+  r.player.deck.push(cardId);
+  finalizeReward();
+  return true;
+}
+
+export function skipRewardCards(): void {
+  finalizeReward();
+}
+
+function finalizeReward() {
+  const r = getRun();
+  if (!r.pendingReward) return;
+  // Auto-grant the staged relic if any (player can't decline elite drops)
+  if (r.pendingReward.relicId) {
+    addRelic(r.pendingReward.relicId, false);
+  }
+  r.pendingReward = null;
+  persist();
+}
+
+export function addRelic(relicId: string, doPersist = true): boolean {
+  const r = getRun();
+  if (r.relics.includes(relicId)) return false;
+  const def = RELICS[relicId];
+  if (!def) return false;
+  r.relics.push(relicId);
+  def.onPickup?.(r);
+  if (doPersist) persist();
+  return true;
 }
 
 export function failCombat(survivingHull: number): void {
