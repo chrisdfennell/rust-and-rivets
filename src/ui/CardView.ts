@@ -19,6 +19,7 @@ export class CardView extends Phaser.GameObjects.Container {
   private hovered = false;
   private homeRot = 0;
   private currentTween: Phaser.Tweens.Tween | null = null;
+  private slotWidth = CARD_W;
 
   constructor(
     scene: Phaser.Scene,
@@ -107,12 +108,24 @@ export class CardView extends Phaser.GameObjects.Container {
     });
   }
 
-  setHome(x: number, y: number, rot: number) {
+  setHome(x: number, y: number, rot: number, slotWidth?: number) {
     this.x = x;
     this.y = y;
     this.homeRot = rot;
     // Outer container never rotates — only the visual does, so the hit area stays axis-aligned.
     this.rotation = 0;
+    // Resize the hit area so adjacent fanned cards don't fight over pointer events
+    // in their visual overlap. Each card "owns" a slot of width = card spacing.
+    if (slotWidth !== undefined && slotWidth !== this.slotWidth) {
+      this.slotWidth = slotWidth;
+      const hitH = CARD_H + LIFT;
+      const hitTop = -CARD_H / 2 - LIFT;
+      this.setSize(slotWidth, hitH);
+      this.setInteractive(
+        new Phaser.Geom.Rectangle(-slotWidth / 2, hitTop, slotWidth, hitH),
+        Phaser.Geom.Rectangle.Contains
+      );
+    }
     if (!this.hovered) {
       this.visual.rotation = rot;
       this.visual.y = 0;

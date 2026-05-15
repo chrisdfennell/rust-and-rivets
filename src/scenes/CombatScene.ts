@@ -65,36 +65,40 @@ export class CombatScene extends Phaser.Scene {
     }
     this.state = createCombatState(run.pendingEnemy, run.player, run.relics);
 
-    // Sprites sit higher in the viewport so their stat bars can fit cleanly
-    // above the card hand without overlap. Bars + labels share one row at y=0.62.
-    this.mech = drawMech(this, width * 0.28, height * 0.4);
-    const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
-    this.enemySprite = drawEnemy(this, width * 0.72, height * 0.42);
+    // Top HUD strip: name + HP bar for each side; intent under enemy bar.
+    // Keeping all status UI above the sprites avoids collisions with the card hand.
+    const hudY = 78;
 
-    const barY = height * 0.62;
-    this.playerBar = new StatBar(this, width * 0.28, barY, 220);
-    this.enemyBar = new StatBar(this, width * 0.72, barY, 220);
+    this.playerBar = new StatBar(this, width * 0.24, hudY, 280);
+    this.enemyBar = new StatBar(this, width * 0.76, hudY, 280);
     this.add.existing(this.playerBar);
     this.add.existing(this.enemyBar);
 
     this.add
-      .text(width * 0.28, barY - 22, 'PILOT', {
+      .text(24, hudY, 'PILOT', {
         fontFamily: FONTS.display,
-        fontSize: '12px',
-        color: hex(COLORS.boneDim)
+        fontSize: '14px',
+        color: hex(COLORS.bone),
+        fontStyle: 'bold'
       })
-      .setOrigin(0.5, 1);
+      .setOrigin(0, 0.5);
 
     this.add
-      .text(width * 0.72, barY - 22, this.state.enemy.def.name.toUpperCase(), {
+      .text(width - 24, hudY, this.state.enemy.def.name.toUpperCase(), {
         fontFamily: FONTS.display,
-        fontSize: '12px',
-        color: hex(COLORS.boneDim)
+        fontSize: '14px',
+        color: hex(COLORS.bone),
+        fontStyle: 'bold'
       })
-      .setOrigin(0.5, 1);
+      .setOrigin(1, 0.5);
 
-    this.intent = new IntentView(this, width * 0.72, height * 0.18);
+    this.intent = new IntentView(this, width * 0.76, hudY + 46);
     this.add.existing(this.intent);
+
+    // Sprites — pushed slightly lower than midline so the HUD has clear sky above.
+    this.mech = drawMech(this, width * 0.28, height * 0.48);
+    const drawEnemy = ENEMY_SPRITES[this.state.enemy.def.id] ?? ENEMY_SPRITES.scrapRaider;
+    this.enemySprite = drawEnemy(this, width * 0.72, height * 0.5);
 
     // Steam gauge
     const steamPanel = this.add
@@ -245,7 +249,7 @@ export class CombatScene extends Phaser.Scene {
     this.turnText.setText(`TURN ${s.turn}`);
     this.deckText.setText(`DRAW: ${s.player.draw.length}`);
     this.discardText.setText(`DISCARD: ${s.player.discard.length}    EXHAUST: ${s.player.exhaust.length}`);
-    this.logText.setText(s.log.slice(-6).join('\n'));
+    this.logText.setText(s.log.slice(-4).join('\n'));
 
     this.layoutHand();
 
@@ -306,18 +310,23 @@ export class CombatScene extends Phaser.Scene {
     const n = next.length;
     if (n === 0) return;
 
-    const spread = Math.min(width - 360, n * (CARD_W * 0.78));
-    const startX = width / 2 - spread / 2 + (CARD_W * 0.78) / 2;
+    const maxSpread = width - 360;
+    const idealSpacing = CARD_W * 0.78;
+    const spacing = n > 1 ? Math.min(idealSpacing, maxSpread / (n - 1)) : 0;
+    const startX = width / 2 - (spacing * (n - 1)) / 2;
     const arc = 16;
     const rotMax = 0.08;
+    // Each card "owns" a slot equal to its spacing — keeps adjacent hit areas
+    // from overlapping so pointer events route to the visually-frontmost card.
+    const slotWidth = Math.min(CARD_W, n > 1 ? spacing : CARD_W);
 
     for (let i = 0; i < n; i++) {
       const t = n === 1 ? 0 : i / (n - 1) - 0.5;
-      const x = startX + i * (CARD_W * 0.78);
+      const x = startX + i * spacing;
       const y = baseY + Math.abs(t) * arc * 2;
       const rot = t * rotMax * 2;
       const view = next[i];
-      view.setHome(x, y, rot);
+      view.setHome(x, y, rot, slotWidth);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
   }
