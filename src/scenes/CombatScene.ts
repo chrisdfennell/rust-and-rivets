@@ -250,13 +250,21 @@ export class CombatScene extends Phaser.Scene {
       this.endHandled = true;
       const reward = completeCombat(s.player.hull);
       const run = getRun();
-      const isBoss = run.result === 'victory';
+      let nextScene: string;
+      let continueLine: string;
+      if (run.result === 'victory') {
+        nextScene = 'Map';
+        continueLine = 'Press SPACE to return.';
+      } else if (run.awaitingInterAct) {
+        nextScene = 'InterAct';
+        continueLine = 'Press SPACE to march on.';
+      } else {
+        nextScene = 'Reward';
+        continueLine = 'Press SPACE to claim rewards.';
+      }
       const rewardLine = reward > 0 ? ` +${reward} scrap.` : '';
-      const continueLine = isBoss
-        ? 'Press SPACE to return to the road.'
-        : 'Press SPACE to claim rewards.';
       this.showOverlay('VICTORY', `${s.enemy.def.name} falls.${rewardLine} ${continueLine}`, COLORS.ok);
-      this.bindContinue(isBoss ? 'Map' : 'Reward');
+      this.bindContinue(nextScene);
     } else if (s.phase === 'defeat' && !this.endHandled) {
       this.endHandled = true;
       failCombat(s.player.hull);

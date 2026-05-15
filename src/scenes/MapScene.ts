@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getRun, startRun, enterNode, isReachable } from '../game/run';
 import type { MapNode } from '../game/map';
 import { RELICS } from '../game/relics';
+import { getActName } from '../game/enemies';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
@@ -38,7 +39,7 @@ export class MapScene extends Phaser.Scene {
     const run = getRun();
 
     this.add
-      .text(width / 2, 28, 'ROAD TO THE FOUNDRY', {
+      .text(width / 2, 28, `ACT ${run.act} — ${getActName(run.act)}`, {
         fontFamily: FONTS.display,
         fontSize: '22px',
         color: hex(COLORS.brass),

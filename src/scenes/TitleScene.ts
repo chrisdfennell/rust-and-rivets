@@ -72,7 +72,8 @@ export class TitleScene extends Phaser.Scene {
         const resultLine =
           peeked.result === 'victory' ? 'Run completed.' :
           peeked.result === 'defeat' ? 'Run lost.' :
-          `Floor ${this.deepestVisitedFloor(peeked.visitedNodeIds, peeked.map)} of ${peeked.map.floors - 1}`;
+          peeked.awaitingInterAct ? `Act ${peeked.act} cleared — choose a boon.` :
+          `Act ${peeked.act}, Floor ${this.deepestVisitedFloor(peeked.visitedNodeIds, peeked.map)} of ${peeked.map.floors - 1}`;
         this.add
           .text(width / 2, height * 0.52,
             `SAVED RUN\nHull ${peeked.player.hull}/${peeked.player.maxHull}   ` +
@@ -156,6 +157,7 @@ export class TitleScene extends Phaser.Scene {
 
   private routeForCurrentRun(r: ReturnType<typeof getRun>): string {
     if (r.result !== 'inProgress') return 'Map';
+    if (r.awaitingInterAct) return 'InterAct';
     if (r.pendingReward) return 'Reward';
     if (r.currentNodeId) {
       const node = r.map.nodes.get(r.currentNodeId);

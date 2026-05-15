@@ -3,8 +3,8 @@ import { ENEMY_DEFS } from './enemies';
 import type { RunState, ShopState, RunResult, PendingReward } from './run';
 import type { PersistentPlayer } from './types';
 
-const KEY = 'rust-and-rivets/save/v2';
-const SCHEMA_VERSION = 2;
+const KEY = 'rust-and-rivets/save/v3';
+const SCHEMA_VERSION = 3;
 
 interface SavedMap {
   floors: number;
@@ -16,6 +16,7 @@ interface SavedMap {
 
 interface SavedRun {
   version: number;
+  act: number;
   map: SavedMap;
   currentNodeId: string | null;
   visitedNodeIds: string[];
@@ -26,11 +27,13 @@ interface SavedRun {
   pendingEnemyId: string | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
+  awaitingInterAct: boolean;
 }
 
 function snapshot(state: RunState): SavedRun {
   return {
     version: SCHEMA_VERSION,
+    act: state.act,
     map: {
       floors: state.map.floors,
       width: state.map.width,
@@ -46,7 +49,8 @@ function snapshot(state: RunState): SavedRun {
     result: state.result,
     pendingEnemyId: state.pendingEnemy?.id ?? null,
     pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null,
-    pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null
+    pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null,
+    awaitingInterAct: state.awaitingInterAct
   };
 }
 
@@ -63,6 +67,7 @@ function hydrate(saved: SavedRun): RunState {
   const pendingEnemy = saved.pendingEnemyId ? ENEMY_DEFS[saved.pendingEnemyId] ?? null : null;
   return {
     map,
+    act: saved.act ?? 1,
     currentNodeId: saved.currentNodeId,
     visitedNodeIds: new Set(saved.visitedNodeIds),
     player: saved.player,
@@ -71,7 +76,8 @@ function hydrate(saved: SavedRun): RunState {
     result: saved.result,
     pendingEnemy,
     pendingShop: saved.pendingShop,
-    pendingReward: saved.pendingReward ?? null
+    pendingReward: saved.pendingReward ?? null,
+    awaitingInterAct: saved.awaitingInterAct ?? false
   };
 }
 

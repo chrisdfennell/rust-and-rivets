@@ -83,7 +83,35 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 9 — Content depth *(current)*
+### Slice 10 — Multi-act progression *(current)*
+- **Two-act run loop**: defeat the Foundry Tyrant (act 1 boss) to advance
+  into **Act 2 — The Foundry Depths**. Iron Sovereign (95 HP, telegraphed
+  Cannon Volley) is the run-ending boss.
+- **Act 2 regular enemies** in `ACT2_POOL`:
+  - **Cinder Hound** (32 HP) — heavier Junk Hound variant with glowing maw
+  - **Slag Drone** (40 HP) — bigger Sentinel Drone, charged Plasma Lance
+  - **Forge Reaver** (45 HP) — heavy attacker with cleaver + smash
+- **Act 2 elite pool** in `ACT2_ELITE_POOL`:
+  - **Magma Sentinel** (65 HP) — heavy attacker with pulsing magma core
+  - **Reclaimer Mk II** (60 HP) — tower-shield turtle with retaliating Weak
+- **Iron Sovereign** boss sprite: fortress-tank with crown of smokestacks,
+  oversized cannon barrel, pulsing eye
+- **InterActScene** between acts with a single-boon choice:
+  - **REPAIR** — heal to full Hull
+  - **REFIT** — +15 max Hull (and heal as well)
+  - **SALVAGE** — receive a rare card (rolled from the elite reward pool)
+- Hull, deck, scrap, and relics all carry forward. Map regenerates fresh
+  for act 2. Visited nodes and pending shop/reward state cleared on advance.
+- **API refactor**: `pickAct1Enemy` and `pickEliteEnemy(rng)` replaced with
+  `pickRegularEnemy(act, rng)` / `pickEliteEnemy(act, rng)` /
+  `getActBoss(act)` / `getActName(act)`. Run state drives enemy choice.
+- **Save schema v3**: adds `act` and `awaitingInterAct`. Old v2 saves
+  auto-discard. TitleScene route now sends refreshes during the inter-act
+  beat back to the InterActScene; saved-run summary shows act number.
+- New `advanceAct(boon)` in [src/game/run.ts](src/game/run.ts) applies the
+  chosen boon then regenerates the map and increments `act`.
+
+### Slice 9 — Content depth
 - **6 new cards** (with upgrades), bringing the buyable pool to 14:
   - **Counter-Strike** (1c common) — Deal 4. Gain 4 Plating.
   - **Hammer Strike** (1c common) — Deal 5. Apply 1 Vulnerable.
@@ -184,33 +212,19 @@ ships so future sessions can pick up cold.
 
 ### Tier 4 — structural / long term
 
-#### Multi-act progression *(user-requested, important)*
-After defeating the Foundry Tyrant, the run continues into a new act with
-escalating stakes. Concrete design:
+#### Act 3 — Above the Cloudline *(future)*
+Acts 1 and 2 are shipped. Act 3 is the planned final tier:
 
-- **Act 2 — "The Foundry Depths"**: descend into the smelter ruins
-  - New regular enemy pool (3 enemies, ~+30% stats vs act 1)
-  - New elite pool (2 new enemies, ~+50% stats)
-  - New boss with multi-phase or staged mechanics
-  - Map ~9 floors instead of 7
-- **Act 3 — "Above the Cloudline"**: airborne, lighter and brighter
-  - Drone-and-sky-pirate theme; another shift in enemy silhouettes
-  - Final boss is the run-ender ("Iron Sovereign" or similar)
+- **Above the Cloudline**: airborne theme, lighter and brighter
+- Drone-and-sky-pirate enemy silhouettes; tonal shift from rust to chrome
+- Final boss is the actual run-ender
+- Required: extend `getActBoss(act)`, `pickRegularEnemy(act)`,
+  `pickEliteEnemy(act)`, and `getActName(act)` for act 3; add 3+ new
+  enemies + 2 new elites + 1 final boss
+- `advanceAct` already increments cleanly past act 2 — the InterActScene
+  would route into act 3 by default if act 3 pools exist
 
-Required engine work to support multi-act:
-- Make `EnemyDef`/`ELITE_POOL`/`BOSS` selection act-scoped (e.g., enemy
-  pools keyed by act number). `pickAct1Enemy` becomes `pickRegularEnemy(act)`
-- `MapData` already has a `floors` count; extend with `act: number`
-- `completeCombat` on boss currently sets `result = 'victory'`. Change to
-  advance act: regenerate map, restore some hull (or full?), keep relics +
-  deck + scrap. Final-act boss is the actual `result = 'victory'`
-- Add an inter-act transition scene (campfire / starlit road / brief
-  narrative beat). Lets the player breathe and pick a between-act bonus
-  (heal fully? +20 max hull? upgrade a card? remove a card?)
-- Save schema bump (v3) to include `act: number` field
-- Title screen summary needs to show act number, not just floor
-
-Stretch ideas once act 2 exists:
+Stretch ideas once act 3 exists:
 - **Boss relics**: defeating each act boss grants a guaranteed strong relic
   pick from a "boss relic" pool (separate from normal relic pool)
 - **Act-themed environmental modifiers**: act 2 might have "Heat: all

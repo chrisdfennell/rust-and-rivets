@@ -612,6 +612,414 @@ export function drawFoundryTyrant(scene: Phaser.Scene, x: number, y: number): Ph
   return c;
 }
 
+export function drawCinderHound(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Slightly bigger than Junk Hound — broader stance, glowing core
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, 30, 14, 56);
+  g.fillRect(-30, 30, 14, 56);
+  g.fillRect(22, 30, 14, 56);
+  g.fillRect(50, 30, 14, 56);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-62, 82, 22, 10);
+  g.fillRect(-34, 82, 22, 10);
+  g.fillRect(18, 82, 22, 10);
+  g.fillRect(46, 82, 22, 10);
+
+  // Body — heavier, blackened steel with magma seams
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-66, -12, 124, 50);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-50, 12, 100, 6);
+  g.fillRect(-40, 24, 80, 4);
+  g.fillStyle(COLORS.steam, 0.5);
+  g.fillRect(-46, 14, 92, 2);
+
+  // Spine — taller spikes
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 6; i++) {
+    const sx = -45 + i * 19;
+    g.fillTriangle(sx - 6, -12, sx + 6, -12, sx, -28);
+  }
+
+  // Head — armored
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-100, -10, 38, 32);
+  g.fillTriangle(-108, 4, -100, -10, -100, 22);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-86, -2, 4);
+  g.fillCircle(-72, -2, 4);
+  // Glowing maw
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-100, 14, 30, 6);
+  g.fillStyle(COLORS.danger);
+  g.fillTriangle(-98, 22, -92, 22, -95, 30);
+  g.fillTriangle(-88, 22, -82, 22, -85, 30);
+  g.fillTriangle(-78, 22, -72, 22, -75, 30);
+
+  // Heat plumes from back
+  g.fillStyle(COLORS.danger, 0.55);
+  g.fillCircle(62, -8, 6);
+  g.fillCircle(72, -16, 5);
+
+  c.add(g);
+  return c;
+}
+
+export function drawSlagDrone(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 36);
+  const g = scene.add.graphics();
+
+  // Hover glow
+  g.fillStyle(COLORS.steam, 0.18);
+  g.fillEllipse(0, 96, 140, 26);
+  g.fillStyle(COLORS.steam, 0.35);
+  g.fillEllipse(0, 96, 92, 16);
+
+  // Hex-shaped body — bigger than Sentinel Drone
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-70, -10, 0, -52, 70, -10);
+  g.fillTriangle(-70, 30, 0, 72, 70, 30);
+  g.fillRect(-70, -10, 140, 40);
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-58, -2, 0, -40, 58, -2);
+  g.fillTriangle(-58, 22, 0, 60, 58, 22);
+  g.fillRect(-58, -2, 116, 24);
+
+  // Heavy plate edges
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-72, -10, 144, 6);
+  g.fillRect(-72, 24, 144, 6);
+
+  // Triple eye core
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 4, 64, 14);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-18, 11, 5);
+  g.fillCircle(0, 11, 5);
+  g.fillCircle(18, 11, 5);
+
+  // Antenna
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-2, -68, 4, 18);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -70, 4);
+
+  // Side thrusters
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-88, 4, 18, 16);
+  g.fillRect(70, 4, 18, 16);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-86, 18, 14, 4);
+  g.fillRect(72, 18, 14, 4);
+
+  c.add(g);
+
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 6,
+    duration: 1300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+export function drawForgeReaver(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Bigger Scrap Raider silhouette — taller, broader
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-36, 60, 22, 70);
+  g.fillRect(14, 60, 22, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-40, 122, 30, 16);
+  g.fillRect(10, 122, 30, 16);
+
+  // Body — heavy, with rust runs
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-52, -28, 104, 92);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, -18, 30, 26);
+  g.fillRect(14, -6, 30, 22);
+  g.fillRect(-30, 30, 60, 18);
+
+  // Head — sharper, twin red optics
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-30, -58, 30, -58, 0, -16);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-10, -40, 5);
+  g.fillCircle(10, -40, 5);
+  // Crown of small spikes
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 5; i++) {
+    const sx = -24 + i * 12;
+    g.fillTriangle(sx - 4, -58, sx + 4, -58, sx, -68);
+  }
+
+  // Massive cleaver arm (left)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-78, -22, 22, 70);
+  g.fillStyle(COLORS.bone);
+  g.fillTriangle(-100, 36, -52, 36, -76, 88);
+  g.fillStyle(COLORS.boneDim);
+  g.fillTriangle(-96, 40, -56, 40, -76, 80);
+
+  // Right hammer arm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(56, -22, 22, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(52, 48, 36, 30);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(56, 78, 28, 6);
+
+  // Heat vent
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-4, 8, 8, 12);
+
+  c.add(g);
+  return c;
+}
+
+export function drawMagmaSentinel(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 4);
+  const g = scene.add.graphics();
+
+  // Even bulkier than Slag Walker — taller, broader, more cracks/glow
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-50, 62, 28, 80);
+  g.fillRect(22, 62, 28, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-56, 134, 40, 20);
+  g.fillRect(16, 134, 40, 20);
+
+  // Body with magma cracks
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-78, -36, 156, 98);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-70, -20, 8, 76);
+  g.fillRect(62, -20, 8, 76);
+  g.fillRect(-30, 36, 60, 6);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-68, -16, 4, 68);
+  g.fillRect(64, -16, 4, 68);
+
+  // Big chest core (glowing)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, -10, 64, 50);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, 14, 22);
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, 14, 14);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, 14, 6);
+
+  // Pauldrons
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-94, -42, 32, 24);
+  g.fillRect(62, -42, 32, 24);
+  // Spikes
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 4; i++) {
+    g.fillTriangle(-90 + i * 9, -42, -86 + i * 9, -42, -88 + i * 9, -54);
+    g.fillTriangle(64 + i * 9, -42, 68 + i * 9, -42, 66 + i * 9, -54);
+  }
+
+  // Head
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-28, -70, 56, 30);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-20, -60, 16, 7);
+  g.fillRect(4, -60, 16, 7);
+
+  // Heavy mauls
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-110, -18, 24, 64);
+  g.fillRect(86, -18, 24, 64);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-120, 46, 44, 30);
+  g.fillRect(76, 46, 44, 30);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-114, 76, 32, 4);
+  g.fillRect(82, 76, 32, 4);
+
+  // Smoke stacks
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-46, -90, 12, 32);
+  g.fillRect(34, -90, 12, 32);
+  g.fillStyle(COLORS.danger, 0.6);
+  g.fillCircle(-40, -106, 7);
+  g.fillCircle(40, -106, 7);
+
+  c.add(g);
+
+  // Pulsing core
+  const corePulse = scene.add.circle(0, 14, 24, COLORS.danger, 0.2);
+  c.add(corePulse);
+  scene.tweens.add({ targets: corePulse, scale: 1.4, alpha: 0, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.Out' });
+
+  return c;
+}
+
+export function drawReclaimerMk2(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Bigger version of Iron Reclaimer with more rivets, taller shield
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, 56, 28, 70);
+  g.fillRect(16, 56, 28, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-50, 118, 40, 24);
+  g.fillRect(10, 118, 40, 24);
+
+  // Body
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-72, -26, 144, 96);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-68, -22, 136, 8);
+  g.fillRect(-68, 64, 136, 8);
+
+  // Rivets
+  g.fillStyle(COLORS.brass);
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 8; col++) {
+      g.fillCircle(-58 + col * 18, -12 + row * 22, 2.8);
+    }
+  }
+
+  // Helmet — bigger, with a slit visor
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-30, -60, 60, 34);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-22, -48, 44, 5);
+
+  // Tower shield (left)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-94, -22, 24, 76);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-126, 0, 36, 80);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-124, 4, 32, 4);
+  g.fillRect(-124, 22, 32, 4);
+  g.fillRect(-124, 40, 32, 4);
+  g.fillRect(-124, 58, 32, 4);
+  g.fillRect(-124, 72, 32, 4);
+  // Shield emblem
+  g.fillStyle(COLORS.danger);
+  g.fillTriangle(-114, 30, -100, 30, -107, 50);
+
+  // Hammer arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(70, -22, 24, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(74, 48, 38, 38);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(78, 86, 30, 8);
+
+  c.add(g);
+  return c;
+}
+
+export function drawIronSovereign(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 14);
+  const g = scene.add.graphics();
+
+  // Wide base — fortress tracks
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-100, 92, 200, 38);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 11; i++) g.fillRect(-96 + i * 18, 98, 12, 26);
+
+  // Lower armored skirt
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-90, 72, 180, 24);
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 8; i++) g.fillCircle(-80 + i * 22, 84, 3);
+
+  // Main fortress torso
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-100, -44, 200, 120);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-90, -34, 180, 14);
+  g.fillRect(-90, 58, 180, 14);
+
+  // Central cannon mount (the BIG gun)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, -84, 88, 60);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-38, -78, 76, 48);
+
+  // The cannon barrel itself, jutting out
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(80, -64, 80, 22);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(140, -68, 22, 30);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(162, -53, 6);
+
+  // Furnace eye in the cannon housing
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -54, 14);
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(0, -54, 8);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -54, 3);
+
+  // Crown of smokestacks
+  g.fillStyle(COLORS.steelDark);
+  for (const sx of [-78, -54, 50, 74]) {
+    g.fillRect(sx, -110, 14, 32);
+  }
+  g.fillStyle(COLORS.brassDim);
+  for (const sx of [-78, -54, 50, 74]) {
+    g.fillRect(sx - 2, -116, 18, 6);
+  }
+  g.fillStyle(COLORS.boneDim, 0.55);
+  for (const [sx, sy] of [[-71, -134], [-47, -142], [57, -138], [81, -130]]) {
+    g.fillCircle(sx, sy, 9);
+  }
+
+  // Side cannons
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-130, 0, 30, 22);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-134, 4, 8, 14);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-126, 11, 3);
+
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(100, 32, 30, 22);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(126, 36, 8, 14);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(118, 43, 3);
+
+  // Brass rivets along main body
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-90, -28], [86, -28], [-90, 52], [86, 52], [-90, 12], [86, 12], [0, 12]
+  ]) g.fillCircle(rx, ry, 3.5);
+
+  // Throne emblem
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-12, -10, 12, -10, 0, -30);
+
+  c.add(g);
+
+  // Cannon eye pulse
+  const eyePulse = scene.add.circle(0, -54, 16, COLORS.danger, 0.25);
+  c.add(eyePulse);
+  scene.tweens.add({ targets: eyePulse, scale: 1.5, alpha: 0, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.Out' });
+
+  return c;
+}
+
 export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
@@ -621,5 +1029,11 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   tinkerHawk: drawTinkerHawk,
   slagWalker: drawSlagWalker,
   ironReclaimer: drawIronReclaimer,
-  foundryTyrant: drawFoundryTyrant
+  foundryTyrant: drawFoundryTyrant,
+  cinderHound: drawCinderHound,
+  slagDrone: drawSlagDrone,
+  forgeReaver: drawForgeReaver,
+  magmaSentinel: drawMagmaSentinel,
+  reclaimerMk2: drawReclaimerMk2,
+  ironSovereign: drawIronSovereign
 };

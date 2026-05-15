@@ -1,7 +1,7 @@
 import type { EnemyDef, PersistentPlayer } from './types';
 import { SHOP_POOL, STARTER_DECK, isUpgradable, upgradeCardId, pickRewardCards } from './cards';
 import { generateMap, type MapData, type MapNode } from './map';
-import { pickAct1Enemy, pickEliteEnemy, FOUNDRY_TYRANT } from './enemies';
+import { pickRegularEnemy, pickEliteEnemy, getActBoss } from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 
@@ -28,6 +28,7 @@ export interface PendingReward {
 
 export interface RunState {
   map: MapData;
+  act: number;
   currentNodeId: string | null;
   visitedNodeIds: Set<string>;
   player: PersistentPlayer;
@@ -37,6 +38,7 @@ export interface RunState {
   pendingEnemy: EnemyDef | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
+  awaitingInterAct: boolean;
 }
 
 let state: RunState | null = null;
@@ -48,6 +50,7 @@ function persist() {
 export function startRun(): RunState {
   state = {
     map: generateMap(),
+    act: 1,
     currentNodeId: null,
     visitedNodeIds: new Set(),
     player: { hull: 70, maxHull: 70, deck: STARTER_DECK.slice() },
@@ -56,7 +59,8 @@ export function startRun(): RunState {
     result: 'inProgress',
     pendingEnemy: null,
     pendingShop: null,
-    pendingReward: null
+    pendingReward: null,
+    awaitingInterAct: false
   };
   persist();
   return state;
@@ -101,11 +105,11 @@ export function enterNode(nodeId: string): void {
   r.pendingShop = null;
   r.pendingReward = null;
   if (node.kind === 'combat') {
-    r.pendingEnemy = pickAct1Enemy(Math.random);
+    r.pendingEnemy = pickRegularEnemy(r.act, Math.random);
   } else if (node.kind === 'elite') {
-    r.pendingEnemy = pickEliteEnemy(Math.random);
+    r.pendingEnemy = pickEliteEnemy(r.act, Math.random);
   } else if (node.kind === 'boss') {
-    r.pendingEnemy = FOUNDRY_TYRANT;
+    r.pendingEnemy = getActBoss(r.act);
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
   }
@@ -191,7 +195,12 @@ export function completeCombat(survivingHull: number): number {
 
   const node: MapNode | undefined = r.currentNodeId ? r.map.nodes.get(r.currentNodeId) : undefined;
   if (node?.kind === 'boss') {
-    r.result = 'victory';
+    if (r.act >= 2) {
+      r.result = 'victory';
+    } else {
+      // Act 1 boss done — transition through InterActScene rather than ending the run
+      r.awaitingInterAct = true;
+    }
     persist();
     return 0;
   }
@@ -260,5 +269,35 @@ export function failCombat(survivingHull: number): void {
   r.player.hull = Math.max(0, survivingHull);
   r.result = 'defeat';
   r.pendingEnemy = null;
+  persist();
+}
+
+export type InterActBoon = 'repair' | 'refit' | 'salvage';
+
+export function advanceAct(boon: InterActBoon): void {
+  const r = getRun();
+  if (!r.awaitingInterAct) return;
+
+  // Apply the boon
+  if (boon === 'repair') {
+    r.player.hull = r.player.maxHull;
+  } else if (boon === 'refit') {
+    r.player.maxHull += 15;
+    r.player.hull += 15;
+  } else if (boon === 'salvage') {
+    const offers = pickRewardCards(1, true);
+    if (offers[0]) r.player.deck.push(offers[0]);
+  }
+
+  // Advance to act 2 with a fresh map but persistent everything else
+  r.act += 1;
+  r.map = generateMap();
+  r.currentNodeId = null;
+  r.visitedNodeIds = new Set();
+  r.pendingEnemy = null;
+  r.pendingShop = null;
+  r.pendingReward = null;
+  r.awaitingInterAct = false;
+
   persist();
 }
