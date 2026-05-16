@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 40.
+Quick orientation for someone coming in cold. Numbers as of Slice 41.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -52,14 +52,56 @@ Quick orientation for someone coming in cold. Numbers as of Slice 40.
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
   Export/Import via base64 bundle (run + meta).
-- **Audio:** Looping ambient mp3 + procedural Web Audio SFX. Persisted
-  mute toggles on title screen + pause menu.
+- **Audio:** Procedural Web Audio ambient (drone + pad + steam hiss +
+  random clangs/thumps) and procedural Web Audio SFX, no asset files.
+  Persisted mute toggles on title screen + pause menu.
 
 ---
 
 ## Done
 
-### Slice 40 — Map-pacing: no shops or rests in the first three floors *(current)*
+### Slice 41 — Procedural ambient music *(current)*
+Replaced the 13 MB `industrial_ambiance.mp3` with a Web-Audio-synthesized
+ambient track. Same dieselpunk vibe (low drone, steam hiss, distant
+clangs and thumps) with zero asset download.
+
+**Layers** (all running continuously once `startMusic()` fires)
+- **Sub-bass drone** — 55 Hz sine routed through a gain, with a 0.07 Hz
+  detune LFO at ±4 cents so it breathes instead of sitting dead-flat.
+- **Mid pad** — three detuned sawtooths at 110 / 131 / 165 Hz (A2 / C3
+  / E3 = A-minor triad) into a lowpass. Each voice has its own slow
+  LFO (0.05–0.09 Hz) modulating the filter cutoff so the chord never
+  pumps in unison.
+- **Steam hiss** — looped noise buffer through a bandpass with a slow
+  center-frequency sweep (0.06 Hz LFO over ±600 Hz).
+- **Random clangs** — every 8–16 s, a 0.45 s burst of bandpass-
+  filtered noise (Q=14, random center 0.9–2.1 kHz) with exponential
+  gain decay. Reads as distant metallic strikes.
+- **Random thumps** — every 4–7 s, a sub-bass 80 Hz sine bump with
+  fast attack / exponential decay over ~0.5 s. Reads as subterranean
+  pulse.
+
+**Bundle impact**
+- Removed `import ambientUrl from '../../assets/industrial_ambiance.mp3'`,
+  so Vite no longer bundles the 13 MB file. Dist drops from
+  ~5 MB (3.3 MB mp3 + 1.6 MB JS) to ~1.7 MB JS-only.
+- The mp3 file is left on disk in `assets/` for now in case we want
+  to revert; it just isn't referenced anywhere.
+
+**API parity**
+- The public exports from `src/audio/music.ts` (`preloadMusic`,
+  `startMusic`, `setMusicVolume`, `setMusicMuted`, `isMusicMuted`,
+  `AMBIENT_KEY`) stay the same shape so TitleScene and PauseScene
+  don't change. `preloadMusic` and the `_scene` params are now
+  unused but preserved.
+
+**Autoplay**
+- New AudioContexts are suspended by browsers until a user gesture.
+  Both `pointerdown` and `keydown` listeners call `ctx.resume()`,
+  which kicks the music in as soon as the player clicks anything on
+  the title screen.
+
+### Slice 40 — Map-pacing: no shops or rests in the first three floors
 Playtest observation: early shops were dead weight — you have no scrap
 to spend — and early rest sites wasted a slot because you hadn't taken
 damage yet. Tightened map generation in
