@@ -83,7 +83,114 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 22 — AoE cards *(current)*
+### Slice 24 — Potions *(current)*
+A 3-slot potion belt with drops, shop sales, and a dedicated in-combat
+aim mode. Brings the system Slay the Spire calls "always there if you
+need it" online.
+
+**Engine**
+- New module [src/game/potions.ts](src/game/potions.ts) with 8 starter
+  potions and a rarity-weighted picker (65/30/5 common/uncommon/rare).
+- `PotionDef` reuses the existing `CardEffect` set as `PotionEffect`,
+  so every effect already supported by cards (damage, plating, draw,
+  steam, vuln/weak/burn, gainStrength/Dex, AoE variants, heal) works
+  in potions for free.
+- `usePotion(state, def, targetIndex?)` in `combat.ts` reuses the
+  private `applyEffect` machinery. Bypasses cost / hand / discard
+  entirely. Only usable during player turn (`canUsePotion`).
+- Potions stay outside the deck and aren't shuffled — pure inventory.
+
+**Potion library**
+- **Block Potion** (common, self) — Gain 12 Plating
+- **Fire Potion** (common, enemy) — Deal 20 damage
+- **Swift Potion** (common, none) — Draw 3
+- **Energy Potion** (common, none) — Gain 2 Steam
+- **Weak Potion** (uncommon, allEnemies) — 3 Weak to all
+- **Vulnerable Potion** (uncommon, allEnemies) — 3 Vuln to all
+- **Strength Potion** (uncommon, self) — Gain 2 Strength
+- **Repair Potion** (uncommon, self) — Heal 8 hull
+
+**Run state**
+- `RunState.potions: (string | null)[]` — fixed-length 3-slot belt.
+- `completeCombat` rolls a drop: elite fights guarantee, regular
+  fights roll 40%. Drop auto-claims into the first empty slot; if
+  all slots are full, no drop fires (no overflow UI to design).
+- `buyPotionOffer`, `clearPotionSlot`, `discardPotion`,
+  `hasOpenPotionSlot` helpers cover every mutation path.
+- Save back-compat via `normalizePotions / normalizeReward /
+  normalizeShop`: pre-potion saves load with an empty belt and no
+  schema bump.
+
+**Shop**
+- Each `pendingShop` now carries a single `potionOffer` alongside
+  the 3 card offers — `35–45` scrap with ±5 jitter. Panel renders
+  below the card row in `ShopScene` showing name + description +
+  price. Falls back to "BELT FULL" when the player has no open slot.
+
+**Combat UI**
+- Row of 3 slots right of the Steam gauge in `CombatScene`. Hover
+  tooltip shows the full potion name + description above the belt.
+- Click filled slot:
+  - `enemy` target with 1 alive enemy → auto-targets it
+  - `enemy` target with 2+ alive → enters **AIM MODE**: cyan glow
+    on every alive enemy, banner reading
+    `CHOOSE A TARGET — CLICK ELSEWHERE TO CANCEL`. Next enemy click
+    consumes; clicking elsewhere cancels; clicking the same slot
+    again also cancels.
+  - `self` / `none` / `allEnemies` → uses immediately.
+- A `suppressNextAimUp` flag swallows the pointerup that ends the
+  slot-click which entered aim mode — without it the click-to-aim
+  click would also confirm the aim immediately.
+- While aiming, card pointerdown handlers ignore input so the
+  player can't start a half-finished card drag through aim mode.
+
+**Reward**
+- `PendingReward.potionId: string | null` carries the dropped
+  potion to `RewardScene`, which renders a `+1 potion: <name>`
+  line under the scrap total. Display only — the potion was
+  already added to the belt by `completeCombat`.
+
+**Known limitations**
+- No in-combat discard UI. If your belt fills, future drops are
+  suppressed until you spend one. No way to throw away a Repair
+  Potion you no longer want.
+- No potion-related relics (belt-slot expander, double-effect
+  drinker, etc.).
+- Potions are combat-only — events that mention "drink" can't tap
+  into the system yet.
+
+### Slice 23 — Retain / Ethereal / Innate keywords
+Three Slay-the-Spire-staple keyword behaviors land. Card definitions
+can now flag any combination of `retain`, `ethereal`, and `innate`;
+the combat loop handles the three end-of-turn / start-of-turn
+routings.
+
+**Engine**
+- `CardDef` gained `retain?`, `ethereal?`, `innate?` boolean flags.
+- `endTurn` routes each hand card by keyword: retain → stay in hand,
+  ethereal → exhaust pile, otherwise → discard. Retain wins over
+  ethereal if a card somehow has both (player-friendly resolution).
+- `startPlayerTurn` on turn 1 pulls every innate card from the draw
+  pile into the opening hand BEFORE the normal draw. Innate held
+  into later turns via retain does NOT re-trigger.
+- Hand size still tops out at 5; retained cards fill slots so the
+  follow-up draw is reduced accordingly.
+
+**Cards** (3 new + upgrades, all in `SHOP_POOL`)
+- **Pressure Reading** (0c uncommon, innate) — Draw 2 (3+ innate)
+- **Hold Position** (1c uncommon, retain) — Gain 7 Plating
+  (10+ retain)
+- **Glass Round** (0c rare, ethereal + exhaust) — Deal 12 (16+)
+
+**UI**
+- `CardView` keyword badge now collapses INNATE / RETAIN / ETHEREAL
+  / EXHAUST into a single bullet-separated line at the bottom of
+  the card. Previously only EXHAUST was rendered.
+
+No save schema bump — keyword routing lives entirely inside
+`CombatState`.
+
+### Slice 22 — AoE cards
 Multi-enemy fights now have a counterplay: cards that hit every enemy
 at once. Four new cards, four new effect kinds, and a `target:
 'allEnemies'` shape that bypasses the drag-to-target flow.
@@ -655,6 +762,19 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 - **More enemies** — only 3 regular act 1 mooks. Add ~3 more for variety
 - **Event nodes (`?`)** — narrative choice rooms with branching outcomes
   (gain/lose scrap/hull, get/lose a card, gain a relic, take damage, etc.)
+- **Potion discard UI** — players can currently get stuck with potions
+  they don't want (belt fills, drops auto-suppress). Right-click belt
+  slot → confirm discard, or a small ✕ on hover.
+- **Potion-related relics** — Potion Belt (+1 slot), Sacred Bark (potions
+  hit double-strength), Toy Ornithopter (heal on potion use), etc.
+  Hooks `onPotionUsed(state, def)` and `onPotionPickup(run, id)`.
+- **Power cards** — persistent in-combat status cards à la Demon Form /
+  Inflame / Barricade. Would need a `power` card type that exhausts on
+  play but registers a permanent buff for the rest of combat.
+- **X-cost / Innate-only / Ethereal status cards** — scaling-with-energy
+  cards (Whirlwind-style), shuffled-in junk (Slime, Dazed, Wound). The
+  keyword infra (Slice 23) supports the latter already; the missing
+  piece is a way to insert curses into a deck/draw mid-combat.
 
 ### Tier 2 — depth and polish
 - **Status effects beyond Vuln/Weak**:

@@ -12,6 +12,12 @@ import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints } from './meta';
 import { getCharacter } from './characters';
 import { pickEventId } from './events';
+import {
+  POTION_SLOT_COUNT,
+  POTION_DROP_CHANCE,
+  POTION_SHOP_PRICE,
+  pickRandomPotionId
+} from './potions';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
 
@@ -23,6 +29,7 @@ export interface ShopOffer {
 
 export interface ShopState {
   offers: ShopOffer[];
+  potionOffer: PotionShopOffer | null;
   removalPrice: number;
   removalUsed: boolean;
 }
@@ -32,6 +39,14 @@ export interface PendingReward {
   relicId: string | null;
   scrap: number;
   fromElite: boolean;
+  // Potion auto-added before this reward was staged. Null if no drop or all slots were full.
+  potionId: string | null;
+}
+
+export interface PotionShopOffer {
+  potionId: string;
+  price: number;
+  sold: boolean;
 }
 
 export interface RunState {
@@ -42,6 +57,8 @@ export interface RunState {
   player: PersistentPlayer;
   scrap: number;
   relics: string[];
+  // Fixed-length potion belt. null = empty slot. Length must equal POTION_SLOT_COUNT.
+  potions: (string | null)[];
   result: RunResult;
   pendingEnemies: EnemyDef[] | null;
   pendingShop: ShopState | null;
@@ -72,6 +89,7 @@ export function startRun(characterId: string = 'pilot'): RunState {
     },
     scrap: 0,
     relics: [],
+    potions: Array(POTION_SLOT_COUNT).fill(null),
     result: 'inProgress',
     pendingEnemies: null,
     pendingShop: null,
@@ -157,7 +175,52 @@ function generateShop(): ShopState {
     const price = 28 + Math.floor(Math.random() * 25); // 28-52
     offers.push({ cardId, price, sold: false });
   }
-  return { offers, removalPrice: 55, removalUsed: false };
+  const potionOffer: PotionShopOffer = {
+    potionId: pickRandomPotionId(),
+    price: POTION_SHOP_PRICE + Math.floor(Math.random() * 11) - 5, // ±5 jitter
+    sold: false
+  };
+  return { offers, potionOffer, removalPrice: 55, removalUsed: false };
+}
+
+export function buyPotionOffer(): boolean {
+  const r = getRun();
+  const shop = r.pendingShop;
+  if (!shop || !shop.potionOffer || shop.potionOffer.sold) return false;
+  if (r.scrap < shop.potionOffer.price) return false;
+  const slot = firstEmptyPotionSlot(r);
+  if (slot < 0) return false; // belt full
+  r.scrap -= shop.potionOffer.price;
+  r.potions[slot] = shop.potionOffer.potionId;
+  shop.potionOffer.sold = true;
+  persist();
+  return true;
+}
+
+function firstEmptyPotionSlot(r: RunState): number {
+  return r.potions.findIndex((p) => p === null);
+}
+
+export function discardPotion(slotIndex: number): boolean {
+  const r = getRun();
+  if (slotIndex < 0 || slotIndex >= r.potions.length) return false;
+  if (r.potions[slotIndex] === null) return false;
+  r.potions[slotIndex] = null;
+  persist();
+  return true;
+}
+
+// Player consumed a potion in combat. The combat state mutation is done by
+// the caller (combat.ts::usePotion) — this just clears the inventory slot.
+export function clearPotionSlot(slotIndex: number): void {
+  const r = getRun();
+  if (slotIndex < 0 || slotIndex >= r.potions.length) return;
+  r.potions[slotIndex] = null;
+  persist();
+}
+
+export function hasOpenPotionSlot(): boolean {
+  return firstEmptyPotionSlot(getRun()) >= 0;
 }
 
 export function buyOffer(offerIndex: number): boolean {
@@ -260,11 +323,25 @@ export function completeCombat(survivingHull: number): number {
   if (isElite) {
     relicId = pickRelicFor(new Set(r.relics));
   }
+
+  // Potion drop: only roll if a slot is open (auto-claim, no overflow UI).
+  // Elite fights get a guaranteed drop; regular fights roll POTION_DROP_CHANCE.
+  let potionId: string | null = null;
+  const slot = firstEmptyPotionSlot(r);
+  if (slot >= 0) {
+    const drops = isElite || Math.random() < POTION_DROP_CHANCE;
+    if (drops) {
+      potionId = pickRandomPotionId();
+      r.potions[slot] = potionId;
+    }
+  }
+
   r.pendingReward = {
     cards,
     relicId,
     scrap: reward,
-    fromElite: isElite
+    fromElite: isElite,
+    potionId
   };
 
   persist();

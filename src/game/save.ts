@@ -2,6 +2,7 @@ import type { MapData, MapNode } from './map';
 import { ENEMY_DEFS } from './enemies';
 import type { RunState, ShopState, RunResult, PendingReward } from './run';
 import type { PersistentPlayer } from './types';
+import { POTION_SLOT_COUNT } from './potions';
 
 const KEY = 'rust-and-rivets/save/v4';
 const SCHEMA_VERSION = 4;
@@ -23,6 +24,7 @@ interface SavedRun {
   player: PersistentPlayer;
   scrap: number;
   relics: string[];
+  potions: (string | null)[];
   result: RunResult;
   pendingEnemyIds: string[] | null;
   pendingShop: ShopState | null;
@@ -48,6 +50,7 @@ function snapshot(state: RunState): SavedRun {
     player: { ...state.player, deck: state.player.deck.slice() },
     scrap: state.scrap,
     relics: state.relics.slice(),
+    potions: state.potions.slice(),
     result: state.result,
     pendingEnemyIds: state.pendingEnemies ? state.pendingEnemies.map((e) => e.id) : null,
     pendingShop: state.pendingShop ? structuredClone(state.pendingShop) : null,
@@ -56,6 +59,30 @@ function snapshot(state: RunState): SavedRun {
     pendingEventId: state.pendingEventId,
     pendingEventResult: state.pendingEventResult
   };
+}
+
+// Pre-potion saves lack the staged-reward potionId and the shop's potionOffer;
+// fill in safe defaults so the rest of the code can treat them as required.
+function normalizeReward(raw: PendingReward | null | undefined): PendingReward | null {
+  if (!raw) return null;
+  return { ...raw, potionId: raw.potionId ?? null };
+}
+
+function normalizeShop(raw: ShopState | null | undefined): ShopState | null {
+  if (!raw) return null;
+  return { ...raw, potionOffer: raw.potionOffer ?? null };
+}
+
+// Pre-potion saves lack the field; pad or truncate to POTION_SLOT_COUNT so
+// the runtime always has a fixed-length belt.
+function normalizePotions(raw: unknown): (string | null)[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  const out: (string | null)[] = Array(POTION_SLOT_COUNT).fill(null);
+  for (let i = 0; i < POTION_SLOT_COUNT; i++) {
+    const v = arr[i];
+    if (typeof v === 'string') out[i] = v;
+  }
+  return out;
 }
 
 function hydrate(saved: SavedRun): RunState {
@@ -85,10 +112,11 @@ function hydrate(saved: SavedRun): RunState {
     player,
     scrap: saved.scrap,
     relics: saved.relics ?? [],
+    potions: normalizePotions(saved.potions),
     result: saved.result,
     pendingEnemies: pendingEnemies && pendingEnemies.length > 0 ? pendingEnemies : null,
-    pendingShop: saved.pendingShop,
-    pendingReward: saved.pendingReward ?? null,
+    pendingShop: normalizeShop(saved.pendingShop),
+    pendingReward: normalizeReward(saved.pendingReward),
     awaitingInterAct: saved.awaitingInterAct ?? false,
     pendingEventId: saved.pendingEventId ?? null,
     pendingEventResult: saved.pendingEventResult ?? null

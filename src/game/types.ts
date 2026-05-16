@@ -25,6 +25,17 @@ export type CardEffect =
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 
+export type PotionEffect = CardEffect;
+
+export interface PotionDef {
+  id: string;
+  name: string;
+  target: Target;
+  description: string;
+  effects: PotionEffect[];
+  rarity?: CardRarity;
+}
+
 export interface CardDef {
   id: CardId;
   name: string;
@@ -34,6 +45,12 @@ export interface CardDef {
   effects: CardEffect[];
   exhaust?: boolean;
   rarity?: CardRarity;
+  // Stays in hand at end of turn instead of being discarded.
+  retain?: boolean;
+  // If still in hand at end of turn, goes to the exhaust pile (not discard).
+  ethereal?: boolean;
+  // Pulled into the opening hand on turn 1 regardless of draw order.
+  innate?: boolean;
 }
 
 export interface CardInstance {

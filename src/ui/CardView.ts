@@ -14,7 +14,7 @@ export class CardView extends Phaser.GameObjects.Container {
   private costBadge: Phaser.GameObjects.Arc;
   private costText: Phaser.GameObjects.Text;
   private descText: Phaser.GameObjects.Text;
-  private exhaustText: Phaser.GameObjects.Text | null = null;
+  private keywordText: Phaser.GameObjects.Text | null = null;
   private playable = true;
   private hovered = false;
   private homeX = 0;
@@ -103,15 +103,20 @@ export class CardView extends Phaser.GameObjects.Container {
 
     this.visual.add([this.bg, this.border, this.nameText, this.costBadge, this.costText, this.descText]);
 
-    if (card.def.exhaust) {
-      this.exhaustText = scene.add
-        .text(0, CARD_H / 2 - 14, 'EXHAUST', {
+    const keywords: string[] = [];
+    if (card.def.innate) keywords.push('INNATE');
+    if (card.def.retain) keywords.push('RETAIN');
+    if (card.def.ethereal) keywords.push('ETHEREAL');
+    if (card.def.exhaust) keywords.push('EXHAUST');
+    if (keywords.length > 0) {
+      this.keywordText = scene.add
+        .text(0, CARD_H / 2 - 14, keywords.join(' • '), {
           fontFamily: FONTS.body,
           fontSize: '10px',
           color: hex(COLORS.rust)
         })
         .setOrigin(0.5, 0.5);
-      this.visual.add(this.exhaustText);
+      this.visual.add(this.keywordText);
     }
 
     this.add(this.visual);

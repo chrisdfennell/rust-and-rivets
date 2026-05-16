@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getRun, takeRewardCard, skipRewardCards } from '../game/run';
 import { CARDS } from '../game/cards';
 import { RELICS } from '../game/relics';
+import { POTIONS } from '../game/potions';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
@@ -52,6 +53,19 @@ export class RewardScene extends Phaser.Scene {
         fontStyle: 'bold'
       })
       .setOrigin(0.5);
+
+    // Potion drop line (auto-claimed to belt, no UI choice — just info)
+    if (reward.potionId) {
+      const def = POTIONS[reward.potionId];
+      this.add
+        .text(width / 2, 124, `+1 potion: ${def?.name ?? reward.potionId}`, {
+          fontFamily: FONTS.display,
+          fontSize: '14px',
+          color: hex(COLORS.brass),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5);
+    }
 
     // Relic banner (elite only)
     let cardsTop = 160;

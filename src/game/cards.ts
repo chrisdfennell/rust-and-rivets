@@ -8,8 +8,9 @@ const card = (
   description: string,
   effects: CardDef['effects'],
   exhaust?: boolean,
-  rarity?: CardRarity
-): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity });
+  rarity?: CardRarity,
+  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean }
+): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity, ...flags });
 
 export const CARDS: Record<string, CardDef> = {
   // ===== Starter =====
@@ -149,7 +150,23 @@ export const CARDS: Record<string, CardDef> = {
   concussion: card('concussion', 'Concussion', 1, 'allEnemies', 'Deal 4 damage to ALL enemies. Apply 1 Weak to all.',
     [{ kind: 'damageAll', amount: 4 }, { kind: 'applyWeakAll', amount: 1 }], false, 'common'),
   'concussion+': card('concussion+', 'Concussion+', 1, 'allEnemies', 'Deal 6 damage to ALL enemies. Apply 2 Weak to all.',
-    [{ kind: 'damageAll', amount: 6 }, { kind: 'applyWeakAll', amount: 2 }], false, 'common')
+    [{ kind: 'damageAll', amount: 6 }, { kind: 'applyWeakAll', amount: 2 }], false, 'common'),
+
+  // ===== Keyword demo: Innate / Retain / Ethereal =====
+  pressureReading: card('pressureReading', 'Pressure Reading', 0, 'none', 'Innate. Draw 2 cards.',
+    [{ kind: 'draw', amount: 2 }], false, 'uncommon', { innate: true }),
+  'pressureReading+': card('pressureReading+', 'Pressure Reading+', 0, 'none', 'Innate. Draw 3 cards.',
+    [{ kind: 'draw', amount: 3 }], false, 'uncommon', { innate: true }),
+
+  holdPosition: card('holdPosition', 'Hold Position', 1, 'self', 'Gain 7 Plating. Retain.',
+    [{ kind: 'plating', amount: 7 }], false, 'uncommon', { retain: true }),
+  'holdPosition+': card('holdPosition+', 'Hold Position+', 1, 'self', 'Gain 10 Plating. Retain.',
+    [{ kind: 'plating', amount: 10 }], false, 'uncommon', { retain: true }),
+
+  glassRound: card('glassRound', 'Glass Round', 0, 'enemy', 'Deal 12 damage. Ethereal. Exhaust.',
+    [{ kind: 'damage', amount: 12 }], true, 'rare', { ethereal: true }),
+  'glassRound+': card('glassRound+', 'Glass Round+', 0, 'enemy', 'Deal 16 damage. Ethereal. Exhaust.',
+    [{ kind: 'damage', amount: 16 }], true, 'rare', { ethereal: true })
 };
 
 export const STARTER_DECK: string[] = [
@@ -165,7 +182,8 @@ export const SHOP_POOL: string[] = [
   'steamSurge', 'pressureBurst',
   'battleForge', 'bufferPlate', 'pyroCharge', 'cinderRound',
   'spikePlating', 'ironWill',
-  'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion'
+  'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion',
+  'pressureReading', 'holdPosition', 'glassRound'
 ];
 
 export function isUpgradable(cardId: string): boolean {

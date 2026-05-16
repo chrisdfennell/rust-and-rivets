@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { createCombatState, endTurn, playCard, canPlay } from '../game/combat';
-import { getRun, completeCombat, failCombat } from '../game/run';
+import { createCombatState, endTurn, playCard, canPlay, usePotion, canUsePotion } from '../game/combat';
+import { getRun, completeCombat, failCombat, clearPotionSlot } from '../game/run';
+import { POTIONS } from '../game/potions';
 import type { CombatState, CardInstance, EnemyState } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
@@ -30,6 +31,13 @@ interface DragState {
   hoveredIndex: number;
 }
 
+interface PotionSlotUI {
+  container: Phaser.GameObjects.Container;
+  bg: Phaser.GameObjects.Rectangle;
+  glow: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+}
+
 const DRAG_THRESHOLD = 12; // pixels of pointer movement before we treat it as a drag
 
 export class CombatScene extends Phaser.Scene {
@@ -55,6 +63,17 @@ export class CombatScene extends Phaser.Scene {
   private drag: DragState | null = null;
   private inputBound = false;
   private debugHitAreas = false;
+  private potionSlots: PotionSlotUI[] = [];
+  private potionTooltip!: Phaser.GameObjects.Text;
+  // When set, the player has clicked an enemy-target potion and is choosing
+  // which enemy to use it on. Next click on an enemy consumes it; clicking
+  // anywhere else cancels.
+  private aimingPotionSlot: number | null = null;
+  // The pointerup that ends the slot-click that entered aim mode fires AFTER
+  // our pointerdown handler. We swallow that first one so the player still
+  // needs to click again to either confirm or cancel.
+  private suppressNextAimUp = false;
+  private potionAimBanner!: Phaser.GameObjects.Text;
 
   constructor() {
     super('Combat');
@@ -69,6 +88,8 @@ export class CombatScene extends Phaser.Scene {
     this.endTurnTimer = null;
     this.enemyUIs = [];
     this.drag = null;
+    this.potionSlots = [];
+    this.aimingPotionSlot = null;
 
     setupPause(this);
 
@@ -185,6 +206,9 @@ export class CombatScene extends Phaser.Scene {
       color: hex(COLORS.boneDim),
       align: 'right'
     }).setOrigin(1, 0);
+
+    // Potion belt — row of slots to the right of the steam gauge.
+    this.makePotionBelt(180, height - 130);
 
     // End turn button
     this.makeEndTurnButton(width - 130, height - 130);
@@ -317,6 +341,182 @@ export class CombatScene extends Phaser.Scene {
     return c;
   }
 
+  // ===== Potion belt =====
+
+  private makePotionBelt(originX: number, originY: number) {
+    const slotSize = 44;
+    const gap = 8;
+    const potions = getRun().potions;
+    for (let i = 0; i < potions.length; i++) {
+      const x = originX + i * (slotSize + gap);
+      const container = this.add.container(x, originY);
+      const glow = this.add
+        .rectangle(0, 0, slotSize + 8, slotSize + 8, COLORS.steam, 0)
+        .setStrokeStyle(2, COLORS.steam, 0);
+      const bg = this.add
+        .rectangle(0, 0, slotSize, slotSize, COLORS.bgPanel)
+        .setStrokeStyle(2, COLORS.brassDim);
+      const label = this.add
+        .text(0, 0, '', {
+          fontFamily: FONTS.display,
+          fontSize: '11px',
+          color: hex(COLORS.bone),
+          align: 'center',
+          fontStyle: 'bold',
+          wordWrap: { width: slotSize - 4 }
+        })
+        .setOrigin(0.5);
+      container.add([glow, bg, label]);
+      bg.setInteractive({ useHandCursor: true });
+      const idx = i;
+      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPotionSlotClick(idx, pointer));
+      bg.on('pointerover', () => this.onPotionHover(idx, true));
+      bg.on('pointerout', () => this.onPotionHover(idx, false));
+      this.potionSlots.push({ container, bg, glow, label });
+    }
+    // Hover tooltip — anchored above the belt, hidden when nothing hovered.
+    this.potionTooltip = this.add
+      .text(originX + ((potions.length - 1) * (slotSize + gap)) / 2, originY - slotSize / 2 - 12, '', {
+        fontFamily: FONTS.body,
+        fontSize: '12px',
+        color: hex(COLORS.bone),
+        backgroundColor: '#000000aa',
+        padding: { x: 6, y: 3 },
+        align: 'center'
+      })
+      .setOrigin(0.5, 1)
+      .setVisible(false)
+      .setDepth(900);
+    // Aim banner — only visible while choosing a potion target.
+    const { width } = this.scale;
+    this.potionAimBanner = this.add
+      .text(width / 2, 56, 'CHOOSE A TARGET — CLICK ELSEWHERE TO CANCEL', {
+        fontFamily: FONTS.display,
+        fontSize: '14px',
+        color: hex(COLORS.steam),
+        fontStyle: 'bold',
+        backgroundColor: '#000000aa',
+        padding: { x: 10, y: 4 }
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(900);
+    this.refreshPotionBelt();
+  }
+
+  private refreshPotionBelt() {
+    const potions = getRun().potions;
+    for (let i = 0; i < this.potionSlots.length; i++) {
+      const ui = this.potionSlots[i];
+      const id = potions[i];
+      const def = id ? POTIONS[id] : null;
+      if (def) {
+        // Compact label: first 4 chars of each word, capped at 10 chars.
+        const short = def.name.split(' ').map((w) => w.slice(0, 4)).join(' ').slice(0, 12);
+        ui.label.setText(short);
+        ui.bg.setFillStyle(COLORS.steelDark);
+        ui.bg.setStrokeStyle(2, COLORS.steam);
+      } else {
+        ui.label.setText('');
+        ui.bg.setFillStyle(COLORS.bgPanel);
+        ui.bg.setStrokeStyle(2, COLORS.brassDim);
+      }
+      // Aim glow lights up the slot being aimed.
+      const aiming = this.aimingPotionSlot === i;
+      ui.glow.setStrokeStyle(2, COLORS.steam, aiming ? 1 : 0);
+    }
+  }
+
+  private onPotionHover(slot: number, hovered: boolean) {
+    const id = getRun().potions[slot];
+    if (!hovered || !id) {
+      this.potionTooltip.setVisible(false);
+      return;
+    }
+    const def = POTIONS[id];
+    if (!def) return;
+    this.potionTooltip.setText(`${def.name}\n${def.description}`);
+    this.potionTooltip.setVisible(true);
+  }
+
+  private onPotionSlotClick(slot: number, _pointer: Phaser.Input.Pointer) {
+    if (!canUsePotion(this.state)) return;
+    const id = getRun().potions[slot];
+    if (!id) return;
+    const def = POTIONS[id];
+    if (!def) return;
+    // Cancel any in-flight end-turn confirm when interacting with belt.
+    this.cancelEndTurnConfirm();
+    // If the same slot is being clicked twice, cancel aim.
+    if (this.aimingPotionSlot === slot) {
+      this.exitPotionAim();
+      return;
+    }
+    if (def.target === 'enemy') {
+      // Enter aim mode unless there's exactly one alive target.
+      const alive = this.state.enemies
+        .map((e, i) => ({ alive: e.hull > 0, i }))
+        .filter((x) => x.alive);
+      if (alive.length === 1) {
+        this.consumePotion(slot, alive[0].i);
+        return;
+      }
+      this.enterPotionAim(slot);
+      return;
+    }
+    this.consumePotion(slot, undefined);
+  }
+
+  private enterPotionAim(slot: number) {
+    this.aimingPotionSlot = slot;
+    this.suppressNextAimUp = true;
+    this.potionAimBanner.setVisible(true);
+    // Highlight all alive enemies so the player sees valid drop targets.
+    for (let i = 0; i < this.enemyUIs.length; i++) {
+      const alive = this.state.enemies[i].hull > 0;
+      const ui = this.enemyUIs[i];
+      ui.highlight.setStrokeStyle(3, COLORS.steam, alive ? 1 : 0);
+      ui.highlight.setFillStyle(COLORS.steam, alive ? 0.12 : 0);
+    }
+    this.refreshPotionBelt();
+  }
+
+  private exitPotionAim() {
+    this.aimingPotionSlot = null;
+    this.potionAimBanner.setVisible(false);
+    for (const ui of this.enemyUIs) {
+      ui.highlight.setStrokeStyle(3, COLORS.danger, 0);
+      ui.highlight.setFillStyle(COLORS.danger, 0);
+    }
+    this.refreshPotionBelt();
+  }
+
+  private consumePotion(slot: number, targetIndex: number | undefined) {
+    const id = getRun().potions[slot];
+    if (!id) return;
+    const def = POTIONS[id];
+    if (!def) return;
+    const pre = this.snapshot();
+    sfx.cardPlay();
+    const ok = usePotion(this.state, def, targetIndex);
+    if (!ok) return;
+    clearPotionSlot(slot);
+    this.exitPotionAim();
+    this.emitDeltas(pre);
+    if (def.target === 'enemy' && targetIndex !== undefined && this.enemyUIs[targetIndex]) {
+      this.shake(this.enemyUIs[targetIndex].sprite, 6);
+    } else if (def.target === 'allEnemies') {
+      for (let i = 0; i < this.state.enemies.length; i++) {
+        if (pre.enemies[i] && pre.enemies[i].hull > 0 && this.enemyUIs[i]) {
+          this.shake(this.enemyUIs[i].sprite, 5);
+        }
+      }
+    }
+    this.refresh();
+  }
+
+  // ===== End-turn UI =====
+
   private startEndTurnConfirm() {
     this.endTurnPending = true;
     const steam = this.state.player.steam;
@@ -364,6 +564,9 @@ export class CombatScene extends Phaser.Scene {
   private onCardPointerDown(card: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) {
     if (!canPlay(this.state, card.uid)) return;
     if (this.drag) return;
+    // While aiming a potion, the global pointerup intercepts everything;
+    // ignore card clicks so we don't leave a half-finished drag.
+    if (this.aimingPotionSlot !== null) return;
     this.cancelEndTurnConfirm();
     this.drag = {
       view,
@@ -404,7 +607,24 @@ export class CombatScene extends Phaser.Scene {
     d.hoveredIndex = idx;
   }
 
-  private onPointerUp(_pointer: Phaser.Input.Pointer) {
+  private onPointerUp(pointer: Phaser.Input.Pointer) {
+    // Potion aim mode steals all clicks until it resolves or cancels.
+    if (this.aimingPotionSlot !== null) {
+      if (this.suppressNextAimUp) {
+        // This is the pointerup that ends the slot-click that entered aim
+        // mode; let it pass through but consume the suppress flag.
+        this.suppressNextAimUp = false;
+        return;
+      }
+      const slot = this.aimingPotionSlot;
+      const idx = this.enemyIndexAt(pointer.x, pointer.y);
+      if (this.aliveAt(idx)) {
+        this.consumePotion(slot, idx);
+      } else {
+        this.exitPotionAim();
+      }
+      return;
+    }
     const d = this.drag;
     if (!d) return;
     // Clear highlights
@@ -700,6 +920,7 @@ export class CombatScene extends Phaser.Scene {
     this.logText.setText(s.log.slice(-4).join('\n'));
 
     this.layoutHand();
+    this.refreshPotionBelt();
 
     if (s.phase === 'victory' && !this.endHandled) {
       this.endHandled = true;

@@ -7,6 +7,7 @@ import type {
   EnemyState,
   PersistentPlayer,
   PlayerState,
+  PotionDef,
   ResolveCtx,
   CardEffect
 } from './types';
@@ -164,7 +165,24 @@ function startPlayerTurn(state: CombatState) {
   p.firstAttackBonus = 0;
   p.firstCardFree = false;
   p.cardsPlayedThisTurn = 0;
-  drawCards(state, 5);
+  // On turn 1, Innate cards are pulled from the draw pile into the opening
+  // hand before the normal 5-card draw. Innate cards held over from a
+  // previous turn (retained) don't re-trigger.
+  if (state.turn === 1) {
+    const innate: CardInstance[] = [];
+    p.draw = p.draw.filter((c) => {
+      if (c.def.innate) {
+        innate.push(c);
+        return false;
+      }
+      return true;
+    });
+    p.hand.push(...innate);
+  }
+  // Retained cards from the previous turn already occupy hand slots, so
+  // only draw enough to fill back up to 5.
+  const toDraw = Math.max(0, 5 - p.hand.length);
+  drawCards(state, toDraw);
   state.phase = 'playerTurn';
   logTo(state, `— Turn ${state.turn} —`);
   // Relic onTurnStart hooks may grant first-attack bonus, free first card, draw extra cards, heal, etc.
@@ -406,6 +424,24 @@ function applyEffect(state: CombatState, eff: CardEffect) {
   }
 }
 
+// Potions reuse the card effect machinery but bypass cost/hand entirely.
+// They can be used during the player turn only (StS convention).
+export function canUsePotion(state: CombatState): boolean {
+  return state.phase === 'playerTurn';
+}
+
+export function usePotion(state: CombatState, def: PotionDef, targetIndex?: number): boolean {
+  if (!canUsePotion(state)) return false;
+  state.activeTargetIndex = targetIndex;
+  logTo(state, `You drink ${def.name}.`);
+  for (const eff of def.effects) {
+    applyEffect(state, eff);
+    if (state.phase === 'victory' || state.phase === 'defeat') break;
+  }
+  state.activeTargetIndex = undefined;
+  return true;
+}
+
 function effectiveCost(state: CombatState, baseCost: number): number {
   const p = state.player;
   if (p.firstCardFree && p.cardsPlayedThisTurn === 0) return 0;
@@ -465,7 +501,19 @@ export interface EndTurnHooks {
 export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (state.phase !== 'playerTurn') return;
   const p = state.player;
-  while (p.hand.length > 0) p.discard.push(p.hand.pop()!);
+  // Cards in hand at end of turn route by keyword:
+  //  - retain → stay in hand
+  //  - ethereal → exhaust
+  //  - otherwise → discard
+  // Retain wins over ethereal if a card somehow has both (retain is the
+  // player-friendly outcome).
+  const kept: CardInstance[] = [];
+  for (const card of p.hand) {
+    if (card.def.retain) kept.push(card);
+    else if (card.def.ethereal) p.exhaust.push(card);
+    else p.discard.push(card);
+  }
+  p.hand = kept;
 
   // Burn ticks at the end of the owner's turn, before debuff decay. Bypasses plating.
   if (p.burn > 0) {

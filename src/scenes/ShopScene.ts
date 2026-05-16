@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { getRun, buyOffer, removeCardFromDeck, completeNode, type ShopOffer } from '../game/run';
+import { getRun, buyOffer, buyPotionOffer, removeCardFromDeck, completeNode, hasOpenPotionSlot, type ShopOffer, type PotionShopOffer } from '../game/run';
 import { CARDS } from '../game/cards';
+import { POTIONS } from '../game/potions';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
@@ -12,6 +13,7 @@ export class ShopScene extends Phaser.Scene {
   private removalView!: Phaser.GameObjects.Container;
   private scrapText!: Phaser.GameObjects.Text;
   private offerSlots: Phaser.GameObjects.Container[] = [];
+  private potionSlot: Phaser.GameObjects.Container | null = null;
   private removeBtn!: Button;
   private mode: 'main' | 'removing' = 'main';
 
@@ -21,6 +23,7 @@ export class ShopScene extends Phaser.Scene {
 
   create() {
     this.offerSlots = [];
+    this.potionSlot = null;
     this.mode = 'main';
     setupPause(this);
 
@@ -85,6 +88,14 @@ export class ShopScene extends Phaser.Scene {
       this.offerSlots.push(slot);
       this.renderOffer(slot, offer, i);
     });
+
+    // Potion offer — small panel below the card row.
+    if (shop.potionOffer) {
+      const panel = this.add.container(width / 2, offerY + CARD_H / 2 + 80);
+      this.mainView.add(panel);
+      this.potionSlot = panel;
+      this.renderPotionOffer(panel, shop.potionOffer);
+    }
 
     // Remove a card button
     const r = getRun();
@@ -151,6 +162,70 @@ export class ShopScene extends Phaser.Scene {
 
   private tryBuy(index: number) {
     if (!buyOffer(index)) return;
+    this.refresh();
+  }
+
+  private renderPotionOffer(slot: Phaser.GameObjects.Container, offer: PotionShopOffer) {
+    slot.removeAll(true);
+    const def = POTIONS[offer.potionId];
+    if (!def) return;
+
+    const r = getRun();
+    const room = hasOpenPotionSlot();
+    const canAfford = !offer.sold && room && r.scrap >= offer.price;
+
+    const w = 320;
+    const h = 64;
+    const fill = offer.sold ? COLORS.steelDark : COLORS.bgPanel;
+    const stroke = canAfford ? COLORS.brass : COLORS.brassDim;
+    const bg = this.add.rectangle(0, 0, w, h, fill).setStrokeStyle(2, stroke);
+
+    let priceLabel: string;
+    let priceColor: number;
+    if (offer.sold) {
+      priceLabel = 'SOLD';
+      priceColor = COLORS.brassDim;
+    } else if (!room) {
+      priceLabel = 'BELT FULL';
+      priceColor = COLORS.danger;
+    } else {
+      priceLabel = `${offer.price} SCRAP`;
+      priceColor = canAfford ? COLORS.steam : COLORS.danger;
+    }
+
+    const name = this.add
+      .text(-w / 2 + 14, -10, def.name, {
+        fontFamily: FONTS.display,
+        fontSize: '15px',
+        color: hex(canAfford ? COLORS.bone : COLORS.boneDim),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0, 0.5);
+    const desc = this.add
+      .text(-w / 2 + 14, 12, def.description, {
+        fontFamily: FONTS.body,
+        fontSize: '11px',
+        color: hex(COLORS.boneDim)
+      })
+      .setOrigin(0, 0.5);
+    const price = this.add
+      .text(w / 2 - 14, 0, priceLabel, {
+        fontFamily: FONTS.display,
+        fontSize: '14px',
+        color: hex(priceColor),
+        fontStyle: 'bold'
+      })
+      .setOrigin(1, 0.5);
+    slot.add([bg, name, desc, price]);
+
+    if (canAfford) {
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => this.tryBuyPotion());
+    }
+  }
+
+  private tryBuyPotion() {
+    if (!buyPotionOffer()) return;
     this.refresh();
   }
 
@@ -243,6 +318,9 @@ export class ShopScene extends Phaser.Scene {
         const slot = this.offerSlots[i];
         if (slot) this.renderOffer(slot, offer, i);
       });
+      if (shop.potionOffer && this.potionSlot) {
+        this.renderPotionOffer(this.potionSlot, shop.potionOffer);
+      }
       const canRemove =
         !shop.removalUsed &&
         r.scrap >= shop.removalPrice &&
