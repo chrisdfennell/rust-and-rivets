@@ -81,7 +81,8 @@ export function createCombatState(
     enemies,
     log: [introLine],
     relicIds: relicIds.slice(),
-    biggestPlayerHit: 0
+    biggestPlayerHit: 0,
+    turnEvents: []
   };
 
   startPlayerTurn(state);
@@ -233,9 +234,11 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number, targetIndex?: numb
   const through = dmg - absorbed;
   e.hull = Math.max(0, e.hull - through);
   if (through > state.biggestPlayerHit) state.biggestPlayerHit = through;
+  state.turnEvents.push({ kind: 'enemyDamaged', enemyIdx: idx, through, absorbed });
   if (through > 0) c.log(`Hit ${e.def.name} for ${through}.`);
   else c.log(`${e.def.name}'s plating absorbs ${absorbed}.`);
   if (e.hull <= 0) {
+    state.turnEvents.push({ kind: 'enemyDied', enemyIdx: idx });
     c.log(`${e.def.name} collapses into scrap.`);
     if (checkVictory(state)) return;
     return;
@@ -245,6 +248,7 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number, targetIndex?: numb
   if (e.thorns > 0) {
     const back = e.thorns;
     p.hull = Math.max(0, p.hull - back);
+    state.turnEvents.push({ kind: 'playerDamaged', from: idx, through: back, absorbed: 0 });
     c.log(`Thorns lash back for ${back}.`);
     if (p.hull <= 0) {
       state.phase = 'defeat';
@@ -271,6 +275,7 @@ export function dealDamageToPlayer(c: ResolveCtx, raw: number, attackerIndex?: n
   p.plating -= absorbed;
   const through = dmg - absorbed;
   p.hull = Math.max(0, p.hull - through);
+  state.turnEvents.push({ kind: 'playerDamaged', from: attackerIdx ?? -1, through, absorbed });
   if (through > 0) c.log(`You take ${through} hull damage.`);
   else c.log(`Plating absorbs ${absorbed}.`);
   if (p.hull <= 0) {
@@ -279,11 +284,13 @@ export function dealDamageToPlayer(c: ResolveCtx, raw: number, attackerIndex?: n
     return;
   }
   // Thorns on the player retaliate against the attacking enemy (bypasses plating).
-  if (p.thorns > 0 && attacker && isAlive(attacker)) {
+  if (p.thorns > 0 && attacker && isAlive(attacker) && attackerIdx !== undefined && attackerIdx >= 0) {
     const back = p.thorns;
     attacker.hull = Math.max(0, attacker.hull - back);
+    state.turnEvents.push({ kind: 'enemyDamaged', enemyIdx: attackerIdx, through: back, absorbed: 0 });
     c.log(`Spikes punish ${attacker.def.name} for ${back}.`);
     if (attacker.hull <= 0) {
+      state.turnEvents.push({ kind: 'enemyDied', enemyIdx: attackerIdx });
       c.log(`${attacker.def.name} collapses into scrap.`);
       checkVictory(state);
     }
@@ -297,21 +304,25 @@ export function gainEnemyPlating(c: ResolveCtx, n: number, targetIndex?: number)
   if (idx < 0) return;
   const e = state.enemies[idx];
   e.plating += n;
+  state.turnEvents.push({ kind: 'enemyPlating', enemyIdx: idx, amount: n });
   c.log(`${e.def.name} braces (+${n}).`);
 }
 
 export function applyVulnerableToPlayer(c: ResolveCtx, n: number) {
   c.state.player.vulnerable += n;
+  c.state.turnEvents.push({ kind: 'playerStatus', status: 'vulnerable', amount: n });
   c.log(`You are Vulnerable (${n}).`);
 }
 
 export function applyWeakToPlayer(c: ResolveCtx, n: number) {
   c.state.player.weak += n;
+  c.state.turnEvents.push({ kind: 'playerStatus', status: 'weak', amount: n });
   c.log(`You are Weak (${n}).`);
 }
 
 export function applyBurnToPlayer(c: ResolveCtx, n: number) {
   c.state.player.burn += n;
+  c.state.turnEvents.push({ kind: 'playerStatus', status: 'burn', amount: n });
   c.log(`You are Burning (${c.state.player.burn}).`);
 }
 
@@ -643,6 +654,9 @@ export interface EndTurnHooks {
 export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (state.phase !== 'playerTurn') return;
   const p = state.player;
+  // Reset the per-turn event log. CombatScene reads this after endTurn
+  // returns and animates each event in sequence.
+  state.turnEvents = [];
   // Curse / status cards that hurt the player while held in hand at end
   // of turn. Fires BEFORE hand routing so ethereal curses (e.g. Shrapnel)
   // can still sting before they auto-exhaust. Bypasses plating.
@@ -675,6 +689,7 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (p.burn > 0) {
     const tick = p.burn;
     p.hull = Math.max(0, p.hull - tick);
+    state.turnEvents.push({ kind: 'playerBurnTick', amount: tick });
     logTo(state, `Burn sears you for ${tick}.`);
     p.burn--;
     if (p.hull <= 0) {
@@ -729,6 +744,10 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
     .filter(({ e }) => isAlive(e));
   for (const { e, i } of enemyOrder) {
     if (!isAlive(e)) continue; // killed earlier this turn (e.g. by thorns from a prior attacker)
+    // Push a marker BEFORE the action resolves so CombatScene can animate
+    // the actor (sprite lunge / glow) ahead of the damage events that
+    // follow inside runEnemyAction.
+    state.turnEvents.push({ kind: 'enemyAct', enemyIdx: i, intentLabel: e.nextAction.intent.label });
     // Use the closure'd index so dealDamageToPlayer can attribute damage to the
     // correct attacker (matters for player Thorns retaliating).
     runEnemyAction(c, e, i);

@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 34.
+Quick orientation for someone coming in cold. Numbers as of Slice 35.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -55,7 +55,57 @@ Quick orientation for someone coming in cold. Numbers as of Slice 34.
 
 ## Done
 
-### Slice 34 — Status / curse cards *(current)*
+### Slice 35 — Animated enemy turn playback *(current)*
+The enemy turn used to resolve in a single tick: one aggregate
+`emitDeltas` showing a consolidated damage number per enemy/player.
+Now each hit, brace, status apply, and death animates as its own beat
+so the player can read what's happening.
+
+**Engine — event log**
+- New `TurnEvent` union in `types.ts` with variants: `enemyAct`,
+  `playerDamaged`, `enemyDamaged`, `enemyDied`, `enemyPlating`,
+  `playerStatus`, `playerBurnTick`, `playerHealed`, `log`.
+- `CombatState` gains `turnEvents: TurnEvent[]`. Cleared at the top
+  of `endTurn`, populated as actions resolve.
+- `dealDamageToPlayer` / `dealDamageToEnemy` / `gainEnemyPlating` /
+  `applyVulnerableToPlayer` / `applyWeakToPlayer` /
+  `applyBurnToPlayer` all push events. The damage helpers also push
+  `enemyDied` when the hit drops the target's hull to 0.
+- `endTurn` pushes an `enemyAct` marker before each enemy resolves
+  so the scene can lunge / glow / highlight the actor before its
+  damage events fire.
+- Player-card-play also writes events (same helpers), but the scene
+  only replays them after `endTurn`. The `applyCardPlay` path
+  continues to use `emitDeltas` against a pre-snapshot.
+
+**Scene — playback**
+- `CombatScene.playTurnEvents(pre, events)` walks the log with
+  `await`-able delays between events.
+- `renderTurnEvent` switches on `event.kind` and runs the matching
+  tween: lunge for `enemyAct` (yoyo 110 ms), float-number + ring +
+  burst for damage hits (220–280 ms), bigger burst + camera shake
+  for `enemyDied`, status badges for `playerStatus`, etc.
+- A `playingTurnEvents` flag gates `onCardPointerDown`, `onEndTurn`,
+  and `onPotionSlotClick` so the player can't act mid-replay.
+
+**Bars-during-playback**
+- The state's already-final values would make the StatBars jump to
+  end-of-turn values at the very first event, so playback uses a
+  `DisplayedStats` snapshot that starts at pre-endTurn values and
+  decrements per event.
+- `refreshBarsFromDisplay` paints from that snapshot; status
+  counters (vuln/weak/burn/str/dex/thorns) still come from state
+  since they change at most once per turn.
+- After the playback Promise resolves, the regular `refresh()`
+  lays out the newly-drawn hand, snaps bars to final state, and
+  routes to victory/defeat if the enemy turn ended there.
+
+Pacing tuned for "readable but not slow": `enemyAct` 180 ms,
+significant hits 260 ms, plating 180 ms, deaths 280 ms. A
+multi-hit attack like Sweep 5×3 plays as three distinct beats with
+their own damage numbers.
+
+### Slice 34 — Status / curse cards
 Closes the last big StS mechanic gap. Enemies and events can now
 inject "junk" cards into the player's deck that clutter the hand and
 optionally hurt the player while held.

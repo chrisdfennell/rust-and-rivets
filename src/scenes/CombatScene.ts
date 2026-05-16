@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { createCombatState, endTurn, playCard, canPlay, usePotion, canUsePotion } from '../game/combat';
 import { getRun, completeCombat, failCombat, clearPotionSlot, discardPotion } from '../game/run';
 import { POTIONS } from '../game/potions';
-import type { CombatState, CardInstance, EnemyState } from '../game/types';
+import type { CombatState, CardInstance, EnemyState, TurnEvent } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { setupPause } from '../ui/setupPause';
@@ -36,6 +36,23 @@ interface PotionSlotUI {
   bg: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
+}
+
+// Pre-endTurn snapshot of bar-relevant stats. Reuses the same shape the
+// existing emitDeltas path uses (this.snapshot() returns it).
+interface PrePlaybackSnapshot {
+  playerHull: number;
+  playerPlating: number;
+  enemies: { hull: number; plating: number }[];
+}
+
+// Live "what the bars currently show" stats during playback. Starts at the
+// pre-snapshot values, decrements per event so the bars match the animation.
+interface DisplayedStats {
+  playerHull: number;
+  playerPlating: number;
+  enemyHulls: number[];
+  enemyPlatings: number[];
 }
 
 const DRAG_THRESHOLD = 12; // pixels of pointer movement before we treat it as a drag
@@ -86,6 +103,9 @@ export class CombatScene extends Phaser.Scene {
   // up exit tweens, and they stay in cardViews so subsequent refresh calls
   // don't re-spawn them from the draw pile if the player chained two plays.
   private playingViews = new Set<CardView>();
+  // True while the enemy turn is being replayed as a sequence of events.
+  // Card pointerdown, End Turn, and potion clicks are all gated on this.
+  private playingTurnEvents = false;
 
   constructor() {
     super('Combat');
@@ -104,6 +124,7 @@ export class CombatScene extends Phaser.Scene {
     this.aimingPotionSlot = null;
     this.potionsUsedThisCombat = 0;
     this.playingViews = new Set();
+    this.playingTurnEvents = false;
 
     setupPause(this);
     // Right-click on potion slots discards the potion; we don't want the
@@ -505,6 +526,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private onPotionSlotClick(slot: number, _pointer: Phaser.Input.Pointer) {
+    if (this.playingTurnEvents) return;
     if (!canUsePotion(this.state)) return;
     const id = getRun().potions[slot];
     if (!id) return;
@@ -612,6 +634,9 @@ export class CombatScene extends Phaser.Scene {
     // this, endTurn() can discard the still-pending card before its
     // applyCardPlay runs, swallowing the play.
     if (this.playingViews.size > 0) return;
+    // Block re-entrancy: if the previous enemy turn is still being
+    // animated, ignore the click.
+    if (this.playingTurnEvents) return;
     const canPlayAnything = this.state.player.hand.some((c) => canPlay(this.state, c.uid));
     if (this.state.player.steam > 0 && canPlayAnything && !this.endTurnPending) {
       this.startEndTurnConfirm();
@@ -619,19 +644,35 @@ export class CombatScene extends Phaser.Scene {
     }
     this.cancelEndTurnConfirm();
     sfx.endTurn();
+    // Snapshot bar-relevant stats BEFORE endTurn so playback can drop the
+    // bars per event instead of jumping to final values up front.
     const pre = this.snapshot();
-    endTurn(this.state, {
-      afterEnemyResolve: () => this.emitDeltas(pre)
+    // Resolve the enemy turn synchronously into state, capturing the
+    // event log. Skip the immediate refresh — that waits for the event
+    // playback to finish so the enemy beat reads cleanly before the new
+    // hand arrives.
+    endTurn(this.state);
+    const events = this.state.turnEvents.slice();
+    // Sync the top-of-screen counters + log line immediately so the player
+    // sees they're back on their turn (turn number / steam) even while the
+    // animated playback shows what just happened.
+    this.steamLabel.setText(`${this.state.player.steam}/${this.state.player.maxSteam}`);
+    this.turnText.setText(`TURN ${this.state.turn}`);
+    this.logText.setText(this.state.log.slice(-4).join('\n'));
+    void this.playTurnEvents(pre, events).then(() => {
+      // After the playback completes, refresh fully — this lays out the
+      // newly-drawn hand and routes to victory/defeat if state ended there.
+      if (this.state.player.hull > 0 && this.state.phase === 'playerTurn') {
+        this.shake(this.mech, 4);
+      }
+      this.refresh();
     });
-    if (this.state.player.hull > 0 && this.state.phase === 'playerTurn') {
-      this.shake(this.mech, 4);
-    }
-    this.refresh();
   }
 
   // ===== Drag + click for cards =====
 
   private onCardPointerDown(card: CardInstance, view: CardView, pointer: Phaser.Input.Pointer) {
+    if (this.playingTurnEvents) return; // enemy turn replay in progress
     if (!canPlay(this.state, card.uid)) return;
     if (this.drag) return;
     // While aiming a potion, the global pointerup intercepts everything;
@@ -979,6 +1020,172 @@ export class CombatScene extends Phaser.Scene {
       repeat: 2,
       onComplete: () => (target.x = ox)
     });
+  }
+
+  // ===== Turn-event playback =====
+  //
+  // After endTurn() returns, state.turnEvents holds an ordered log of
+  // everything that happened during the enemy beat (enemyAct markers,
+  // damage hits on the player, thorns counterhits, plating gains, status
+  // applies, burn ticks, deaths). We replay them as a timed sequence so
+  // the player sees each hit land instead of all damage applying in
+  // one tick.
+  //
+  // Bars use a separate "displayed" snapshot that lags state by exactly
+  // the events not yet animated. Starts at pre-endTurn values; each event
+  // applies its delta and refreshes the bars. After playback completes
+  // the full refresh() lands them on final state — they should already
+  // match.
+
+  private async playTurnEvents(pre: PrePlaybackSnapshot, events: TurnEvent[]): Promise<void> {
+    this.playingTurnEvents = true;
+    const display: DisplayedStats = {
+      playerHull: pre.playerHull,
+      playerPlating: pre.playerPlating,
+      enemyHulls: pre.enemies.map((e) => e.hull),
+      enemyPlatings: pre.enemies.map((e) => e.plating)
+    };
+    this.refreshBarsFromDisplay(display);
+    for (const event of events) {
+      // Bail if the scene shut down mid-playback (combat ended, user nav'd).
+      if (!this.scene || !this.scene.systems || !this.scene.systems.isActive()) break;
+      await this.renderTurnEvent(event, display);
+    }
+    this.playingTurnEvents = false;
+  }
+
+  private renderTurnEvent(event: TurnEvent, display: DisplayedStats): Promise<void> {
+    switch (event.kind) {
+      case 'enemyAct': {
+        const ui = this.enemyUIs[event.enemyIdx];
+        if (ui && this.state.enemies[event.enemyIdx]?.hull > 0) {
+          // Brief lunge toward the player (left) and back so the player
+          // sees which enemy is acting before its damage events resolve.
+          this.tweens.add({
+            targets: ui.sprite,
+            x: ui.baseX - 18,
+            duration: 110,
+            yoyo: true,
+            ease: 'Sine.InOut'
+          });
+        }
+        return this.wait(180);
+      }
+      case 'playerDamaged': {
+        const playerPos = { x: this.mech.x, y: this.mech.y };
+        display.playerPlating = Math.max(0, display.playerPlating - event.absorbed);
+        display.playerHull = Math.max(0, display.playerHull - event.through);
+        if (event.through > 0) {
+          this.floatNumber(playerPos.x, playerPos.y - 60, `-${event.through}`, COLORS.danger);
+          this.hitRing(playerPos.x, playerPos.y, COLORS.danger);
+          this.burst(playerPos.x, playerPos.y, COLORS.rust, 10);
+          if (event.through >= 10) this.cameras.main.shake(180, 0.006);
+          sfx.hit();
+        } else if (event.absorbed > 0) {
+          this.floatNumber(playerPos.x - 30, playerPos.y - 40, `-${event.absorbed}`, COLORS.shield);
+          this.burst(playerPos.x, playerPos.y, COLORS.shield, 6);
+          sfx.platingAbsorb();
+        }
+        this.refreshBarsFromDisplay(display);
+        return this.wait(event.through > 0 ? 260 : 200);
+      }
+      case 'enemyDamaged': {
+        const ui = this.enemyUIs[event.enemyIdx];
+        display.enemyPlatings[event.enemyIdx] = Math.max(0, (display.enemyPlatings[event.enemyIdx] ?? 0) - event.absorbed);
+        display.enemyHulls[event.enemyIdx] = Math.max(0, (display.enemyHulls[event.enemyIdx] ?? 0) - event.through);
+        if (ui) {
+          if (event.through > 0) {
+            this.floatNumber(ui.baseX, ui.baseY - 60, `-${event.through}`, COLORS.danger);
+            this.hitRing(ui.baseX, ui.baseY, COLORS.danger);
+            this.burst(ui.baseX, ui.baseY, COLORS.rust, 8);
+            sfx.hit();
+          } else if (event.absorbed > 0) {
+            this.floatNumber(ui.baseX - 30, ui.baseY - 40, `-${event.absorbed}`, COLORS.shield);
+            this.burst(ui.baseX, ui.baseY, COLORS.shield, 6);
+            sfx.platingAbsorb();
+          }
+        }
+        this.refreshBarsFromDisplay(display);
+        return this.wait(200);
+      }
+      case 'enemyDied': {
+        const ui = this.enemyUIs[event.enemyIdx];
+        if (ui) {
+          this.burst(ui.baseX, ui.baseY, COLORS.rust, 24);
+          this.hitRing(ui.baseX, ui.baseY, COLORS.danger);
+          this.cameras.main.shake(220, 0.008);
+        }
+        return this.wait(280);
+      }
+      case 'enemyPlating': {
+        const ui = this.enemyUIs[event.enemyIdx];
+        display.enemyPlatings[event.enemyIdx] = (display.enemyPlatings[event.enemyIdx] ?? 0) + event.amount;
+        if (ui) {
+          this.floatNumber(ui.baseX + 30, ui.baseY - 40, `+${event.amount}`, COLORS.shield);
+        }
+        this.refreshBarsFromDisplay(display);
+        return this.wait(180);
+      }
+      case 'playerStatus': {
+        const playerPos = { x: this.mech.x, y: this.mech.y };
+        const label =
+          event.status === 'vulnerable' ? `VULN +${event.amount}`
+          : event.status === 'weak' ? `WEAK +${event.amount}`
+          : `BURN +${event.amount}`;
+        this.floatNumber(playerPos.x, playerPos.y - 80, label, COLORS.rust);
+        // Status counters come from state directly (we don't bother
+        // tracking them in display since they change at most once per turn).
+        this.refreshBarsFromDisplay(display);
+        return this.wait(180);
+      }
+      case 'playerBurnTick': {
+        const playerPos = { x: this.mech.x, y: this.mech.y };
+        display.playerHull = Math.max(0, display.playerHull - event.amount);
+        this.floatNumber(playerPos.x, playerPos.y - 60, `-${event.amount}`, COLORS.danger);
+        this.burst(playerPos.x, playerPos.y, COLORS.rust, 6);
+        sfx.hit();
+        this.refreshBarsFromDisplay(display);
+        return this.wait(220);
+      }
+      case 'playerHealed': {
+        const playerPos = { x: this.mech.x, y: this.mech.y };
+        display.playerHull = Math.min(this.state.player.maxHull, display.playerHull + event.amount);
+        this.floatNumber(playerPos.x, playerPos.y - 60, `+${event.amount}`, COLORS.ok);
+        sfx.heal();
+        this.refreshBarsFromDisplay(display);
+        return this.wait(200);
+      }
+      case 'log':
+        return Promise.resolve();
+    }
+  }
+
+  // Promise wrapper around Phaser's delayedCall so playTurnEvents can `await`.
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => this.time.delayedCall(ms, resolve));
+  }
+
+  // Paints the StatBars using the "displayed" snapshot — the values that
+  // lag actual state by the events not yet animated. Status counters
+  // (vuln/weak/burn/str/dex/thorns) come from state directly since they
+  // change at most once per turn and don't drive the per-hit pacing.
+  private refreshBarsFromDisplay(display: DisplayedStats) {
+    const s = this.state;
+    this.playerBar.update(
+      display.playerHull, s.player.maxHull, display.playerPlating,
+      s.player.vulnerable, s.player.weak,
+      s.player.strength, s.player.dexterity, s.player.burn, s.player.thorns
+    );
+    for (let i = 0; i < s.enemies.length; i++) {
+      const e = s.enemies[i];
+      const ui = this.enemyUIs[i];
+      if (!ui) continue;
+      ui.bar.update(
+        Math.max(0, display.enemyHulls[i] ?? 0), e.maxHull, display.enemyPlatings[i] ?? 0,
+        e.vulnerable, e.weak,
+        e.strength, e.dexterity, e.burn, e.thorns
+      );
+    }
   }
 
   // ===== Refresh =====

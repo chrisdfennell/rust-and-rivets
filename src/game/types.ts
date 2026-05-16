@@ -167,6 +167,22 @@ export interface PersistentPlayer {
 
 export type CombatPhase = 'playerTurn' | 'enemyTurn' | 'victory' | 'defeat';
 
+// Recorded during endTurn so CombatScene can replay the enemy beat as a
+// timed sequence (one damage number per hit, per-enemy lunge, etc.) instead
+// of showing all damage in a single visual tick. Helpers like
+// dealDamageToPlayer push into state.turnEvents; the scene reads it after
+// endTurn returns.
+export type TurnEvent =
+  | { kind: 'enemyAct'; enemyIdx: number; intentLabel: string }
+  | { kind: 'playerDamaged'; from: number; through: number; absorbed: number }
+  | { kind: 'enemyDamaged'; enemyIdx: number; through: number; absorbed: number }
+  | { kind: 'enemyDied'; enemyIdx: number }
+  | { kind: 'enemyPlating'; enemyIdx: number; amount: number }
+  | { kind: 'playerStatus'; status: 'vulnerable' | 'weak' | 'burn'; amount: number }
+  | { kind: 'playerBurnTick'; amount: number }
+  | { kind: 'playerHealed'; amount: number }
+  | { kind: 'log'; text: string };
+
 export interface CombatState {
   phase: CombatPhase;
   turn: number;
@@ -188,6 +204,10 @@ export interface CombatState {
   // Largest single hull-damage hit the player has landed in this combat,
   // bubbled to run.stats.biggestHit on victory/defeat.
   biggestPlayerHit: number;
+  // Per-turn event log used by CombatScene to play back the enemy turn
+  // as a timed sequence. Cleared at the start of endTurn; populated by
+  // damage / plating / status helpers as they fire.
+  turnEvents: TurnEvent[];
 }
 
 export interface ResolveCtx {
