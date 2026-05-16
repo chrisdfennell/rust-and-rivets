@@ -123,6 +123,10 @@ export interface PersistentPlayer {
   maxHull: number;
   deck: string[];
   characterId: string;
+  // Run-level meta bonuses. Default to 3 and 0 respectively when absent
+  // (back-compat for saves predating workshop additions).
+  maxSteam?: number;
+  startingPlating?: number;
 }
 
 export type CombatPhase = 'playerTurn' | 'enemyTurn' | 'victory' | 'defeat';

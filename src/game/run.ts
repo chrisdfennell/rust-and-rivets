@@ -60,6 +60,8 @@ export interface RunState {
   // Fixed-length potion belt. null = empty slot. Length must equal POTION_SLOT_COUNT.
   potions: (string | null)[];
   result: RunResult;
+  // Extra scrap added on boss kills, set by the Boss Bounty workshop upgrade.
+  bossBonus?: number;
   pendingEnemies: EnemyDef[] | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
@@ -85,12 +87,15 @@ export function startRun(characterId: string = 'pilot'): RunState {
       hull: character.startingHull,
       maxHull: character.startingHull,
       deck: character.startingDeck.slice(),
-      characterId: character.id
+      characterId: character.id,
+      maxSteam: 3,
+      startingPlating: 0
     },
     scrap: 0,
     relics: [],
     potions: Array(POTION_SLOT_COUNT).fill(null),
     result: 'inProgress',
+    bossBonus: 0,
     pendingEnemies: null,
     pendingShop: null,
     pendingReward: null,
@@ -301,6 +306,9 @@ export function completeCombat(survivingHull: number): number {
     // Award meta points scaled to the act being cleared:
     // act 1 boss → 1 pt, act 2 → 2 pts, etc.
     grantMetaPoints(r.act);
+    // Boss Bounty workshop upgrade adds a flat scrap bonus to boss kills.
+    const bonus = r.bossBonus ?? 0;
+    if (bonus > 0) r.scrap += bonus;
     if (isFinalAct(r.act)) {
       r.result = 'victory';
     } else {
@@ -308,7 +316,7 @@ export function completeCombat(survivingHull: number): number {
       r.awaitingInterAct = true;
     }
     persist();
-    return 0;
+    return bonus;
   }
 
   const isElite = node?.kind === 'elite';

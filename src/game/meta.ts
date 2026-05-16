@@ -1,5 +1,6 @@
 import type { RunState } from './run';
 import { RELICS, pickRelicFor } from './relics';
+import { pickRandomPotionId } from './potions';
 
 const META_KEY = 'rust-and-rivets/meta/v1';
 const META_SCHEMA = 1;
@@ -71,11 +72,74 @@ const SALVAGERS_EYE: UpgradeDef = {
   }
 };
 
+// Tempered Frame stacks plating per level — combat reads startingPlating
+// off the persistent player after onCombatStart relic hooks fire.
+const TEMPERED_FRAME: UpgradeDef = {
+  id: 'temperedFrame',
+  name: 'Tempered Frame',
+  description: 'Start each combat with +2 Plating per level.',
+  costPerLevel: 1,
+  maxLevel: 3,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.player.startingPlating = (run.player.startingPlating ?? 0) + 2 * level;
+  }
+};
+
+const RESERVE_TANK: UpgradeDef = {
+  id: 'reserveTank',
+  name: 'Reserve Tank',
+  description: '+1 max Steam every combat.',
+  costPerLevel: 2,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.player.maxSteam = (run.player.maxSteam ?? 3) + 1;
+  }
+};
+
+// Pre-Brew fills empty potion slots at run start with random potions, up to
+// `level` total. Will not push past the belt's current capacity (so it
+// stacks reasonably with the Potion Belt relic if granted by Salvager's Eye).
+const PRE_BREW: UpgradeDef = {
+  id: 'preBrew',
+  name: 'Pre-Brew',
+  description: 'Start each run with 1 random potion per level.',
+  costPerLevel: 1,
+  maxLevel: 3,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    let placed = 0;
+    for (let i = 0; i < run.potions.length && placed < level; i++) {
+      if (run.potions[i] === null) {
+        run.potions[i] = pickRandomPotionId();
+        placed++;
+      }
+    }
+  }
+};
+
+const BOSS_BOUNTY: UpgradeDef = {
+  id: 'bossBounty',
+  name: 'Boss Bounty',
+  description: '+10 Scrap from every boss kill.',
+  costPerLevel: 1,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.bossBonus = (run.bossBonus ?? 0) + 10;
+  }
+};
+
 export const META_UPGRADES: UpgradeDef[] = [
   REINFORCED_HULL,
   FOUNDRY_STIPEND,
   CUSTOM_LOADOUT,
-  SALVAGERS_EYE
+  SALVAGERS_EYE,
+  TEMPERED_FRAME,
+  RESERVE_TANK,
+  PRE_BREW,
+  BOSS_BOUNTY
 ];
 
 const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(

@@ -49,7 +49,7 @@ export function createCombatState(
     burn: 0,
     thorns: 0,
     steam: 0,
-    maxSteam: 3,
+    maxSteam: persistent.maxSteam ?? 3,
     draw: shuffle(persistent.deck.map(instance)),
     hand: [],
     discard: [],
@@ -82,6 +82,10 @@ export function createCombatState(
   // Relic onCombatStart hooks run AFTER startPlayerTurn so they can stack
   // plating, steam, etc. on top of the freshly-initialized turn state.
   for (const id of relicIds) RELICS[id]?.onCombatStart?.(state);
+  // Workshop meta bonus: Tempered Frame adds permanent starting plating
+  // every combat. Stacks on top of any relic-granted plating.
+  const startingPlating = persistent.startingPlating ?? 0;
+  if (startingPlating > 0) state.player.plating += startingPlating;
   return state;
 }
 

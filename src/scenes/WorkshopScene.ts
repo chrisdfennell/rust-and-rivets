@@ -57,8 +57,11 @@ export class WorkshopScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const rowSpacing = 96;
-    const startY = 200;
+    // 8 upgrades at 720 px tall is tight — slim rows from 80 → 52 px and
+    // shrink the spacing so everything fits between header (~150 px) and
+    // the BACK button (~660 px).
+    const rowSpacing = 56;
+    const startY = 165;
     META_UPGRADES.forEach((def, i) => {
       this.buildRow(def, width / 2, startY + i * rowSpacing);
     });
@@ -81,23 +84,23 @@ export class WorkshopScene extends Phaser.Scene {
 
   private buildRow(def: UpgradeDef, x: number, y: number) {
     const panel = this.add
-      .rectangle(x, y, 880, 80, COLORS.bgPanel)
+      .rectangle(x, y, 880, 50, COLORS.bgPanel)
       .setStrokeStyle(2, COLORS.brassDim);
     void panel;
 
     this.add
-      .text(x - 420, y - 18, def.name, {
+      .text(x - 420, y - 10, def.name, {
         fontFamily: FONTS.display,
-        fontSize: '18px',
+        fontSize: '15px',
         color: hex(COLORS.bone),
         fontStyle: 'bold'
       })
       .setOrigin(0, 0.5);
 
     this.add
-      .text(x - 420, y + 14, def.description, {
+      .text(x - 420, y + 10, def.description, {
         fontFamily: FONTS.body,
-        fontSize: '13px',
+        fontSize: '11px',
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0, 0.5);
@@ -105,7 +108,7 @@ export class WorkshopScene extends Phaser.Scene {
     const level = this.add
       .text(x + 220, y, '', {
         fontFamily: FONTS.display,
-        fontSize: '14px',
+        fontSize: '12px',
         color: hex(COLORS.bone)
       })
       .setOrigin(1, 0.5);
@@ -113,7 +116,7 @@ export class WorkshopScene extends Phaser.Scene {
     const cost = this.add
       .text(x + 240, y, '', {
         fontFamily: FONTS.display,
-        fontSize: '14px',
+        fontSize: '12px',
         color: hex(COLORS.steam)
       })
       .setOrigin(0, 0.5);
@@ -126,7 +129,7 @@ export class WorkshopScene extends Phaser.Scene {
       () => {
         if (buyUpgrade(def.id)) this.refresh();
       },
-      { width: 110, height: 44, fontSize: 14 }
+      { width: 100, height: 36, fontSize: 12 }
     );
     this.add.existing(buy);
 
