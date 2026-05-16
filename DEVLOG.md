@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 37.
+Quick orientation for someone coming in cold. Numbers as of Slice 38.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -30,9 +30,10 @@ Quick orientation for someone coming in cold. Numbers as of Slice 37.
   Damage, Old Rust) inject via enemy actions and events.
 - **Powers** (persistent in-combat buffs): Demon Form, Barricade,
   Metallicize, Combust.
-- **Relics:** 18 total, with hooks `onCombatStart` / `onCombatEnd` /
-  `onPickup` / `onTurnStart` / `onCardPlayed`. Three potion-specific
-  (Potion Belt, Sacred Bark, Toy Ornithopter).
+- **Relics:** 24 total, with hooks `onCombatStart` / `onCombatEnd` /
+  `onPickup` / `onTurnStart` / `onTurnEnd` / `onCardPlayed`. Three
+  potion-specific (Potion Belt, Sacred Bark, Toy Ornithopter); two
+  end-of-turn passives (Auto-Mortar, Bristle Plate).
 - **Potions:** 8 in the pool. 3-slot belt (expandable via Potion Belt
   relic). Right-click to discard. 40% drop chance after regular
   combats, guaranteed after elites, never overflows.
@@ -55,7 +56,46 @@ Quick orientation for someone coming in cold. Numbers as of Slice 37.
 
 ## Done
 
-### Slice 37 — Ascension damage scaling *(current)*
+### Slice 38 — Six new relics *(current)*
+The relic pool jumps from 18 → 24, with one tiny engine addition
+(`Relic.onTurnEnd`) to support the two passive-effect entries.
+Niches the previous set didn't really exercise — exhaust synergy,
+retain synergy, risk/reward, full-hull rewards, end-of-turn passives —
+all get one entry each.
+
+**Engine — onTurnEnd**
+- `Relic` interface gains an optional
+  `onTurnEnd?(state: CombatState): void` hook.
+- `endTurn` fires it AFTER Metallicize / Combust and BEFORE the phase
+  flip to `'enemyTurn'`. Checks `phase` afterward so a victory or
+  defeat triggered by the hook (Auto-Mortar killing the last enemy,
+  hypothetically a self-damage relic killing the player) cleanly
+  bails out the rest of the function.
+
+**Relics**
+- **Backup Capacitor** — Exhaust synergy. `onCardPlayed` checks
+  `card.exhaust`; if true, refunds +1 Steam. Power cards and the
+  exhaust-on-play status cards (Slag Glob etc.) both trigger it.
+- **Retained Bracer** — Retain-keyword synergy. `onTurnStart` counts
+  hand cards with `card.def.retain` and grants +2 Plating each.
+  Hold Position + this relic is a small turtle engine.
+- **Coal Coil** — Risk/reward boss-relic style. `onPickup` cuts -3
+  max Hull permanently; `onCombatStart` grants +2 Strength. Stacks
+  with Power Cell for +3 Str / combat baseline.
+- **Battle Cap** — Clean-combat reward. `onCombatEnd` checks
+  `hull >= maxHull`; if so, +8 Scrap. Pairs with Barricade /
+  Metallicize turtle builds and Thorns retaliators.
+- **Auto-Mortar** — Passive end-of-turn damage. `onTurnEnd` rolls a
+  random alive enemy and routes 5 damage through `dealDamageToEnemy`
+  so Strength / Vuln / Brass Knuckles all flow through correctly
+  (the random target eats the first-attack-bonus on its first turn).
+- **Bristle Plate** — Plating top-off. `onTurnEnd` checks
+  `plating < 5`; if so, +3 plating. Compensates for skipping a
+  defense card on light-hit turns.
+
+No save schema change — relics are just string ids on the run state.
+
+### Slice 37 — Ascension damage scaling
 Slice 36 shipped HP-only ascension modifiers. Long fights, not harder
 fights. This slice layers outgoing-damage multipliers onto A1 / A3 /
 A4 so each tier actually hurts.
@@ -1422,9 +1462,11 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 - **Even more bosses** — each act has 2 bosses (Slice 28). A pool
   of 3 per act would push past "I've seen them all" after a few
   more wins.
-- **More relics with bespoke hooks** — 18 is solid but several
-  niches are missing (cards-cost-modifiers, deck-search, retain-
-  trigger relics).
+- **More relics with bespoke hooks** — Slice 38 brought the pool to
+  24 and added the `onTurnEnd` hook. Niches still empty: deck-search
+  ("at start of combat, draw a specific card type"), cost-modifier
+  ("Attacks cost 1 less"), conditional-damage ("first hit vs a full-
+  hull enemy deals double").
 - **Daily seed / shareable runs** — same seed for everyone on a
   given date; share button copies a permalink that imports the
   exact run state. Would require seeded RNG threaded through map

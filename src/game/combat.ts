@@ -768,6 +768,17 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
     }
   }
 
+  // Relic onTurnEnd hooks fire after the power triggers (Metallicize /
+  // Combust) and before the phase flip. Auto-Mortar fires its passive
+  // damage here; Bristle Plate tops off plating; etc.
+  for (const id of state.relicIds) RELICS[id]?.onTurnEnd?.(state);
+  const phaseAfterRelics: string = state.phase;
+  if (phaseAfterRelics === 'victory') {
+    hooks?.afterEnemyResolve?.();
+    return;
+  }
+  if (phaseAfterRelics === 'defeat') return;
+
   state.phase = 'enemyTurn';
 
   // Each alive enemy resolves its action in order. Capture indices up front so

@@ -1,6 +1,6 @@
 import type { CardDef, CombatState } from './types';
 import type { RunState } from './run';
-import { drawCards, dealDamageToEnemy } from './combat';
+import { drawCards, dealDamageToEnemy, aliveEnemies } from './combat';
 
 export interface Relic {
   id: string;
@@ -10,6 +10,10 @@ export interface Relic {
   onCombatEnd?: (run: RunState) => void;
   onPickup?: (run: RunState) => void;
   onTurnStart?: (state: CombatState) => void;
+  // Fires at the end of the player's turn, after Metallicize / Combust,
+  // before the phase flips to 'enemyTurn'. Used by Auto-Mortar /
+  // Bristle Plate style relics that emit a passive effect each turn.
+  onTurnEnd?: (state: CombatState) => void;
   onCardPlayed?: (state: CombatState, card: CardDef, indexInTurn: number) => void;
 }
 
@@ -186,6 +190,100 @@ const TOY_ORNITHOPTER: Relic = {
   description: 'Heal 4 Hull every time you use a potion.'
 };
 
+// ===== Slice 38 relic batch =====
+
+// Backup Capacitor — exhaust synergy. Every exhausting card play refunds
+// 1 Steam, so cards like Battle Forge / Iron Will / Cinder Round / power
+// cards (which all exhaust) effectively cost one less.
+const BACKUP_CAPACITOR: Relic = {
+  id: 'backupCapacitor',
+  name: 'Backup Capacitor',
+  description: 'Whenever you play a card that exhausts, gain 1 Steam.',
+  onCardPlayed: (state, card) => {
+    if (!card.exhaust) return;
+    state.player.steam += 1;
+    state.log.push('Backup Capacitor: +1 Steam.');
+  }
+};
+
+// Retained Bracer — retain-keyword synergy. Each card in hand with the
+// Retain flag at turn start adds +2 plating. Pairs hard with Hold Position
+// since it stays in hand turn after turn.
+const RETAINED_BRACER: Relic = {
+  id: 'retainedBracer',
+  name: 'Retained Bracer',
+  description: 'At the start of each turn, gain 2 Plating for each card in your hand with Retain.',
+  onTurnStart: (state) => {
+    const count = state.player.hand.filter((c) => c.def.retain).length;
+    if (count <= 0) return;
+    const gained = 2 * count;
+    state.player.plating += gained;
+    state.log.push(`Retained Bracer: +${gained} Plating.`);
+  }
+};
+
+// Coal Coil — risk/reward boss-relic style. Strong combat bonus with a
+// permanent max-hull cost. Stacks with Power Cell for +3 Strength every
+// fight.
+const COAL_COIL: Relic = {
+  id: 'coalCoil',
+  name: 'Coal Coil',
+  description: 'Gain 2 Strength each combat. -3 max Hull on pickup.',
+  onPickup: (run) => {
+    run.player.maxHull = Math.max(1, run.player.maxHull - 3);
+    run.player.hull = Math.min(run.player.hull, run.player.maxHull);
+  },
+  onCombatStart: (state) => {
+    state.player.strength += 2;
+    state.log.push('Coal Coil: +2 Strength.');
+  }
+};
+
+// Battle Cap — rewards clean combats. Pairs well with defensive builds
+// that already aim to take no damage (Barricade + Metallicize, Spike
+// Mantle thorns turtles, etc.).
+const BATTLE_CAP: Relic = {
+  id: 'battleCap',
+  name: 'Battle Cap',
+  description: 'Gain 8 Scrap after any combat you end at full Hull.',
+  onCombatEnd: (run) => {
+    if (run.player.hull >= run.player.maxHull) {
+      run.scrap += 8;
+    }
+  }
+};
+
+// Auto-Mortar — passive end-of-turn damage. Picks a random alive enemy
+// each turn. Modest amount that adds up over a long fight.
+const AUTO_MORTAR: Relic = {
+  id: 'autoMortar',
+  name: 'Auto-Mortar',
+  description: 'At the end of each turn, deal 5 damage to a random enemy.',
+  onTurnEnd: (state) => {
+    const alive = aliveEnemies(state);
+    if (alive.length === 0) return;
+    // Pick a random alive enemy, then resolve damage at its real index.
+    const target = alive[Math.floor(Math.random() * alive.length)];
+    const idx = state.enemies.indexOf(target);
+    dealDamageToEnemy({ state, log: (m) => state.log.push(m) }, 5, idx);
+  }
+};
+
+// Bristle Plate — defensive top-off. Compensates for the turn's incoming
+// hit if you came up short on plating cards. Less strong than Iron Plating
+// (combat start) but fires every turn.
+const BRISTLE_PLATE: Relic = {
+  id: 'bristlePlate',
+  name: 'Bristle Plate',
+  description: 'At the end of each turn, gain 3 Plating if you have less than 5 Plating.',
+  onTurnEnd: (state) => {
+    if (state.player.plating < 5) {
+      state.player.plating += 3;
+      state.log.push('Bristle Plate: +3 Plating.');
+    }
+  }
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
@@ -204,7 +302,13 @@ export const RELICS: Record<string, Relic> = {
   [SPIKE_MANTLE.id]: SPIKE_MANTLE,
   [POTION_BELT.id]: POTION_BELT,
   [SACRED_BARK.id]: SACRED_BARK,
-  [TOY_ORNITHOPTER.id]: TOY_ORNITHOPTER
+  [TOY_ORNITHOPTER.id]: TOY_ORNITHOPTER,
+  [BACKUP_CAPACITOR.id]: BACKUP_CAPACITOR,
+  [RETAINED_BRACER.id]: RETAINED_BRACER,
+  [COAL_COIL.id]: COAL_COIL,
+  [BATTLE_CAP.id]: BATTLE_CAP,
+  [AUTO_MORTAR.id]: AUTO_MORTAR,
+  [BRISTLE_PLATE.id]: BRISTLE_PLATE
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);
