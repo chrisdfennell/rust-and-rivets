@@ -56,7 +56,27 @@ const SABOTEUR: CharacterDef = {
   startingRelics: ['calibrationSpike']
 };
 
-export const CHARACTERS: CharacterDef[] = [PILOT, ENGINEER, SABOTEUR];
+// Slice 44 — burn-stacker snowball. Lower hull baseline, deck stacked with
+// Burn-applying cards. Furnace Heart turns Burning enemies into a per-turn
+// Strength ramp, so the longer a fight goes the harder the Stoker hits.
+const STOKER: CharacterDef = {
+  id: 'stoker',
+  name: 'THE STOKER',
+  tagline: 'Set them alight. Reap the smoke.',
+  description:
+    'Feeds a furnace heart with the smoke of burning foes. Every enemy left smoldering at end of turn cranks the Stoker\'s damage higher.',
+  startingHull: 55,
+  startingDeck: [
+    'autocannon', 'autocannon', 'autocannon',
+    'brace', 'brace', 'brace',
+    'ventSteam',
+    'pyroCharge', 'pyroCharge',
+    'acidMist'
+  ],
+  startingRelics: ['furnaceHeart']
+};
+
+export const CHARACTERS: CharacterDef[] = [PILOT, ENGINEER, SABOTEUR, STOKER];
 
 export const CHARACTER_BY_ID: Record<string, CharacterDef> = Object.fromEntries(
   CHARACTERS.map((c) => [c.id, c])

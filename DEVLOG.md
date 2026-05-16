@@ -14,15 +14,16 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 43.
+Quick orientation for someone coming in cold. Numbers as of Slice 44.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
   Iron Sovereign / Pyroclast Engine, Stormheart / The Wraith). Win =
   defeat the act-3 boss. InterActScene between each act lets the
   player pick a boon (Repair / Refit / Salvage).
-- **Characters:** 3 pilots (Pilot / Engineer / Saboteur) with unique
-  starter decks, hull pools, and signature relics.
+- **Characters:** 4 pilots (Pilot / Engineer / Saboteur / Stoker) with
+  unique starter decks, hull pools, and signature relics. The Stoker
+  ramps Strength every turn an enemy is Burning (Furnace Heart relic).
 - **Cards:** ~61 base + `+` upgraded variants. Types: attack / skill /
   power. Keywords: exhaust, retain, ethereal, innate, AoE
   (`target: 'allEnemies'`), X-cost, unplayable. Rarities: common /
@@ -62,7 +63,50 @@ Quick orientation for someone coming in cold. Numbers as of Slice 43.
 
 ## Done
 
-### Slice 43 — Event pool 13 → 30 *(current)*
+### Slice 44 — The Stoker (new pilot) + scrollable character select *(current)*
+A fourth pilot joins the roster with a snowball mechanic that's
+different in shape from anything the existing three do.
+
+**THE STOKER**
+- Hull 55 (matches Saboteur baseline — high-risk specialist).
+- Starter deck (10): 3 Auto-Cannon, 3 Brace, 1 Vent Steam, 2 Pyro
+  Charge, 1 Acid Mist. Heavy on Burn-application from turn 1.
+- Signature relic: **Furnace Heart** — `onTurnEnd` counts alive
+  enemies with `burn > 0` and grants +1 Strength each (capped at 3
+  per turn). One Pyro Charge → up to ~4 Strength stacks over the
+  burn's lifetime. Snake-Oil Salesman events become genuinely
+  dangerous since Heat Damage curses would hand free Strength to
+  the player… wait, Heat Damage burns the player, not the enemy.
+  Furnace Heart only counts enemy Burn, so the curses still hurt.
+
+**Sprite** ([src/ui/MechSprite.ts](src/ui/MechSprite.ts))
+- `drawStokerMech` adds a heat-themed industrial frame: planted
+  legs, riveted brass torso, central furnace grate (orange/amber
+  rect with vertical slats and inner-glow circle), three asymmetric
+  smokestacks venting bone-dim smoke puffs, slit visor with amber
+  glow. One arm is a stoking shovel, the other a fire poker tipped
+  with a danger-orange ember. Subtle scale-pulse tween (1.012, 0.7s
+  yoyo) sells the breathing furnace.
+- Registered in `CHARACTER_SPRITES.stoker`.
+
+**Scrollable character select**
+- 4 cards × 380 wide doesn't fit in the 1280 viewport. Rather than
+  shrinking cards, the scene now puts them in a `cardsLayer`
+  container and drag-scrolls horizontally when the row overflows.
+- `setupDragScroll(layer, minX, maxX)` adds scene-level
+  pointerdown/move/up listeners with an 8 px drag threshold (so a
+  short tap on the SELECT button doesn't kick off a scroll).
+  Container x is clamped to `[minX, maxX]` so the row can't drift
+  off-screen.
+- `drawCharacterCard` refactored to return a Container holding all
+  card elements at local coordinates (panel, sprite, name, tagline,
+  description, stats, signature, SELECT button) so the whole card
+  translates as one unit during scroll.
+- A "DRAG TO SCROLL" hint renders at the bottom of the scene when
+  overflow > 0. Hidden for 3-or-fewer pilots since the row fits
+  natively.
+
+### Slice 43 — Event pool 13 → 30
 Seventeen new events bring the pool to 30, matching the StS-style
 density. The previous 13 were heavy on small risk/reward and potion
 acquisition; this batch fills gaps the older set didn't cover —

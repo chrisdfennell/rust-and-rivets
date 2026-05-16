@@ -42,14 +42,39 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Cards stay at a fixed width; if the row doesn't fit the viewport we
+    // let the player drag horizontally to scroll. drawCharacterCard now
+    // returns a Container so the whole row lives inside cardsLayer.
     const cardW = 380;
     const gap = 30;
-    const totalW = CHARACTERS.length * cardW + (CHARACTERS.length - 1) * gap;
-    const startX = (width - totalW) / 2 + cardW / 2;
+    const cardCount = CHARACTERS.length;
+    const totalContentW = cardCount * cardW + (cardCount - 1) * gap;
+    const cardsLayer = this.add.container(width / 2, 390);
 
     CHARACTERS.forEach((c, i) => {
-      this.drawCharacterCard(c, startX + i * (cardW + gap), 390, cardW);
+      const localX = -totalContentW / 2 + cardW / 2 + i * (cardW + gap);
+      cardsLayer.add(this.drawCharacterCard(c, localX, 0, cardW));
     });
+
+    // Drag-scroll bounds — only scroll if the row is wider than the
+    // visible margin-trimmed viewport. minX/maxX are the allowed
+    // container-x positions (clamped during drag).
+    const viewable = width - 80; // 40 px margin each side
+    const overflow = Math.max(0, totalContentW - viewable);
+    const minX = width / 2 - overflow / 2;
+    const maxX = width / 2 + overflow / 2;
+
+    if (overflow > 0) {
+      this.setupDragScroll(cardsLayer, minX, maxX);
+      // Small hint at the bottom so the player knows the row scrolls.
+      this.add
+        .text(width / 2, height - 100, 'DRAG TO SCROLL', {
+          fontFamily: FONTS.display,
+          fontSize: '11px',
+          color: hex(COLORS.boneDim)
+        })
+        .setOrigin(0.5);
+    }
 
     // Back button (top-left)
     const back = new Button(
@@ -63,119 +88,171 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.add.existing(back);
   }
 
-  private drawCharacterCard(c: CharacterDef, x: number, y: number, w: number) {
+  // Adds scene-level pointer handlers that drag `layer` horizontally.
+  // Uses a small distance threshold so accidental moves during a SELECT
+  // button click don't trigger scroll.
+  private setupDragScroll(layer: Phaser.GameObjects.Container, minX: number, maxX: number) {
+    let start: { pointerX: number; layerX: number } | null = null;
+    let dragging = false;
+    const THRESHOLD = 8;
+
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      start = { pointerX: p.x, layerX: layer.x };
+      dragging = false;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!start) return;
+      const dx = p.x - start.pointerX;
+      if (!dragging && Math.abs(dx) >= THRESHOLD) dragging = true;
+      if (dragging) {
+        layer.x = Math.max(minX, Math.min(maxX, start.layerX + dx));
+      }
+    });
+    const end = () => { start = null; };
+    this.input.on('pointerup', end);
+    this.input.on('pointerupoutside', end);
+  }
+
+  // Returns a Container holding the whole card (panel + sprite + texts +
+  // SELECT button). Positions are local to the container so the caller
+  // can place it anywhere in a scrollable layer.
+  private drawCharacterCard(c: CharacterDef, localX: number, localY: number, w: number): Phaser.GameObjects.Container {
+    const card = this.add.container(localX, localY);
     const h = 560;
-    const leftX = x - w / 2 + 24;
+    const leftX = -w / 2 + 24;
+
     // Panel
-    this.add
-      .rectangle(x, y, w, h, COLORS.bgPanel)
+    const panel = this.add
+      .rectangle(0, 0, w, h, COLORS.bgPanel)
       .setStrokeStyle(2, COLORS.brassDim);
+    card.add(panel);
 
     // Sprite (scaled down so it fits in the card)
     const drawFn = CHARACTER_SPRITES[c.id] ?? CHARACTER_SPRITES.pilot;
-    const sprite = drawFn(this, x, y - 180);
+    const sprite = drawFn(this, 0, -180);
     sprite.setScale(0.6);
+    card.add(sprite);
 
     // Name
-    this.add
-      .text(x, y - 50, c.name, {
-        fontFamily: FONTS.display,
-        fontSize: '22px',
-        color: hex(COLORS.brass),
-        fontStyle: 'bold'
-      })
-      .setOrigin(0.5);
+    card.add(
+      this.add
+        .text(0, -50, c.name, {
+          fontFamily: FONTS.display,
+          fontSize: '22px',
+          color: hex(COLORS.brass),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5)
+    );
 
     // Tagline
-    this.add
-      .text(x, y - 24, c.tagline, {
-        fontFamily: FONTS.body,
-        fontSize: '12px',
-        color: hex(COLORS.steam)
-      })
-      .setOrigin(0.5);
-
-    // Description (top-aligned, wraps)
-    this.add
-      .text(x, y - 4, c.description, {
-        fontFamily: FONTS.body,
-        fontSize: '12px',
-        color: hex(COLORS.bone),
-        align: 'center',
-        wordWrap: { width: w - 40 },
-        lineSpacing: 3
-      })
-      .setOrigin(0.5, 0);
-
-    // Stats block
-    this.add
-      .text(leftX, y + 70, `Hull   ${c.startingHull}`, {
-        fontFamily: FONTS.display,
-        fontSize: '13px',
-        color: hex(COLORS.bone),
-        fontStyle: 'bold'
-      })
-      .setOrigin(0, 0);
-    this.add
-      .text(leftX, y + 90, `Deck   ${c.startingDeck.length} cards`, {
-        fontFamily: FONTS.display,
-        fontSize: '13px',
-        color: hex(COLORS.bone),
-        fontStyle: 'bold'
-      })
-      .setOrigin(0, 0);
-
-    // Signature relic block
-    this.add
-      .text(leftX, y + 118, 'SIGNATURE', {
-        fontFamily: FONTS.display,
-        fontSize: '11px',
-        color: hex(COLORS.boneDim)
-      })
-      .setOrigin(0, 0);
-
-    if (c.startingRelics.length === 0) {
+    card.add(
       this.add
-        .text(leftX, y + 136, 'none — pure baseline', {
+        .text(0, -24, c.tagline, {
           fontFamily: FONTS.body,
           fontSize: '12px',
-          color: hex(COLORS.boneDim),
-          fontStyle: 'italic'
+          color: hex(COLORS.steam)
         })
-        .setOrigin(0, 0);
+        .setOrigin(0.5)
+    );
+
+    // Description (top-aligned, wraps)
+    card.add(
+      this.add
+        .text(0, -4, c.description, {
+          fontFamily: FONTS.body,
+          fontSize: '12px',
+          color: hex(COLORS.bone),
+          align: 'center',
+          wordWrap: { width: w - 40 },
+          lineSpacing: 3
+        })
+        .setOrigin(0.5, 0)
+    );
+
+    // Stats block
+    card.add(
+      this.add
+        .text(leftX, 70, `Hull   ${c.startingHull}`, {
+          fontFamily: FONTS.display,
+          fontSize: '13px',
+          color: hex(COLORS.bone),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0, 0)
+    );
+    card.add(
+      this.add
+        .text(leftX, 90, `Deck   ${c.startingDeck.length} cards`, {
+          fontFamily: FONTS.display,
+          fontSize: '13px',
+          color: hex(COLORS.bone),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0, 0)
+    );
+
+    // Signature relic block
+    card.add(
+      this.add
+        .text(leftX, 118, 'SIGNATURE', {
+          fontFamily: FONTS.display,
+          fontSize: '11px',
+          color: hex(COLORS.boneDim)
+        })
+        .setOrigin(0, 0)
+    );
+
+    if (c.startingRelics.length === 0) {
+      card.add(
+        this.add
+          .text(leftX, 136, 'none — pure baseline', {
+            fontFamily: FONTS.body,
+            fontSize: '12px',
+            color: hex(COLORS.boneDim),
+            fontStyle: 'italic'
+          })
+          .setOrigin(0, 0)
+      );
     } else {
       const def = RELICS[c.startingRelics[0]];
       if (def) {
-        this.add
-          .text(leftX, y + 136, `★ ${def.name}`, {
-            fontFamily: FONTS.display,
-            fontSize: '13px',
-            color: hex(COLORS.steam),
-            fontStyle: 'bold'
-          })
-          .setOrigin(0, 0);
-        this.add
-          .text(leftX, y + 156, def.description, {
-            fontFamily: FONTS.body,
-            fontSize: '11px',
-            color: hex(COLORS.bone),
-            wordWrap: { width: w - 48 },
-            lineSpacing: 3
-          })
-          .setOrigin(0, 0);
+        card.add(
+          this.add
+            .text(leftX, 136, `★ ${def.name}`, {
+              fontFamily: FONTS.display,
+              fontSize: '13px',
+              color: hex(COLORS.steam),
+              fontStyle: 'bold'
+            })
+            .setOrigin(0, 0)
+        );
+        card.add(
+          this.add
+            .text(leftX, 156, def.description, {
+              fontFamily: FONTS.body,
+              fontSize: '11px',
+              color: hex(COLORS.bone),
+              wordWrap: { width: w - 48 },
+              lineSpacing: 3
+            })
+            .setOrigin(0, 0)
+        );
       }
     }
 
     // SELECT button anchored at the bottom of the panel
     const btn = new Button(
       this,
-      x,
-      y + h / 2 - 38,
+      0,
+      h / 2 - 38,
       'SELECT',
       () => this.pick(c.id),
       { width: w - 40, height: 50, fontSize: 17 }
     );
-    this.add.existing(btn);
+    card.add(btn);
+
+    return card;
   }
 
   private pick(characterId: string) {

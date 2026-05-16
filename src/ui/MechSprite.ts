@@ -206,10 +206,113 @@ export function drawSaboteurMech(scene: Phaser.Scene, x: number, y: number): Pha
   return c;
 }
 
+// THE STOKER — heat-themed industrial frame. Heavy planted legs, riveted
+// brass-orange torso, central furnace core (pulses on a slow tween), three
+// asymmetric smokestacks, orange visor. One arm carries a glowing fire-
+// poker, the other a stoking shovel — heat tools, not weapons.
+export function drawStokerMech(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Wide planted legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-54, 60, 32, 72);
+  g.fillRect(22, 60, 32, 72);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-58, 124, 40, 18);
+  g.fillRect(18, 124, 40, 18);
+  // Hip
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-44, 50, 88, 18);
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 5; i++) g.fillCircle(-34 + i * 17, 59, 2.5);
+
+  // Boxy torso — riveted brass slab
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-64, -34, 128, 92);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-58, -28, 116, 10);
+  g.fillRect(-58, 44, 116, 10);
+  // Rivet rows
+  g.fillStyle(COLORS.brass);
+  for (let col = 0; col < 6; col++) {
+    g.fillCircle(-48 + col * 19, -24, 2.5);
+    g.fillCircle(-48 + col * 19, 48, 2.5);
+  }
+
+  // Furnace core (chest) — orange grate that pulses via the tween below.
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, -10, 52, 42);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-22, -6, 44, 34);
+  g.fillStyle(0xffa030); // amber
+  g.fillRect(-18, -2, 36, 26);
+  // Furnace grate bars (dark vertical slats)
+  g.fillStyle(COLORS.steelDark);
+  for (let i = 0; i < 4; i++) g.fillRect(-16 + i * 10, -2, 3, 26);
+  // Inner glow
+  g.fillStyle(0xfff060, 0.8);
+  g.fillCircle(0, 12, 6);
+
+  // Three smokestacks — asymmetric, the middle one taller (heat exhaust).
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-50, -72, 12, 38);
+  g.fillRect( -6, -82, 12, 48);
+  g.fillRect( 38, -68, 12, 34);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-52, -76, 16, 6);
+  g.fillRect( -8, -86, 16, 6);
+  g.fillRect( 36, -72, 16, 6);
+  // Smoke puffs
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(-44, -86, 6);
+  g.fillCircle(  0, -98, 7);
+  g.fillCircle( 44, -82, 6);
+
+  // Helm — slit visor with amber glow
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -30, 44, 18);
+  g.fillStyle(0xffa030);
+  g.fillRect(-16, -24, 32, 4);
+
+  // Stoking shovel arm (left) — long pole with a flat metal scoop
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-100, -16, 22, 64);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-118, 46, 38, 14); // scoop blade
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-122, 44, 6, 18); // scoop tip
+
+  // Fire-poker arm (right) — pole tipped with glowing ember
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect( 78, -16, 22, 64);
+  g.fillStyle(COLORS.steel);
+  g.fillRect( 80, 48, 18, 26); // pole bottom
+  g.fillStyle(COLORS.danger);
+  g.fillCircle( 89, 80, 7);    // ember
+  g.fillStyle(0xffa030);
+  g.fillCircle( 89, 80, 4);
+
+  c.add(g);
+  // Slow furnace flicker — gives the central core a breathing pulse.
+  scene.tweens.add({
+    targets: c,
+    scaleX: 1.012,
+    scaleY: 1.012,
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 export const CHARACTER_SPRITES: Record<string, (scene: Phaser.Scene, x: number, y: number) => Phaser.GameObjects.Container> = {
   pilot: drawMech,
   engineer: drawEngineerMech,
-  saboteur: drawSaboteurMech
+  saboteur: drawSaboteurMech,
+  stoker: drawStokerMech
 };
 
 export type EnemyDraw = (scene: Phaser.Scene, x: number, y: number) => Phaser.GameObjects.Container;

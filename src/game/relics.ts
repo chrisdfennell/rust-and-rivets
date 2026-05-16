@@ -284,6 +284,24 @@ const BRISTLE_PLATE: Relic = {
   }
 };
 
+// Furnace Heart — The Stoker's signature relic (Slice 44). Burn-stacker
+// snowball: every enemy that's Burning at end of turn adds +1 Strength
+// permanently this combat (capped at 3 per turn). Pyro Charge / Acid Mist /
+// Cinder Round all become ramp tools instead of pure damage cards.
+const FURNACE_HEART: Relic = {
+  id: 'furnaceHeart',
+  name: 'Furnace Heart',
+  description: 'At the end of each turn, gain 1 Strength for each Burning enemy (max 3).',
+  onTurnEnd: (state) => {
+    const burning = state.enemies.filter((e) => e.hull > 0 && e.burn > 0).length;
+    const gain = Math.min(3, burning);
+    if (gain > 0) {
+      state.player.strength += gain;
+      state.log.push(`Furnace Heart: +${gain} Strength.`);
+    }
+  }
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
@@ -308,7 +326,8 @@ export const RELICS: Record<string, Relic> = {
   [COAL_COIL.id]: COAL_COIL,
   [BATTLE_CAP.id]: BATTLE_CAP,
   [AUTO_MORTAR.id]: AUTO_MORTAR,
-  [BRISTLE_PLATE.id]: BRISTLE_PLATE
+  [BRISTLE_PLATE.id]: BRISTLE_PLATE,
+  [FURNACE_HEART.id]: FURNACE_HEART
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);
