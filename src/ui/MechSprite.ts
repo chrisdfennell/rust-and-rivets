@@ -2040,6 +2040,310 @@ export function drawTheWraith(scene: Phaser.Scene, x: number, y: number): Phaser
   return c;
 }
 
+// Ember Spitter — Act 2 mook. Small squat cauldron-mech: stubby legs,
+// open-top crucible chest glowing molten orange, one stubby barrel
+// arm. Reads as "the kettle that throws fire."
+export function drawEmberSpitter(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Stubby legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-38, 40, 18, 44);
+  g.fillRect(20, 40, 18, 44);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-42, 80, 26, 12);
+  g.fillRect(16, 80, 26, 12);
+
+  // Cauldron body — wider at bottom
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-56, -12, 112, 56);
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-50, -6, 100, 44);
+  // Crucible rim
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-58, -14, 116, 8);
+
+  // Molten core opening
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-32, -6, 64, 22);
+  g.fillStyle(0xffa030);
+  g.fillRect(-26, -4, 52, 16);
+  g.fillStyle(0xfff060);
+  g.fillEllipse(0, 6, 40, 8);
+
+  // Smoke wisps coming off the top
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(-20, -28, 5);
+  g.fillCircle(8, -34, 6);
+  g.fillCircle(24, -26, 4);
+
+  // Barrel-arm on the right (the spitter)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(54, 4, 36, 18);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(86, 4, 8, 18);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(92, 13, 4);
+
+  // Small handle-arm on left
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, 6, 16, 26);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(-64, 36, 6);
+
+  // Rivets along the body
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-44, 22], [44, 22], [-44, 36], [44, 36]
+  ]) g.fillCircle(rx, ry, 2.5);
+
+  c.add(g);
+
+  // Heat pulse via tiny scale tween
+  scene.tweens.add({
+    targets: c,
+    scaleX: 1.018,
+    scaleY: 1.018,
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// Pig Iron Brute — Act 2 mook. Boxy iron golem with bolted-on plate
+// pauldrons that grow thicker each Anneal (visually static — we don't
+// rebuild the sprite per turn). One massive iron fist as the right
+// arm. Reads as "slow but hits like a forge press."
+export function drawPigIronBrute(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 4);
+  const g = scene.add.graphics();
+
+  // Thick legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-46, 50, 26, 56);
+  g.fillRect(20, 50, 26, 56);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-52, 102, 34, 14);
+  g.fillRect(18, 102, 34, 14);
+
+  // Squat boxy torso
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-62, -28, 124, 82);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-54, -20, 108, 12);  // chest band
+  g.fillRect(-54, 38, 108, 12);   // belt band
+
+  // Bolted-on plate pauldrons
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-78, -20, 22, 36);
+  g.fillRect(56, -20, 22, 36);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-78, -22, 22, 4);
+  g.fillRect(56, -22, 22, 4);
+
+  // Tiny head — barely a head, all torso
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-16, -46, 32, 20);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -36, 3);
+
+  // Massive iron fist (right arm)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(70, -8, 22, 50);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(60, 38, 44, 32);
+  // Knuckle plates
+  g.fillStyle(COLORS.brassDim);
+  for (const sx of [64, 78, 92]) g.fillRect(sx, 44, 8, 6);
+
+  // Smaller left arm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-92, -8, 22, 50);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-96, 42, 30, 14);
+
+  // Rivets
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-40, -10], [40, -10], [-40, 28], [40, 28], [0, 8]
+  ]) g.fillCircle(rx, ry, 3);
+
+  c.add(g);
+
+  // Slow heavy sway
+  scene.tweens.add({
+    targets: c,
+    x: x + 2,
+    duration: 1200,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// Mist Specter — Act 3 mook. Tall slender ghost with no legs (lower
+// body trails into mist), pale visor with two cyan eyes, wispy
+// trailing tendrils. Reads as "ghost — touch at your own risk."
+export function drawMistSpecter(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 10);
+  const g = scene.add.graphics();
+
+  // Trailing mist body (no legs)
+  g.fillStyle(0x4a4a6a, 0.45);
+  g.fillTriangle(-30, 10, 30, 10, 0, 100);
+  g.fillStyle(0x6a6a8a, 0.6);
+  g.fillTriangle(-22, 24, 22, 24, 0, 90);
+  // Wispy tendrils at the bottom
+  g.fillStyle(0x4a4a6a, 0.35);
+  for (let i = 0; i < 5; i++) {
+    const tx = -24 + i * 12;
+    g.fillTriangle(tx, 86, tx + 8, 86, tx + 4, 110);
+  }
+
+  // Narrow torso
+  g.fillStyle(0x3a3a5a);
+  g.fillRect(-22, -28, 44, 50);
+  g.fillStyle(0x5a5a7a);
+  g.fillRect(-18, -22, 36, 6);
+  g.fillRect(-18, 14, 36, 4);
+
+  // Head/hood
+  g.fillStyle(0x2a2a4a);
+  g.fillTriangle(-22, -44, 22, -44, 0, -68);
+  g.fillRect(-22, -44, 44, 18);
+
+  // Glowing eyes — cyan
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(-8, -36, 3);
+  g.fillCircle(8, -36, 3);
+  g.fillStyle(0xffffff, 0.7);
+  g.fillCircle(-8, -36, 1.5);
+  g.fillCircle(8, -36, 1.5);
+
+  // Floating wisp-arms (just blobs, no solid arms)
+  g.fillStyle(0x6a6a8a, 0.55);
+  g.fillCircle(-34, -10, 8);
+  g.fillCircle(34, -10, 8);
+  g.fillStyle(0x4a4a6a, 0.4);
+  g.fillCircle(-42, 6, 5);
+  g.fillCircle(42, 6, 5);
+
+  // Floating wisps around the head
+  g.fillStyle(COLORS.steam, 0.3);
+  g.fillCircle(-26, -56, 3);
+  g.fillCircle(28, -50, 3);
+  g.fillCircle(-12, -72, 2);
+
+  c.add(g);
+
+  // Slow ethereal float (vertical bob)
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 4,
+    duration: 1500,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// Cloud Corsair — Act 3 mook. Sky-pirate variant: smaller and meaner
+// than Sky Pirate, with a hook arm and a powder-bag for tossing
+// curses. Tricorne hat sells the pirate read; gold sash + lit fuse
+// say "this one carries explosives."
+export function drawCloudCorsair(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Legs — booted
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 36, 18, 50);
+  g.fillRect(14, 36, 18, 50);
+  g.fillStyle(0x3a2718);
+  g.fillRect(-36, 82, 26, 12);
+  g.fillRect(10, 82, 26, 12);
+
+  // Coat-torso — long with brass buttons
+  g.fillStyle(0x5a3018);
+  g.fillRect(-38, -22, 76, 64);
+  g.fillStyle(0x7a4028);
+  g.fillRect(-32, -16, 64, 8);
+  // Brass buttons
+  g.fillStyle(COLORS.brass);
+  for (const by of [-4, 8, 20]) g.fillCircle(0, by, 2.5);
+
+  // Gold sash
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-38, 26, 76, 6);
+
+  // Head
+  g.fillStyle(COLORS.bone);
+  g.fillRect(-16, -42, 32, 20);
+  // Eye band
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-16, -34, 32, 4);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-8, -32, 1.5);
+  g.fillCircle(8, -32, 1.5);
+  // Mouth
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-6, -26, 12, 2);
+
+  // Tricorne hat
+  g.fillStyle(0x1a1410);
+  g.fillTriangle(-30, -42, 30, -42, 0, -64);
+  g.fillRect(-32, -44, 64, 6);
+  // Hat band
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-30, -42, 60, 2);
+
+  // Hook arm (left) — silver hook
+  g.fillStyle(0x5a3018);
+  g.fillRect(-54, -10, 16, 40);
+  g.fillStyle(COLORS.bone);
+  // Hook curve approximated
+  g.fillRect(-52, 30, 12, 4);
+  g.fillTriangle(-52, 34, -40, 34, -46, 46);
+  g.fillTriangle(-52, 34, -64, 40, -54, 50);
+
+  // Powder-bag arm (right) — grenade with lit fuse
+  g.fillStyle(0x5a3018);
+  g.fillRect(38, -10, 16, 36);
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(56, 32, 9);
+  // Fuse + ember
+  g.lineStyle(2, COLORS.boneDim, 0.9);
+  g.beginPath();
+  g.moveTo(56, 24); g.lineTo(60, 18); g.lineTo(58, 12);
+  g.strokePath();
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(58, 10, 3);
+  g.fillStyle(0xffa030);
+  g.fillCircle(58, 10, 1.5);
+
+  c.add(g);
+
+  // Light shifty hover
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 3,
+    duration: 900,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 // Reclaimer Prime — Act 1 #3. Spike-clad bipedal: silhouette reads
 // "do not touch." Bulkier than Iron Reclaimer with prominent spike
 // pauldrons and a row of front-facing thorns down the torso.
@@ -2380,5 +2684,9 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   theWraith: drawTheWraith,
   reclaimerPrime: drawReclaimerPrime,
   vaultWarden: drawVaultWarden,
-  cycloneKing: drawCycloneKing
+  cycloneKing: drawCycloneKing,
+  emberSpitter: drawEmberSpitter,
+  pigIronBrute: drawPigIronBrute,
+  mistSpecter: drawMistSpecter,
+  cloudCorsair: drawCloudCorsair
 };

@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 45.
+Quick orientation for someone coming in cold. Numbers as of Slice 46.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
@@ -64,7 +64,50 @@ Quick orientation for someone coming in cold. Numbers as of Slice 45.
 
 ## Done
 
-### Slice 45 — Third boss per act *(current)*
+### Slice 46 — Act 2 / Act 3 regular-enemy pool expansion *(current)*
+Act 2 and Act 3 each had only 3 regular mooks (vs. Act 1's 6) so
+late-run combats felt repetitive. Added 2 mooks per act, each
+introducing a mechanic that act's existing trio didn't already cover.
+
+**Act 2 additions** (foundry depths)
+- **Ember Spitter** (44 HP) — opens with `Spit: 5 + Burn 2` and
+  rotates through `Ember Salvo 3x3`, `Magma Spew 11`, `Vent Heat +7`.
+  Pulls Burn pressure into regular Act 2 fights (previously only
+  Pyroclast Engine and the Stoker brought Burn to the table). Also
+  makes Furnace Heart relics genuinely useful pre-boss.
+- **Pig Iron Brute** (62 HP) — opens with `Anneal: +1 Strength` and
+  rerolls into more Anneals / `Iron Punch 9` / `Heavy Slam 13` /
+  `Brace +9`. Snowball-Strength mechanic at mook tier — a lighter
+  cousin of Salvage Colossus. If you let it cook, later hits sting.
+
+**Act 3 additions** (above the cloudline)
+- **Mist Specter** (42 HP) — opens with `Shroud: +6 + 4 Thorns`,
+  with `Vanish` later refreshing thorns to 4. Pattern rotates Drain
+  (5 dmg → heal 4), `Wisp Strike 9`, `Phase +6 + Vuln`. Innate
+  thorns punish button-mashing; the heal makes "burst or starve"
+  the central decision.
+- **Cloud Corsair** (50 HP) — sky-pirate variant with a Vault
+  Warden-style pollute clock. Every 3rd turn: `Plunder: 6 + Shrapnel`
+  (jams an unplayable 0-cost Shrapnel into discard). Off-cycle:
+  `Cutlass 12`, `Pistol Shot 9`, `Boarding 4x2`, `Smoke Bomb +8 + Vuln`.
+
+**Sprites** ([src/ui/MechSprite.ts](src/ui/MechSprite.ts))
+- `drawEmberSpitter` — squat cauldron-mech with a molten orange
+  crucible chest, smoke wisps, and a stubby barrel arm.
+- `drawPigIronBrute` — boxy iron golem with bolted plate pauldrons
+  and one massive iron fist.
+- `drawMistSpecter` — legless trailing-mist ghost with cyan eye
+  pinpricks and wisp blobs for arms.
+- `drawCloudCorsair` — tricorne-hatted pirate with hook arm, gold
+  sash, and a fuse-lit powder-bag grenade arm.
+
+**Wiring** ([src/game/enemies.ts](src/game/enemies.ts:1352))
+- `ACT2_POOL` grows 3 → 5; `ACT3_POOL` grows 3 → 5. `pickRegularEnemy`
+  already weights uniformly across the pool so the new mooks slot
+  in naturally at 20% each.
+- All four registered in `ENEMY_DEFS` for save/load round-trip.
+
+### Slice 45 — Third boss per act
 Each act now picks from three bosses instead of two. The new bosses
 each introduce a mechanic the existing pair doesn't cover, so picking
 "the third boss" is meaningfully different from rolling Foundry

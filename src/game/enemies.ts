@@ -495,6 +495,115 @@ export const FORGE_REAVER: EnemyDef = {
   }
 };
 
+// Ember Spitter — Act 2 mook that brings Burn into regular fights. The
+// foundry already has Pyroclast Engine as the Burn-themed boss; this is
+// the cheap-fight version so Burn pressure is felt every encounter, not
+// just at the boss. Also gives the Stoker more Furnace Heart food.
+export const EMBER_SPITTER: EnemyDef = {
+  id: 'emberSpitter',
+  name: 'Ember Spitter',
+  maxHull: 44,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Spit: ${dmg} + Burn 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Spit') && roll < 0.35) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Spit: ${dmg} + Burn 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (!last.startsWith('Ember Salvo') && roll < 0.65) {
+      const dmg = 3;
+      return {
+        intent: { kind: 'attack', label: `Ember Salvo: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Magma Spew') && roll < 0.88) {
+      const dmg = 11;
+      return {
+        intent: { kind: 'attack', label: `Magma Spew: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Vent Heat: +7' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 7)
+    };
+  }
+};
+
+// Pig Iron Brute — Act 2 mook that snowballs Strength via Anneal. A
+// lighter cousin of Salvage Colossus: if the player lets it stand,
+// later hits land much harder. Adds a "kill it fast or eat it" rhythm
+// to regular Act 2 fights, which Cinder Hound / Slag Drone / Forge
+// Reaver don't currently have.
+export const PIG_IRON_BRUTE: EnemyDef = {
+  id: 'pigIronBrute',
+  name: 'Pig Iron Brute',
+  maxHull: 62,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'buff', label: 'Anneal: +1 Strength' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 1;
+          ctx.log('The Brute heat-treats its arm (+1 Strength).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Anneal') && roll < 0.22) {
+      return {
+        intent: { kind: 'buff', label: 'Anneal: +1 Strength' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 1;
+          ctx.log('The Brute anneals heavier plating (+1 Strength).');
+        }
+      };
+    }
+    if (!last.startsWith('Iron Punch') && roll < 0.55) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'attack', label: `Iron Punch: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Heavy Slam') && roll < 0.82) {
+      const dmg = 13;
+      return {
+        intent: { kind: 'attack', label: `Heavy Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Brace: +9' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 9)
+    };
+  }
+};
+
 export const MAGMA_SENTINEL: EnemyDef = {
   id: 'magmaSentinel',
   name: 'Magma Sentinel',
@@ -1080,6 +1189,141 @@ export const LIGHTNING_SPRITE: EnemyDef = {
   }
 };
 
+// Mist Specter — Act 3 mook with innate Thorns + a small self-heal on
+// Drain. Punishes button-mashing and creates a "do I keep poking this
+// 40-HP ghost or burst it down" decision. Reclaimer Prime brings thorns
+// to a boss; this is the regular-fight counterpart so the mechanic
+// shows up more than once a run.
+export const MIST_SPECTER: EnemyDef = {
+  id: 'mistSpecter',
+  name: 'Mist Specter',
+  maxHull: 42,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Shroud: +6 + 4 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 6);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 4;
+          ctx.log('The Specter wraps itself in mist (+4 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Vanish') && roll < 0.22) {
+      // Refresh thorns so they don't dwindle from player attacks. Caps
+      // at 4 so it never stacks into an unkillable wall.
+      return {
+        intent: { kind: 'buff', label: 'Vanish: refresh Thorns' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 4);
+          ctx.log('The Specter dissolves and reforms its spikes.');
+        }
+      };
+    }
+    if (!last.startsWith('Drain') && roll < 0.5) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Drain: ${dmg} → heal 4`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          const me = ctx.state.enemies[idx];
+          const healed = Math.min(4, me.maxHull - me.hull);
+          if (healed > 0) {
+            me.hull += healed;
+            ctx.log(`The Specter siphons ${healed} hull.`);
+          }
+        }
+      };
+    }
+    if (!last.startsWith('Wisp Strike') && roll < 0.8) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'attack', label: `Wisp Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'debuff', label: 'Phase: +6 + Vuln' },
+      resolve: (ctx) => {
+        gainEnemyPlating(ctx, 6);
+        applyVulnerableToPlayer(ctx, 1);
+      }
+    };
+  }
+};
+
+// Cloud Corsair — Act 3 mook that injects a Shrapnel curse every 3rd
+// turn. The mook-tier echo of Vault Warden's Slag Glob pollute, but
+// the curse is cheaper (0-cost unplayable Shrapnel) so it's annoying
+// rather than fight-defining. Adds deck-pollution texture to regular
+// sky fights, which currently only have Sky Pirate's Weak-via-board.
+export const CLOUD_CORSAIR: EnemyDef = {
+  id: 'cloudCorsair',
+  name: 'Cloud Corsair',
+  maxHull: 50,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Boarding Hook: ${dmg} + Weak`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    // Deterministic shrapnel injection every 3rd turn (3, 6, 9, ...).
+    if (turn % 3 === 0) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Plunder: ${dmg} + Shrapnel`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'shrapnel');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Smoke Bomb') && roll < 0.22) {
+      return {
+        intent: { kind: 'debuff', label: 'Smoke Bomb: +8 + Vuln' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 8);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (!last.startsWith('Pistol') && roll < 0.55) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'attack', label: `Pistol Shot: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Cutlass') && roll < 0.85) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Cutlass: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const dmg = 4;
+    return {
+      intent: { kind: 'attack', label: `Boarding: ${dmg}x2`, damage: dmg, hits: 2 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+      }
+    };
+  }
+};
+
 export const CLOUD_REAVER: EnemyDef = {
   id: 'cloudReaver',
   name: 'Cloud Reaver',
@@ -1392,10 +1636,16 @@ export const ACT1_POOL: EnemyDef[] = [
 ];
 export const ACT1_ELITE_POOL: EnemyDef[] = [SLAG_WALKER, IRON_RECLAIMER];
 
-export const ACT2_POOL: EnemyDef[] = [CINDER_HOUND, SLAG_DRONE, FORGE_REAVER];
+export const ACT2_POOL: EnemyDef[] = [
+  CINDER_HOUND, SLAG_DRONE, FORGE_REAVER,
+  EMBER_SPITTER, PIG_IRON_BRUTE
+];
 export const ACT2_ELITE_POOL: EnemyDef[] = [MAGMA_SENTINEL, RECLAIMER_MK2];
 
-export const ACT3_POOL: EnemyDef[] = [STRATUS_DRONE, SKY_PIRATE, LIGHTNING_SPRITE];
+export const ACT3_POOL: EnemyDef[] = [
+  STRATUS_DRONE, SKY_PIRATE, LIGHTNING_SPRITE,
+  MIST_SPECTER, CLOUD_CORSAIR
+];
 export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
 
 // Boss pools — each act picks one random boss at boss-node entry. The
@@ -1527,5 +1777,9 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [THE_WRAITH.id]: THE_WRAITH,
   [RECLAIMER_PRIME.id]: RECLAIMER_PRIME,
   [VAULT_WARDEN.id]: VAULT_WARDEN,
-  [CYCLONE_KING.id]: CYCLONE_KING
+  [CYCLONE_KING.id]: CYCLONE_KING,
+  [EMBER_SPITTER.id]: EMBER_SPITTER,
+  [PIG_IRON_BRUTE.id]: PIG_IRON_BRUTE,
+  [MIST_SPECTER.id]: MIST_SPECTER,
+  [CLOUD_CORSAIR.id]: CLOUD_CORSAIR
 };
