@@ -4,6 +4,9 @@ import { COLORS, FONTS, hex } from './theme';
 
 export const CARD_W = 140;
 export const CARD_H = 170;
+// Visual-only hover lift. The hit area does NOT extend up by LIFT — that
+// extension previously caused a noticeable mismatch between where cards
+// were drawn and where they had to be clicked.
 const LIFT = 40;
 
 export class CardView extends Phaser.GameObjects.Container {
@@ -27,30 +30,6 @@ export class CardView extends Phaser.GameObjects.Container {
 
   setDebugHitAreaVisible(visible: boolean) {
     if (this.hitDebug) this.hitDebug.setVisible(visible);
-  }
-
-  // Set the hit area to a slot that extends `leftExtent` px to the left of
-  // the card's center and `rightExtent` px to the right. The scene gives
-  // each card a slot that matches its visible portion exactly, so adjacent
-  // hit areas never overlap and click routing is unambiguous.
-  setSlot(leftExtent: number, rightExtent: number) {
-    this.applySlot(leftExtent, rightExtent);
-  }
-
-  private applySlot(leftExtent: number, rightExtent: number) {
-    const width = leftExtent + rightExtent;
-    const hitH = CARD_H + LIFT;
-    const hitTop = -CARD_H / 2 - LIFT;
-    const hitLeft = -leftExtent;
-    this.setSize(width, hitH);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(hitLeft, hitTop, width, hitH),
-      Phaser.Geom.Rectangle.Contains
-    );
-    if (this.hitDebug) {
-      this.hitDebug.setPosition(hitLeft + width / 2, hitTop + hitH / 2);
-      this.hitDebug.setSize(width, hitH);
-    }
   }
 
   constructor(
@@ -121,22 +100,21 @@ export class CardView extends Phaser.GameObjects.Container {
 
     this.add(this.visual);
 
-    // Hit area lives on the outer container, which never moves or scales.
-    // Default to a full CARD_W slot; the scene calls setSlot() per card to
-    // narrow the slot to exactly the card's visible portion (so adjacent
-    // hit areas never overlap and routing is unambiguous).
-    this.applySlot(CARD_W / 2, CARD_W / 2);
+    // Hit area lives on the outer container and matches the card's visible
+    // rectangle EXACTLY (CARD_W × CARD_H, centered on origin). Hover-lift
+    // moves only the inner visual, so the hit area stays put — the cursor
+    // remains over the card for the lower ~130 px even while it's lifted.
+    this.setSize(CARD_W, CARD_H);
+    this.setInteractive(
+      new Phaser.Geom.Rectangle(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H),
+      Phaser.Geom.Rectangle.Contains
+    );
 
-    // Manual hit-area visualization. Lives in the outer container so it
-    // moves and renders with the card itself (unlike scene.input.enableDebug,
-    // which has known offset issues for nested Container children). Hidden
-    // by default; CombatScene's D-key toggles visibility on every card.
-    // Initial dimensions match the default full-CARD_W slot; applySlot
-    // resizes the debug rect whenever the hit area changes.
-    const initialHitH = CARD_H + LIFT;
-    const initialHitTop = -CARD_H / 2 - LIFT;
+    // Debug visualization, toggled by CombatScene's D-key. Same geometry
+    // as the hit area so green (Phaser's enableDebug) and magenta should
+    // agree. Hidden by default.
     this.hitDebug = scene.add
-      .rectangle(0, initialHitTop + initialHitH / 2, CARD_W, initialHitH)
+      .rectangle(0, 0, CARD_W, CARD_H)
       .setStrokeStyle(2, 0xff00ff)
       .setFillStyle()
       .setVisible(false);
@@ -161,7 +139,7 @@ export class CardView extends Phaser.GameObjects.Container {
     });
   }
 
-  setHome(x: number, y: number, rot: number, _slotWidth?: number) {
+  setHome(x: number, y: number, rot: number) {
     this.homeX = x;
     this.homeY = y;
     if (!this.dragging) {
@@ -171,10 +149,6 @@ export class CardView extends Phaser.GameObjects.Container {
     this.homeRot = rot;
     // Outer container never rotates — only the visual does, so the hit area stays axis-aligned.
     this.rotation = 0;
-    // Hit area stays at full CARD_W regardless of fan spacing. Adjacent
-    // cards' hit areas overlap in their visual-overlap regions; pointer
-    // events route to the visually-frontmost card via parent-container
-    // bringToTop ordering (Phaser's setDepth is a no-op inside Containers).
     if (!this.hovered && !this.dragging) {
       this.visual.rotation = rot;
       this.visual.y = 0;

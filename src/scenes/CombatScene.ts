@@ -1003,9 +1003,6 @@ export class CombatScene extends Phaser.Scene {
       const x = startX + i * spacing;
       const view = next[i];
       view.setHome(x, baseY, 0);
-      // Full-width centered slot for every card. With no overlap, there's
-      // no need for the asymmetric left-aligned slot.
-      view.setSlot(CARD_W / 2, CARD_W / 2);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
 
