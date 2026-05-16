@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 46.
+Quick orientation for someone coming in cold. Numbers as of Slice 47.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
@@ -64,7 +64,41 @@ Quick orientation for someone coming in cold. Numbers as of Slice 46.
 
 ## Done
 
-### Slice 46 — Act 2 / Act 3 regular-enemy pool expansion *(current)*
+### Slice 47 — Export/Import as .json file + drag-and-drop *(current)*
+Replaced the clipboard-and-paste save flow with proper file
+operations. Two issues to fix and one feature to add.
+
+**Bug fix.** `meta.ts` had `RUN_KEY = 'rust-and-rivets/save/v3'`
+hardcoded, but `save.ts` is on `v4`. So the old export was reading
+an empty key and round-tripping nothing. Replaced the duplicate key
+with `export const SAVE_KEY` from `save.ts` so the two modules can't
+drift again.
+
+**Export now downloads a .json file.** Builds a Blob, creates a
+hidden `<a download>` link, triggers it, then revokes the object
+URL. Filename includes an ISO timestamp so multiple exports are
+distinguishable. JSON is pretty-printed so players can peek inside
+the file or hand-edit if they really want to.
+
+**Import now opens a file picker.** A hidden `<input type="file"
+accept=".json">` is created on click, listens for `change`, reads
+the file via `File.text()`, then runs the same validation pipeline
+as before. The old base64 path is kept as a fallback inside
+`importSaveJson` — if the text isn't valid JSON, it tries `atob()`
+first before failing. Old clipboard exports still work.
+
+**Drag-and-drop on the IMPORT button.** Window-level `dragenter` /
+`dragover` / `dragleave` / `drop` listeners. When a file is dragged
+over the page the IMPORT button switches its label to "DROP TO
+IMPORT" so the player knows where the drop logically lands; drop
+anywhere on the page triggers the import. dragenter/leave use a
+counter to handle child-element bubbling cleanly. Listeners are
+torn down on scene `shutdown` so they don't leak across transitions.
+
+Added an italic "*or drop a save file anywhere*" hint under the
+IMPORT button so the drop-target affordance is discoverable.
+
+### Slice 46 — Act 2 / Act 3 regular-enemy pool expansion
 Act 2 and Act 3 each had only 3 regular mooks (vs. Act 1's 6) so
 late-run combats felt repetitive. Added 2 mooks per act, each
 introducing a mechanic that act's existing trio didn't already cover.

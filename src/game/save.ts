@@ -4,7 +4,8 @@ import type { RunState, ShopState, RunResult, PendingReward, RunStats } from './
 import type { PersistentPlayer } from './types';
 import { POTION_SLOT_COUNT } from './potions';
 
-const KEY = 'rust-and-rivets/save/v4';
+export const SAVE_KEY = 'rust-and-rivets/save/v4';
+const KEY = SAVE_KEY;
 const SCHEMA_VERSION = 4;
 
 interface SavedMap {

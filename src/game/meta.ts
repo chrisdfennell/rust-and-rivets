@@ -1,6 +1,7 @@
 import type { RunState } from './run';
 import { RELICS, pickRelicFor } from './relics';
 import { pickRandomPotionId } from './potions';
+import { SAVE_KEY } from './save';
 
 const META_KEY = 'rust-and-rivets/meta/v1';
 const META_SCHEMA = 1;
@@ -274,29 +275,10 @@ export function clearMeta(): void {
 
 // ---- Export / Import bundle ----
 
-const RUN_KEY = 'rust-and-rivets/save/v3';
-
 interface SaveBundle {
   bundleVersion: 1;
   run: string | null;
   meta: string | null;
-}
-
-export function exportSaveString(): string {
-  let runJson: string | null = null;
-  let metaJson: string | null = null;
-  try {
-    runJson = localStorage.getItem(RUN_KEY);
-    metaJson = localStorage.getItem(META_KEY);
-  } catch {
-    // ignore
-  }
-  const bundle: SaveBundle = {
-    bundleVersion: 1,
-    run: runJson,
-    meta: metaJson
-  };
-  return btoa(JSON.stringify(bundle));
 }
 
 export interface ImportResult {
@@ -304,37 +286,64 @@ export interface ImportResult {
   message: string;
 }
 
-export function importSaveString(encoded: string): ImportResult {
-  if (!encoded) return { ok: false, message: 'Empty save string.' };
-  let decoded: string;
+function buildBundle(): SaveBundle {
+  let runJson: string | null = null;
+  let metaJson: string | null = null;
   try {
-    decoded = atob(encoded.trim());
+    runJson = localStorage.getItem(SAVE_KEY);
+    metaJson = localStorage.getItem(META_KEY);
   } catch {
-    return { ok: false, message: 'Save string is not valid base64.' };
+    // ignore — buildBundle still returns a valid empty bundle
   }
-  let bundle: SaveBundle;
+  return {
+    bundleVersion: 1,
+    run: runJson,
+    meta: metaJson
+  };
+}
+
+// Pretty-printed JSON bundle for file download. Players can open the
+// file, peek at it, share it, or restore a run from any device.
+export function exportSaveJson(): string {
+  return JSON.stringify(buildBundle(), null, 2);
+}
+
+// Accepts either the new pretty-JSON bundle or a legacy base64-wrapped
+// bundle (from older versions where exportSaveString returned base64).
+// The base64 fallback keeps old clipboard exports working after the
+// switch to file-based saves.
+export function importSaveJson(text: string): ImportResult {
+  if (!text || !text.trim()) return { ok: false, message: 'Empty save.' };
+  const trimmed = text.trim();
+  let bundle: SaveBundle | null = null;
+  // Try raw JSON first (the new format)
   try {
-    bundle = JSON.parse(decoded) as SaveBundle;
+    bundle = JSON.parse(trimmed) as SaveBundle;
   } catch {
-    return { ok: false, message: 'Save string contains invalid JSON.' };
+    // Not JSON — try base64-wrapped JSON for back-compat
+    try {
+      bundle = JSON.parse(atob(trimmed)) as SaveBundle;
+    } catch {
+      return { ok: false, message: 'File is not a valid save.' };
+    }
   }
-  if (bundle.bundleVersion !== 1) {
-    return { ok: false, message: `Unknown bundle version: ${bundle.bundleVersion}` };
+  if (!bundle || bundle.bundleVersion !== 1) {
+    return { ok: false, message: `Unknown bundle version: ${bundle?.bundleVersion ?? '?'}` };
   }
   // Validate inner payloads parse as JSON before committing
   if (bundle.run) {
     try { JSON.parse(bundle.run); } catch {
-      return { ok: false, message: 'Run payload is not valid JSON.' };
+      return { ok: false, message: 'Run payload is corrupted.' };
     }
   }
   if (bundle.meta) {
     try { JSON.parse(bundle.meta); } catch {
-      return { ok: false, message: 'Meta payload is not valid JSON.' };
+      return { ok: false, message: 'Meta payload is corrupted.' };
     }
   }
   try {
-    if (bundle.run) localStorage.setItem(RUN_KEY, bundle.run);
-    else localStorage.removeItem(RUN_KEY);
+    if (bundle.run) localStorage.setItem(SAVE_KEY, bundle.run);
+    else localStorage.removeItem(SAVE_KEY);
     if (bundle.meta) localStorage.setItem(META_KEY, bundle.meta);
     else localStorage.removeItem(META_KEY);
   } catch {

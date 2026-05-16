@@ -6,8 +6,8 @@ import {
 } from '../game/run';
 import {
   loadMeta,
-  exportSaveString,
-  importSaveString,
+  exportSaveJson,
+  importSaveJson,
   setCurrentAscension,
   ASCENSION_TIERS,
   MAX_ASCENSION
@@ -185,6 +185,21 @@ export class TitleScene extends Phaser.Scene {
     );
     this.add.existing(importBtn);
 
+    // Hint text under the IMPORT button — discovers the drop-to-import path
+    this.add
+      .text(width / 2 + 120, secondaryY + 28, 'or drop a save file anywhere', {
+        fontFamily: FONTS.body,
+        fontSize: '10px',
+        color: hex(COLORS.boneDim),
+        fontStyle: 'italic'
+      })
+      .setOrigin(0.5);
+
+    // Wire up window-level drag-and-drop. While a file is being dragged
+    // over the page, the IMPORT button switches to "DROP TO IMPORT" so
+    // the player knows where to release it.
+    this.setupFileDrop(importBtn);
+
     // Audio mute toggles
     const audioY = secondaryY + 44;
     this.makeMuteToggle(
@@ -297,32 +312,108 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Workshop'));
   }
 
-  private async doExport() {
-    const str = exportSaveString();
-    let copied = false;
-    try {
-      await navigator.clipboard.writeText(str);
-      copied = true;
-    } catch {
-      // Fall through to manual copy
-    }
-    if (copied) {
-      this.toast('Save copied to clipboard.');
-    } else {
-      // Clipboard API unavailable — show the string in a prompt so the user can copy
-      window.prompt('Copy this save string:', str);
-    }
+  private doExport() {
+    const json = exportSaveJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Timestamp in the filename makes multiple exports easy to tell apart
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.download = `rust-and-rivets-save-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.toast('Save downloaded.');
   }
 
   private doImport() {
-    const input = window.prompt('Paste your save string:');
-    if (input == null) return;
-    const result = importSaveString(input);
-    this.toast(result.message);
-    if (result.ok) {
-      // Re-render to reflect the imported state
-      this.time.delayedCall(900, () => this.scene.restart());
+    // Hidden file picker — browsers won't allow programmatic .click()
+    // unless triggered from a user gesture, which this is (button click).
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.style.display = 'none';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (file) void this.importFromFile(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  private async importFromFile(file: File) {
+    try {
+      const text = await file.text();
+      const result = importSaveJson(text);
+      this.toast(result.message);
+      if (result.ok) {
+        this.time.delayedCall(900, () => this.scene.restart());
+      }
+    } catch {
+      this.toast('Could not read file.');
     }
+  }
+
+  // Drag-and-drop import. We listen on the window so the player can drop
+  // anywhere on the page — the IMPORT button just visually highlights to
+  // signal where the drop "logically" lands. Listeners are torn down on
+  // scene shutdown so they don't leak across scene transitions.
+  private setupFileDrop(importBtn: Button) {
+    const originalLabel = 'IMPORT SAVE';
+    const dropLabel = 'DROP TO IMPORT';
+    let highlighted = false;
+
+    // dragenter/dragleave fire for child elements too, so we count entries
+    // rather than toggling on each event.
+    let dragDepth = 0;
+
+    const isFileDrag = (e: DragEvent) =>
+      !!e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+
+    const highlight = (on: boolean) => {
+      if (on === highlighted) return;
+      highlighted = on;
+      importBtn.setLabel(on ? dropLabel : originalLabel);
+    };
+
+    const onDragEnter = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      dragDepth++;
+      highlight(true);
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+    };
+    const onDragLeave = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) highlight(false);
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      dragDepth = 0;
+      highlight(false);
+      const file = e.dataTransfer?.files[0];
+      if (file) void this.importFromFile(file);
+    };
+
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+
+    this.events.once('shutdown', () => {
+      window.removeEventListener('dragenter', onDragEnter);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+    });
   }
 
   private toast(message: string) {
