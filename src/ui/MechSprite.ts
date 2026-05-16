@@ -2040,6 +2040,319 @@ export function drawTheWraith(scene: Phaser.Scene, x: number, y: number): Phaser
   return c;
 }
 
+// Reclaimer Prime — Act 1 #3. Spike-clad bipedal: silhouette reads
+// "do not touch." Bulkier than Iron Reclaimer with prominent spike
+// pauldrons and a row of front-facing thorns down the torso.
+export function drawReclaimerPrime(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 8);
+  const g = scene.add.graphics();
+
+  // Legs — wide stance
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, 64, 36, 80);
+  g.fillRect(22, 64, 36, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-64, 138, 48, 22);
+  g.fillRect(16, 138, 48, 22);
+
+  // Knee spikes
+  g.fillStyle(COLORS.bone);
+  g.fillTriangle(-40, 100, -32, 100, -36, 86);
+  g.fillTriangle(40, 100, 48, 100, 44, 86);
+
+  // Torso — wide and angled
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-78, -38, 156, 108);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-70, -30, 140, 14);
+  g.fillRect(-70, 54, 140, 12);
+
+  // Front thorn row — three big forward-facing spikes down the torso
+  g.fillStyle(COLORS.boneDim);
+  g.fillTriangle(-28, 4, -12, 4, -20, -16);
+  g.fillTriangle(-8, 22, 8, 22, 0, 2);
+  g.fillTriangle(12, 4, 28, 4, 20, -16);
+  g.fillStyle(COLORS.bone);
+  g.fillTriangle(-26, 2, -14, 2, -20, -12);
+  g.fillTriangle(-6, 20, 6, 20, 0, 4);
+  g.fillTriangle(14, 2, 26, 2, 20, -12);
+
+  // Spike-pauldrons — radial spikes on each shoulder
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(-72, -22, 20);
+  g.fillCircle(72, -22, 20);
+  g.fillStyle(COLORS.boneDim);
+  // Left pauldron spikes
+  g.fillTriangle(-92, -22, -84, -10, -84, -34);
+  g.fillTriangle(-72, -46, -64, -36, -80, -36);
+  g.fillTriangle(-52, -22, -60, -10, -60, -34);
+  // Right pauldron spikes
+  g.fillTriangle(92, -22, 84, -10, 84, -34);
+  g.fillTriangle(72, -46, 64, -36, 80, -36);
+  g.fillTriangle(52, -22, 60, -10, 60, -34);
+
+  // Head — small, slit visor, red eye
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -68, 44, 28);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-14, -58, 28, 4);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-22, -72, 44, 4);
+
+  // Arms — chunky with spike-knuckle gauntlets
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-104, -10, 22, 70);
+  g.fillRect(82, -10, 22, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-110, 56, 34, 24); // left fist
+  g.fillRect(76, 56, 34, 24);   // right fist
+  // Knuckle spikes
+  g.fillStyle(COLORS.bone);
+  for (const sx of [-104, -94, -84]) g.fillTriangle(sx, 56, sx + 6, 56, sx + 3, 46);
+  for (const sx of [82, 92, 102]) g.fillTriangle(sx, 56, sx + 6, 56, sx + 3, 46);
+
+  // Rivets
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-60, -22], [60, -22], [-60, 50], [60, 50]
+  ]) g.fillCircle(rx, ry, 3);
+
+  c.add(g);
+
+  // Slow menacing breath
+  scene.tweens.add({
+    targets: c,
+    y: c.y + 4,
+    duration: 1300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// Vault Warden — Act 2 #3. Squat armored vault on stubby legs: a sealed
+// blast-door chest with a glowing toxic-green hatch in the center.
+// Reads as "the safe is the boss," and the hatch is where Slag erupts.
+export function drawVaultWarden(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 4);
+  const g = scene.add.graphics();
+
+  // Stubby tracked base
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-96, 80, 192, 44);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 10; i++) {
+    g.fillRect(-92 + i * 20, 108, 14, 12);
+  }
+  g.fillStyle(COLORS.brassDim);
+  for (const wx of [-70, -28, 14, 56]) {
+    g.fillCircle(wx, 102, 7);
+  }
+
+  // Vault-door torso — wide armored block
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-100, -54, 200, 138);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-92, -46, 184, 124);
+  // Border bevels
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-92, -46, 184, 8);
+  g.fillRect(-92, 70, 184, 8);
+  g.fillRect(-92, -46, 8, 124);
+  g.fillRect(84, -46, 8, 124);
+
+  // Massive bolt rivets on the corners (like a vault door)
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-74, -28], [74, -28], [-74, 56], [74, 56]
+  ]) {
+    g.fillCircle(rx, ry, 8);
+    g.fillStyle(COLORS.brassDim);
+    g.fillCircle(rx, ry, 4);
+    g.fillStyle(COLORS.brass);
+  }
+
+  // Central round hatch — glowing toxic green (the Slag dispenser)
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, 14, 44);
+  g.fillStyle(0x3a5a2a);
+  g.fillCircle(0, 14, 36);
+  g.fillStyle(0x6b9b4f); // toxic green
+  g.fillCircle(0, 14, 28);
+  g.fillStyle(0xb5d97a);
+  g.fillCircle(-4, 10, 12);
+  // Slag drip from the bottom of the hatch
+  g.fillStyle(0x6b9b4f, 0.7);
+  g.fillTriangle(-8, 42, 8, 42, 0, 58);
+  g.fillCircle(0, 56, 4);
+
+  // Hatch wheel — radial spokes
+  g.lineStyle(4, COLORS.brass, 0.9);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(0, 14);
+    g.lineTo(Math.cos(a) * 38, 14 + Math.sin(a) * 38);
+    g.strokePath();
+  }
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(0, 14, 6);
+
+  // Top sensor strip with twin red lenses
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-50, -70, 100, 18);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-26, -61, 5);
+  g.fillCircle(26, -61, 5);
+
+  // Side smokestacks (short and stout)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-94, -86, 14, 38);
+  g.fillRect(80, -86, 14, 38);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-96, -90, 18, 6);
+  g.fillRect(78, -90, 18, 6);
+  g.fillStyle(COLORS.boneDim, 0.45);
+  g.fillCircle(-86, -104, 6);
+  g.fillCircle(86, -104, 6);
+
+  c.add(g);
+
+  // Pulsing toxic hatch glow
+  const glow = scene.add.circle(0, 14, 30, 0x6b9b4f, 0.4);
+  c.add(glow);
+  scene.tweens.add({
+    targets: glow,
+    scale: 1.4,
+    alpha: 0,
+    duration: 900,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.Out'
+  });
+
+  return c;
+}
+
+// Cyclone King — Act 3 #3. Tall crowned figure split visually between
+// the two stances: dark iron right half, lighter storm-blue left half
+// with a swirling halo above. Twin great weapons — a heavy mace (iron)
+// and a bladed wind-fan (tempest). The vertical split sells the
+// alternating-stance mechanic at a glance.
+export function drawCycloneKing(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 16);
+  const g = scene.add.graphics();
+
+  // Long royal skirt (no visible legs) — split colors
+  g.fillStyle(COLORS.shield);
+  g.fillTriangle(-70, 30, 0, 30, -10, 170);
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(0, 30, 70, 30, 10, 170);
+  // Brass hem along bottom
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-22, 158, 44, 8);
+
+  // Torso — vertically halved
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-50, -40, 50, 80);  // tempest half
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(0, -40, 50, 80);    // iron half
+  // Center divider strip
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-3, -40, 6, 80);
+  // Chest emblem — half steam, half danger
+  g.fillStyle(COLORS.steam);
+  g.fillTriangle(-22, -10, 0, -22, 0, 10);
+  g.fillStyle(COLORS.danger);
+  g.fillTriangle(22, -10, 0, -22, 0, 10);
+
+  // Pauldrons — wide, asymmetric (storm side feathered, iron side spiked)
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-78, -46, 30, 24);
+  g.fillStyle(COLORS.steam, 0.7);
+  // Feather strips on tempest pauldron
+  for (const sy of [-44, -38, -32]) g.fillRect(-92, sy, 18, 4);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(48, -46, 30, 24);
+  // Spikes on iron pauldron
+  g.fillStyle(COLORS.boneDim);
+  for (const sx of [54, 64, 74]) g.fillTriangle(sx, -46, sx + 6, -46, sx + 3, -58);
+
+  // Helm — crown with central tall spike
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, -78, 52, 32);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-22, -70, 44, 8); // visor band
+  // Glowing eye slits — split colors matching halves
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-16, -68, 10, 4);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(6, -68, 10, 4);
+  // Crown spikes
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-22, -78, -14, -78, -18, -94); // left point
+  g.fillTriangle(-6, -78, 6, -78, 0, -110);     // center tall
+  g.fillTriangle(14, -78, 22, -78, 18, -94);    // right point
+
+  // Storm halo — arc of small blue wisps above the crown
+  g.fillStyle(COLORS.shield, 0.55);
+  for (const [hx, hy, hr] of [
+    [-34, -118, 6], [-12, -126, 5], [10, -124, 5], [32, -116, 6]
+  ] as [number, number, number][]) {
+    g.fillCircle(hx, hy, hr);
+  }
+
+  // Left arm — wind-fan blade (tempest weapon)
+  g.fillStyle(COLORS.shield);
+  g.fillRect(-86, -18, 18, 60);
+  g.fillStyle(COLORS.steel);
+  // Fan blades fan out from the wrist
+  g.fillTriangle(-78, 42, -120, 26, -110, 70);
+  g.fillTriangle(-78, 42, -130, 50, -106, 84);
+  g.fillStyle(COLORS.steam, 0.5);
+  g.fillTriangle(-78, 44, -118, 32, -108, 66);
+
+  // Right arm — heavy mace (iron weapon)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(68, -18, 18, 60);
+  // Mace shaft + head
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(72, 42, 12, 40);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(58, 70, 40, 28);
+  // Mace spikes
+  g.fillStyle(COLORS.boneDim);
+  for (const sx of [60, 74, 88]) g.fillTriangle(sx, 70, sx + 6, 70, sx + 3, 60);
+  for (const sx of [60, 74, 88]) g.fillTriangle(sx, 98, sx + 6, 98, sx + 3, 108);
+
+  // Sash/belt
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-50, 26, 100, 8);
+
+  // Rivets
+  g.fillStyle(COLORS.brassDim);
+  for (const [rx, ry] of [
+    [-40, -32], [40, -32], [-40, 28], [40, 28]
+  ]) g.fillCircle(rx, ry, 3);
+
+  c.add(g);
+
+  // Halo wisps spin via container rotation? Use a small bob instead so
+  // weapons stay readable.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 6,
+    duration: 1500,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
@@ -2064,5 +2377,8 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   stormheart: drawStormheart,
   salvageColossus: drawSalvageColossus,
   pyroclastEngine: drawPyroclastEngine,
-  theWraith: drawTheWraith
+  theWraith: drawTheWraith,
+  reclaimerPrime: drawReclaimerPrime,
+  vaultWarden: drawVaultWarden,
+  cycloneKing: drawCycloneKing
 };

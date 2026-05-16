@@ -14,13 +14,14 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 44.
+Quick orientation for someone coming in cold. Numbers as of Slice 45.
 
-- **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
-  bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
-  Iron Sovereign / Pyroclast Engine, Stormheart / The Wraith). Win =
-  defeat the act-3 boss. InterActScene between each act lets the
-  player pick a boon (Repair / Refit / Salvage).
+- **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
+  bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
+  Reclaimer Prime, Iron Sovereign / Pyroclast Engine / Vault Warden,
+  Stormheart / The Wraith / Cyclone King). Win = defeat the act-3
+  boss. InterActScene between each act lets the player pick a boon
+  (Repair / Refit / Salvage).
 - **Characters:** 4 pilots (Pilot / Engineer / Saboteur / Stoker) with
   unique starter decks, hull pools, and signature relics. The Stoker
   ramps Strength every turn an enemy is Burning (Furnace Heart relic).
@@ -63,7 +64,60 @@ Quick orientation for someone coming in cold. Numbers as of Slice 44.
 
 ## Done
 
-### Slice 44 — The Stoker (new pilot) + scrollable character select *(current)*
+### Slice 45 — Third boss per act *(current)*
+Each act now picks from three bosses instead of two. The new bosses
+each introduce a mechanic the existing pair doesn't cover, so picking
+"the third boss" is meaningfully different from rolling Foundry
+Tyrant vs. Salvage Colossus.
+
+**Reclaimer Prime** (Act 1, 100 HP) — Thorns retaliator. Opens with
+`Activate Defense: +10 Plating + 6 Thorns`, and `Reinforce` refreshes
+thorns (`max(current, 6) + 4`) so multi-hit / AoE players bleed each
+turn the Prime is on defense. Punishes Cleaver / Whirlwind chains
+that walked over Foundry Tyrant.
+
+**Vault Warden** (Act 2, 130 HP) — Slag Glob polluter. Every third
+turn (3/6/9/...) it deterministically uses `Pollute: 10 + Slag Glob`,
+jamming an unplayable curse card into the player's discard. Off-cycle
+turns rotate Slam / Vault Volley / Reinforce / Iron Stagger. The
+predictable pollute clock means players can plan exhausts around it
+but can't ignore the deck-pollution pressure.
+
+**Cyclone King** (Act 3, 145 HP) — alternating stance. Tracks
+`memory.stance` and flips it each turn. Tempest stance hits hard
+(`Tempest Strike: 24` or `Cyclone Sweep: 6x4` or `Gale: 10 + Vuln 2`)
+but never gains plating. Iron stance gains huge plating (18–26) and
+debuffs (Weak 2 / Vuln 2) but deals no damage. Player reads the
+rhythm and plans two-turn windows: burst during Iron, scrub debuffs
+during Tempest setup.
+
+**Sprites** ([src/ui/MechSprite.ts](src/ui/MechSprite.ts))
+- `drawReclaimerPrime` — wide-stance bipedal with spike-pauldrons
+  (radial bone spikes on each shoulder), a front row of three
+  forward-facing thorns down the torso, spike-knuckle gauntlets,
+  red eye-slit visor. Reads as "do not touch."
+- `drawVaultWarden` — squat tracked vault on stubby wheels with a
+  glowing toxic-green central hatch (the Slag dispenser). Hatch
+  has a brass wheel/spoke pattern, drips green from the bottom,
+  pulses via a scale tween. Massive corner bolt-rivets sell the
+  blast-door silhouette.
+- `drawCycloneKing` — tall crowned figure vertically halved between
+  shield-blue tempest (left) and steelDark iron (right). Left arm
+  holds a wind-fan blade, right arm a heavy spiked mace. Helm has
+  a tall central crown spike flanked by side points, eye slits in
+  matching half-colors (steam left, danger right), and a blue
+  wisp halo arc above the crown.
+
+**Wiring** ([src/game/enemies.ts](src/game/enemies.ts:1327))
+- `ACT1_BOSS_POOL` / `ACT2_BOSS_POOL` / `ACT3_BOSS_POOL` each gain
+  the new boss. `getActBoss` still rolls uniformly across the pool,
+  so each act has a 1/3 chance per run for each boss.
+- All three registered in `ENEMY_DEFS` so save/load resumes them
+  correctly via `run.pendingEnemyIds`.
+- Sprite map ([src/ui/MechSprite.ts:ENEMY_SPRITES](src/ui/MechSprite.ts))
+  gains the three new draws.
+
+### Slice 44 — The Stoker (new pilot) + scrollable character select
 A fourth pilot joins the roster with a snowball mechanic that's
 different in shape from anything the existing three do.
 

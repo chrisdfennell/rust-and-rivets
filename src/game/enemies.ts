@@ -681,6 +681,69 @@ export const SALVAGE_COLOSSUS: EnemyDef = {
   }
 };
 
+// Reclaimer Prime — Act 1 third boss. Mechanic: high innate Thorns,
+// refreshed each Reinforce. Punishes multi-hit / AoE decks because each
+// hit retaliates. Foundry Tyrant is steady pressure, Salvage Colossus
+// snowballs Strength, this one weaponizes the player's own attacks.
+export const RECLAIMER_PRIME: EnemyDef = {
+  id: 'reclaimerPrime',
+  name: 'Reclaimer Prime',
+  maxHull: 100,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      // Opener arms retaliatory spikes. Player turn 1 is now a "do I dare
+      // attack into 6 thorns" decision.
+      return {
+        intent: { kind: 'defend', label: 'Activate Defense: +10 + 6 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 10);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 6;
+          ctx.log('Reclaimer Prime arms retaliatory spikes (+6 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Reinforce') && roll < 0.25) {
+      // Reinforce refreshes thorns, so they don't dwindle from player
+      // strip cards (if any existed). Plating tops up too.
+      return {
+        intent: { kind: 'defend', label: 'Reinforce: +14 + 4 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 14);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 6) + 4;
+          ctx.log('Reclaimer Prime refreshes its spikes.');
+        }
+      };
+    }
+    if (!last.startsWith('Heavy Slam') && roll < 0.55) {
+      const dmg = 16;
+      return {
+        intent: { kind: 'attack', label: `Heavy Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Cleave') && roll < 0.85) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'attack', label: `Cleave: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const dmg = 12;
+    return {
+      intent: { kind: 'attack', label: `Hammer Down: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
 export const FOUNDRY_TYRANT: EnemyDef = {
   id: 'foundryTyrant',
   name: 'Foundry Tyrant',
@@ -786,6 +849,70 @@ export const PYROCLAST_ENGINE: EnemyDef = {
         dealDamageToPlayer(ctx, dmg);
         dealDamageToPlayer(ctx, dmg);
         dealDamageToPlayer(ctx, dmg);
+      }
+    };
+  }
+};
+
+// Vault Warden — Act 2 third boss. Mechanic: every 3 turns, jams a
+// Slag Glob into the player's discard pile, slowly polluting future
+// draws. Iron Sovereign is one huge telegraph, Pyroclast Engine is Burn
+// pressure; the Warden weaponizes the player's deck against itself.
+export const VAULT_WARDEN: EnemyDef = {
+  id: 'vaultWarden',
+  name: 'Vault Warden',
+  maxHull: 130,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Seal Vault: +18 Plating' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 18)
+      };
+    }
+    // Every third turn (3, 6, 9, ...) the Warden pollutes the deck.
+    // Deterministic so the player can plan around it.
+    if (turn % 3 === 0) {
+      const dmg = 10;
+      return {
+        intent: { kind: 'debuff', label: `Pollute: ${dmg} + Slag Glob`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'slagGlob');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Reinforce') && roll < 0.30) {
+      return {
+        intent: { kind: 'defend', label: 'Reinforce: +14 Plating' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 14)
+      };
+    }
+    if (!last.startsWith('Slam') && roll < 0.60) {
+      const dmg = 18;
+      return {
+        intent: { kind: 'attack', label: `Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Vault Volley') && roll < 0.85) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'attack', label: `Vault Volley: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const dmg = 12;
+    return {
+      intent: { kind: 'debuff', label: `Iron Stagger: ${dmg} + Weak 2`, damage: dmg, hits: 1 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        applyWeakToPlayer(ctx, 2);
       }
     };
   }
@@ -1182,6 +1309,83 @@ export const THE_WRAITH: EnemyDef = {
   }
 };
 
+// Cyclone King — Act 3 third boss. Mechanic: alternates between Tempest
+// stance (heavy offense, no defense) and Iron stance (huge plating +
+// debuffs). Stance flips each turn, so the player can predict the
+// rhythm but has to plan two-turn windows: burst in Tempest, scrub
+// debuffs in Iron. Stormheart is one big telegraphed cannon, the
+// Wraith grinds with debuffs/heal; the King is a clock you read.
+export const CYCLONE_KING: EnemyDef = {
+  id: 'cycloneKing',
+  name: 'Cyclone King',
+  maxHull: 145,
+  pickAction: ({ turn, rng, memory }): EnemyAction => {
+    // Initialize stance on turn 1 — open in Tempest so first hit is
+    // immediate and readable, then Iron next turn.
+    if (turn === 1) {
+      memory.stance = 'tempest';
+      const dmg = 16;
+      return {
+        intent: { kind: 'attack', label: `Tempest Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    // Flip stance each turn — predictable rhythm.
+    memory.stance = memory.stance === 'tempest' ? 'iron' : 'tempest';
+    const roll = rng();
+    if (memory.stance === 'tempest') {
+      // Tempest stance: offense-only, no plating gained.
+      if (roll < 0.45) {
+        const dmg = 6;
+        return {
+          intent: { kind: 'attack', label: `Cyclone Sweep: ${dmg}x4`, damage: dmg, hits: 4 },
+          resolve: (ctx) => {
+            for (let i = 0; i < 4; i++) dealDamageToPlayer(ctx, dmg);
+          }
+        };
+      }
+      if (roll < 0.8) {
+        const dmg = 24;
+        return {
+          intent: { kind: 'attack', label: `Tempest Strike: ${dmg}`, damage: dmg, hits: 1 },
+          resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+        };
+      }
+      const dmg = 10;
+      return {
+        intent: { kind: 'debuff', label: `Gale: ${dmg} + Vuln 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    // Iron stance: defense + debuffs, no big damage.
+    if (roll < 0.5) {
+      return {
+        intent: { kind: 'defend', label: 'Iron Bulwark: +22 + Weak 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 22);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (roll < 0.85) {
+      return {
+        intent: { kind: 'defend', label: 'Iron Bulwark: +18 + Vuln 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 18);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Iron Wall: +26' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 26)
+    };
+  }
+};
+
 export const ACT1_POOL: EnemyDef[] = [
   SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
   RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
@@ -1197,9 +1401,9 @@ export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
 // Boss pools — each act picks one random boss at boss-node entry. The
 // selection is persisted via run.pendingEnemyIds so refresh resumes the
 // same boss, but a new run rolls a fresh choice.
-export const ACT1_BOSS_POOL: EnemyDef[] = [FOUNDRY_TYRANT, SALVAGE_COLOSSUS];
-export const ACT2_BOSS_POOL: EnemyDef[] = [IRON_SOVEREIGN, PYROCLAST_ENGINE];
-export const ACT3_BOSS_POOL: EnemyDef[] = [STORMHEART, THE_WRAITH];
+export const ACT1_BOSS_POOL: EnemyDef[] = [FOUNDRY_TYRANT, SALVAGE_COLOSSUS, RECLAIMER_PRIME];
+export const ACT2_BOSS_POOL: EnemyDef[] = [IRON_SOVEREIGN, PYROCLAST_ENGINE, VAULT_WARDEN];
+export const ACT3_BOSS_POOL: EnemyDef[] = [STORMHEART, THE_WRAITH, CYCLONE_KING];
 
 function regularPoolFor(act: number): EnemyDef[] {
   if (act >= 3) return ACT3_POOL;
@@ -1320,5 +1524,8 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [STORMHEART.id]: STORMHEART,
   [SALVAGE_COLOSSUS.id]: SALVAGE_COLOSSUS,
   [PYROCLAST_ENGINE.id]: PYROCLAST_ENGINE,
-  [THE_WRAITH.id]: THE_WRAITH
+  [THE_WRAITH.id]: THE_WRAITH,
+  [RECLAIMER_PRIME.id]: RECLAIMER_PRIME,
+  [VAULT_WARDEN.id]: VAULT_WARDEN,
+  [CYCLONE_KING.id]: CYCLONE_KING
 };
