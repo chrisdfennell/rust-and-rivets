@@ -28,7 +28,10 @@ export class IntentView extends Phaser.GameObjects.Container {
     this.add([this.bg, this.icon, this.label]);
   }
 
-  update(intent: Intent) {
+  // Optional stat-modifier args let us display the actual hit number
+  // (post-Strength + Vulnerable + Weak) instead of the raw base damage
+  // baked into the label. Without these the call works as before.
+  update(intent: Intent, attackerStr = 0, attackerWeak = 0, playerVuln = 0) {
     let glyph = '?';
     let color = COLORS.bone;
     switch (intent.kind) {
@@ -50,6 +53,24 @@ export class IntentView extends Phaser.GameObjects.Container {
         break;
     }
     this.icon.setText(glyph).setColor(hex(color));
-    this.label.setText(intent.label);
+    this.label.setText(this.computeDisplayLabel(intent, attackerStr, attackerWeak, playerVuln));
+  }
+
+  // Re-derive the label so the displayed damage number reflects the actual
+  // hit the player will take (matches dealDamageToPlayer's math). Labels
+  // bake the base damage in like "Crushing Punch: 12" or "Salvage Storm: 5x3";
+  // we replace just the first occurrence of that base number.
+  private computeDisplayLabel(intent: Intent, str: number, weak: number, vuln: number): string {
+    const base = intent.damage;
+    if (base === undefined) return intent.label;
+    let mod = base + str;
+    if (vuln > 0) mod = Math.floor(mod * 1.5);
+    if (weak > 0) mod = Math.floor(mod * 0.75);
+    if (mod === base) return intent.label;
+    // Match the base number bounded by non-digits on both sides. `\b` won't
+    // work for labels like "Salvage Storm: 5x3" because `x` is a word char,
+    // so `\b5\b` fails to find the 5. Digit-boundary lookarounds do.
+    const regex = new RegExp(`(?<!\\d)${base}(?!\\d)`);
+    return intent.label.replace(regex, String(mod));
   }
 }

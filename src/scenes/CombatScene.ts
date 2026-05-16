@@ -928,7 +928,7 @@ export class CombatScene extends Phaser.Scene {
         e.vulnerable, e.weak,
         e.strength, e.dexterity, e.burn, e.thorns
       );
-      ui.intent.update(e.nextAction.intent);
+      ui.intent.update(e.nextAction.intent, e.strength, e.weak, s.player.vulnerable);
       const dead = e.hull <= 0;
       ui.sprite.setAlpha(dead ? 0.25 : 1);
       ui.intent.setAlpha(dead ? 0.2 : 1);
