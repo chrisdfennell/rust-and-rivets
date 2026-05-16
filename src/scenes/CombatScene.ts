@@ -608,6 +608,10 @@ export class CombatScene extends Phaser.Scene {
   private onEndTurn() {
     if (this.state.phase !== 'playerTurn') return;
     if (this.drag) return; // ignore while dragging
+    // Don't let End Turn fire while a card is mid-play flourish. Without
+    // this, endTurn() can discard the still-pending card before its
+    // applyCardPlay runs, swallowing the play.
+    if (this.playingViews.size > 0) return;
     const canPlayAnything = this.state.player.hand.some((c) => canPlay(this.state, c.uid));
     if (this.state.player.steam > 0 && canPlayAnything && !this.endTurnPending) {
       this.startEndTurnConfirm();
@@ -1113,11 +1117,20 @@ export class CombatScene extends Phaser.Scene {
     for (let i = 0; i < n; i++) {
       const x = startX + i * spacing;
       const view = next[i];
-      view.setHome(x, baseY, 0);
       view.setPlayable(canPlay(this.state, view.card.uid));
       if (newlyCreated.has(view)) {
+        // New card: snap to home, then animateDrawIn moves it to the draw
+        // pile and tweens back. The "snap" half is wasted work but keeps
+        // home values authoritative if animateDrawIn ever short-circuits.
+        view.setHome(x, baseY, 0);
         this.animateDrawIn(view, x, baseY, drawStagger);
         drawStagger += 1;
+      } else {
+        // Existing card: update home values without snapping, then tween
+        // the container to the new x/y so hand reflow looks like a slide
+        // instead of a teleport.
+        view.setHome(x, baseY, 0, false);
+        this.tweenHandTo(view, x, baseY);
       }
     }
 
@@ -1140,6 +1153,27 @@ export class CombatScene extends Phaser.Scene {
       scale: 1,
       duration: 220,
       delay: stagger * 50,
+      ease: 'Cubic.Out'
+    });
+  }
+
+  // Slides an already-in-hand card from its current position to a new
+  // home slot. Used when a card leaves the hand and the remaining cards
+  // need to reflow. Skips no-op moves so a refresh that doesn't change
+  // anything doesn't trigger a pointless tween.
+  private tweenHandTo(view: CardView, x: number, y: number) {
+    // If the player is actively dragging this card, the pointer drives its
+    // position — don't fight it with a layout tween.
+    if (view.isDragging()) return;
+    if (Math.abs(view.x - x) < 1 && Math.abs(view.y - y) < 1) return;
+    // Kill any prior layout tween on this view so a fast-firing refresh
+    // doesn't stack motion on top of motion.
+    this.tweens.killTweensOf(view);
+    this.tweens.add({
+      targets: view,
+      x,
+      y,
+      duration: 180,
       ease: 'Cubic.Out'
     });
   }

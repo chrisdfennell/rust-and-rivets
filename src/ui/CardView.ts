@@ -144,10 +144,15 @@ export class CardView extends Phaser.GameObjects.Container {
     });
   }
 
-  setHome(x: number, y: number, rot: number) {
+  // When `snap` is false, the home (x, y) is recorded but the view's own
+  // position isn't moved — the caller is responsible for animating the
+  // container to the new home (e.g. the hand-shuffle tween in CombatScene).
+  // The home values are still updated so hover-out tween-backs land at
+  // the right spot.
+  setHome(x: number, y: number, rot: number, snap = true) {
     this.homeX = x;
     this.homeY = y;
-    if (!this.dragging) {
+    if (!this.dragging && snap) {
       this.x = x;
       this.y = y;
     }

@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 31.
+Quick orientation for someone coming in cold. Numbers as of Slice 32.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -53,7 +53,35 @@ Quick orientation for someone coming in cold. Numbers as of Slice 31.
 
 ## Done
 
-### Slice 31 — Card draw / discard / play animations *(current)*
+### Slice 32 — Hand-shuffle tween + End Turn lock *(current)*
+Two short follow-ups from the animation work in Slice 31.
+
+**Hand-shuffle tween**
+- Previously, when a card left the hand, the remaining cards
+  snapped to their new positions inside `setHome`. Now they tween.
+- `CardView.setHome` gained a `snap = true` parameter. Passing
+  `false` updates the home (x, y, rot) values without moving the
+  container, so the caller can animate the container itself.
+- New `CombatScene.tweenHandTo(view, x, y)` runs a 180 ms
+  `Cubic.Out` x/y tween. It bails if the move is sub-pixel, if the
+  view is being dragged (`view.isDragging()`), and `killTweensOf`s
+  any prior layout tween so back-to-back refreshes don't stack
+  motion.
+- `layoutHand` now branches per view: newly-created views still
+  snap-to-home then `animateDrawIn` from the draw pile; existing
+  views set their home without snapping and call `tweenHandTo`.
+
+**End Turn lock during play flourish**
+- Pre-existing race documented in Slice 31's notes: pressing End
+  Turn during a card's play flourish let `endTurn()` discard the
+  still-pending card before its `applyCardPlay` ran, swallowing
+  the play.
+- Fixed with `if (this.playingViews.size > 0) return;` at the top
+  of `onEndTurn`. The button stays visually live (no graying), but
+  the 340 ms flourish window is short enough that the no-op is
+  not noticeable.
+
+### Slice 31 — Card draw / discard / play animations
 Cards used to pop in and out of the hand instantly. Now they fly
 from a draw-pile anchor into the hand on draw, sweep to a discard-
 pile anchor on play / end-of-turn discard, and the play "flourish"
@@ -1167,15 +1195,6 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   stored locally for retrospection.
 
 ### Tier 3 — polish
-- **Hand-shuffle tween** — when a card leaves the hand, the
-  remaining cards still snap to their new positions in
-  `layoutHand` rather than tweening. Could compare old vs new home
-  and add a short ease.
-- **End Turn lock during play flourish** — pre-existing race: if
-  the player presses End Turn while a play flourish is in flight,
-  the played card gets discarded by `endTurn` before its
-  `applyCardPlay` resolves and its effect never fires. Fix by
-  gating End Turn while `playingViews.size > 0`.
 - **Animated enemy idle** — small bob / occasional twitch so
   static silhouettes feel alive.
 - **Sprite consistency pass** — enemies are hand-coded geometry
