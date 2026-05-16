@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 41.
+Quick orientation for someone coming in cold. Numbers as of Slice 42.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -60,7 +60,38 @@ Quick orientation for someone coming in cold. Numbers as of Slice 41.
 
 ## Done
 
-### Slice 41 — Procedural ambient music *(current)*
+### Slice 42 — Animated enemy idles *(current)*
+Every enemy in the lineup (24 total: regulars, elites, bosses, and the
+slice-28 boss alts) now has an infinite idle tween so the field reads
+as alive between actions. Bosses already had per-character tweens from
+their introduction slices; this pass filled in the 9 regulars and
+elites that were sitting stiff:
+
+- **Scrap Raider** — slow left-right shuffle (`x ± 2`, 1.2 s yoyo).
+- **Junk Hound** — quick panting bob (`y -= 2`, 0.7 s yoyo).
+- **Rust Sprayer** — acid-pressure pulse (`scale 1.02`, 0.9 s yoyo).
+- **Pylon Crawler** — low tremble (`x ± 1.5`, 1.5 s yoyo).
+- **Iron Reclaimer** — heavy turtle heave (`y -= 1.5`, 1.4 s yoyo).
+- **Cinder Hound** — fiery panting (bob + small scale pulse, 0.6 s).
+- **Forge Reaver** — heavier cleaver sway (`x ± 2.5`, 1.3 s yoyo).
+- **Reclaimer Mk II** — slower heave than its Act 1 cousin (1.6 s).
+- **Sky Pirate** — dramatic hover bob (`y -= 6`, 1.8 s yoyo) since
+  the unit is airborne with no legs to ground it.
+
+All tweens use `Sine.InOut` easing and `repeat: -1` for continuous
+playback. Amplitudes are kept small (1.5–2.5 px x, 1.5–6 px y) so
+they read as subtle life rather than competing with hit-shake and
+the new slice-35 turn-event playback animations.
+
+The player mechs (Pilot / Engineer / Saboteur) intentionally stay
+static — they should only move when the player acts.
+
+Pre-existing interaction to watch: hit-shake also tweens `x` on the
+outer container, so during a shake the idle tween briefly fights for
+the same property. In practice the shake is 40 ms × 2 yoyos so the
+visual flicker is invisible.
+
+### Slice 41 — Procedural ambient music
 Replaced the 13 MB `industrial_ambiance.mp3` with a Web-Audio-synthesized
 ambient track. Same dieselpunk vibe (low drone, steam hiss, distant
 clangs and thumps) plus an actual cycling chord progression and a

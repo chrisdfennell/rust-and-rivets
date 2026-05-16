@@ -260,6 +260,15 @@ export function drawRaider(scene: Phaser.Scene, x: number, y: number): Phaser.Ga
   g.fillRect(34, -30, 8, 18);
 
   c.add(g);
+  // Heavy weight-shift idle — slow left-right shuffle.
+  scene.tweens.add({
+    targets: c,
+    x: c.x + 2,
+    duration: 1200,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -320,6 +329,15 @@ export function drawJunkHound(scene: Phaser.Scene, x: number, y: number): Phaser
   g.fillCircle(78, -16, 3);
 
   c.add(g);
+  // Panting bob — short fast vertical breathing.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 2,
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -438,6 +456,16 @@ export function drawRustSprayer(scene: Phaser.Scene, x: number, y: number): Phas
   g.fillCircle(0, -36, 4);
 
   c.add(g);
+  // Acid pulse — body throbs slightly as pressure cycles through the nozzles.
+  scene.tweens.add({
+    targets: c,
+    scaleX: 1.02,
+    scaleY: 1.02,
+    duration: 900,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -485,6 +513,15 @@ export function drawPylonCrawler(scene: Phaser.Scene, x: number, y: number): Pha
   g.fillRect(88, 6, 6, 14);
 
   c.add(g);
+  // Low tremble — slow side-to-side, as if servos can barely hold the weight.
+  scene.tweens.add({
+    targets: c,
+    x: c.x + 1.5,
+    duration: 1500,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -657,6 +694,15 @@ export function drawIronReclaimer(scene: Phaser.Scene, x: number, y: number): Ph
   g.fillRect(74, 42, 22, 6);
 
   c.add(g);
+  // Heavy turtle heave — slow vertical bob, as if breathing under all that plating.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 1.5,
+    duration: 1400,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -817,6 +863,18 @@ export function drawCinderHound(scene: Phaser.Scene, x: number, y: number): Phas
   g.fillCircle(72, -16, 5);
 
   c.add(g);
+  // Fiery panting — quick vertical bob with a small scale pulse to
+  // suggest the heat plumes flaring.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 2,
+    scaleX: 1.015,
+    scaleY: 1.015,
+    duration: 600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -935,6 +993,15 @@ export function drawForgeReaver(scene: Phaser.Scene, x: number, y: number): Phas
   g.fillRect(-4, 8, 8, 12);
 
   c.add(g);
+  // Heavy cleaver sway — slightly larger amplitude than the Raider.
+  scene.tweens.add({
+    targets: c,
+    x: c.x + 2.5,
+    duration: 1300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -1075,6 +1142,15 @@ export function drawReclaimerMk2(scene: Phaser.Scene, x: number, y: number): Pha
   g.fillRect(78, 86, 30, 8);
 
   c.add(g);
+  // Slower heave than Iron Reclaimer — bigger frame, heavier breath.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 2,
+    duration: 1600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
@@ -1295,6 +1371,16 @@ export function drawSkyPirate(scene: Phaser.Scene, x: number, y: number): Phaser
   g.fillCircle(106, 14, 3);  // muzzle glow
 
   c.add(g);
+  // Hover bob — more dramatic vertical motion since the Sky Pirate is
+  // an airborne unit, no legs grounding it.
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 6,
+    duration: 1800,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
   return c;
 }
 
