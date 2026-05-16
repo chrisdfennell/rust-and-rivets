@@ -9,7 +9,7 @@ const card = (
   effects: CardDef['effects'],
   exhaust?: boolean,
   rarity?: CardRarity,
-  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean; type?: CardType }
+  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean; type?: CardType; xCost?: boolean }
 ): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity, ...flags });
 
 export const CARDS: Record<string, CardDef> = {
@@ -187,7 +187,24 @@ export const CARDS: Record<string, CardDef> = {
   combust: card('combust', 'Combust', 1, 'allEnemies', 'Power. At the end of each turn, lose 1 hull and deal 5 damage to ALL enemies.',
     [{ kind: 'addCombust', amount: 5 }], true, 'uncommon', { type: 'power' }),
   'combust+': card('combust+', 'Combust+', 1, 'allEnemies', 'Power. At the end of each turn, lose 1 hull and deal 7 damage to ALL enemies.',
-    [{ kind: 'addCombust', amount: 7 }], true, 'uncommon', { type: 'power' })
+    [{ kind: 'addCombust', amount: 7 }], true, 'uncommon', { type: 'power' }),
+
+  // ===== X-cost cards. Consume ALL remaining Steam at play time and
+  // scale effects by the amount consumed. Cost badge shows "X".
+  whirlwind: card('whirlwind', 'Whirlwind', 0, 'allEnemies', 'Deal 5 damage to ALL enemies X times.',
+    [{ kind: 'xDamageAll', amount: 5 }], false, 'common', { xCost: true }),
+  'whirlwind+': card('whirlwind+', 'Whirlwind+', 0, 'allEnemies', 'Deal 7 damage to ALL enemies X times.',
+    [{ kind: 'xDamageAll', amount: 7 }], false, 'common', { xCost: true }),
+
+  skewer: card('skewer', 'Skewer', 0, 'enemy', 'Deal 7 damage X times.',
+    [{ kind: 'xDamage', amount: 7 }], false, 'uncommon', { xCost: true }),
+  'skewer+': card('skewer+', 'Skewer+', 0, 'enemy', 'Deal 10 damage X times.',
+    [{ kind: 'xDamage', amount: 10 }], false, 'uncommon', { xCost: true }),
+
+  forgeCycle: card('forgeCycle', 'Forge Cycle', 0, 'self', 'Gain 4 Plating X times.',
+    [{ kind: 'xPlating', amount: 4 }], false, 'uncommon', { xCost: true }),
+  'forgeCycle+': card('forgeCycle+', 'Forge Cycle+', 0, 'self', 'Gain 6 Plating X times.',
+    [{ kind: 'xPlating', amount: 6 }], false, 'uncommon', { xCost: true })
 };
 
 export const STARTER_DECK: string[] = [
@@ -205,7 +222,8 @@ export const SHOP_POOL: string[] = [
   'spikePlating', 'ironWill',
   'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion',
   'pressureReading', 'holdPosition', 'glassRound',
-  'demonForm', 'barricade', 'metallicize', 'combust'
+  'demonForm', 'barricade', 'metallicize', 'combust',
+  'whirlwind', 'skewer', 'forgeCycle'
 ];
 
 export function isUpgradable(cardId: string): boolean {

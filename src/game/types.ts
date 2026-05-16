@@ -27,7 +27,13 @@ export type CardEffect =
   | { kind: 'addDemonForm'; amount: number }
   | { kind: 'setBarricade' }
   | { kind: 'addMetallicize'; amount: number }
-  | { kind: 'addCombust'; amount: number };
+  | { kind: 'addCombust'; amount: number }
+  // ----- X-cost scaling. The card consumes all remaining Steam at play
+  // time; each `amount` applies X times. Per-hit so Strength / Vuln /
+  // Brass Knuckles / Dexterity all stack correctly on every iteration.
+  | { kind: 'xDamageAll'; amount: number }
+  | { kind: 'xDamage'; amount: number }
+  | { kind: 'xPlating'; amount: number };
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 
@@ -63,6 +69,10 @@ export interface CardDef {
   // or turn-end. They exhaust on play. Currently only used for UI labeling;
   // exhaust behavior comes from the existing `exhaust` flag.
   type?: CardType;
+  // X-cost cards consume ALL remaining Steam when played and pass that
+  // amount into x-effect kinds. `cost` is treated as 0 for canPlay
+  // (always playable); the cost badge renders "X" instead of a number.
+  xCost?: boolean;
 }
 
 export interface CardInstance {
@@ -157,6 +167,10 @@ export interface CombatState {
   // enemy to hit. Falls back to the first alive enemy when undefined (e.g.
   // for relic-triggered damage like Pneumatic Strike).
   activeTargetIndex?: number;
+  // Set by playCard when an X-cost card is played, equal to the Steam
+  // consumed (matches the card's "X" value). Read by xDamage / xDamageAll
+  // / xPlating effect handlers. Cleared after the card finishes resolving.
+  activeCardX?: number;
   // Set while an enemy's nextAction is resolving so dealDamageToPlayer can
   // attribute damage to the right attacker (matters for player Thorns).
   activeAttackerIndex?: number;

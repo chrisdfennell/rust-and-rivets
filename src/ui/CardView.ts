@@ -61,8 +61,11 @@ export class CardView extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0.5);
 
     this.costBadge = scene.add.circle(-CARD_W / 2 + 16, -CARD_H / 2 + 16, 14, COLORS.steam);
+    // X-cost cards render an "X" on the badge instead of the literal cost,
+    // matching the convention from games like Slay the Spire.
+    const costLabel = card.def.xCost ? 'X' : String(card.def.cost);
     this.costText = scene.add
-      .text(-CARD_W / 2 + 16, -CARD_H / 2 + 16, String(card.def.cost), {
+      .text(-CARD_W / 2 + 16, -CARD_H / 2 + 16, costLabel, {
         fontFamily: FONTS.display,
         fontSize: '16px',
         color: hex(COLORS.steelDark),

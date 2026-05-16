@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 32.
+Quick orientation for someone coming in cold. Numbers as of Slice 33.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -53,7 +53,48 @@ Quick orientation for someone coming in cold. Numbers as of Slice 32.
 
 ## Done
 
-### Slice 32 — Hand-shuffle tween + End Turn lock *(current)*
+### Slice 33 — X-cost cards *(current)*
+The last major mechanic gap from the original Slay-the-Spire feature
+comparison. Cards with cost "X" consume ALL remaining Steam at play
+time and scale their effects by the amount consumed.
+
+**Engine**
+- `CardDef` gained an `xCost?: boolean` flag. The `cost` field stays
+  at 0 (so it sorts cleanly with other zero-cost cards), but a new
+  helper, `effectiveCost(state, def)`, treats `xCost` cards as
+  costing `p.steam` (all of it). `canPlay` reads through this, so
+  X-cost cards are always playable on the player's turn.
+- `CombatState` gained `activeCardX?: number`, set by `playCard` to
+  the Steam actually consumed (matches the card's literal X).
+  Cleared after the effect loop, alongside `activeTargetIndex`.
+- Three new `CardEffect` kinds:
+  - `xDamageAll` (amount per hit) — loops X iterations × every alive
+    enemy, each call going through `dealDamageToEnemy` so Strength,
+    Vulnerable, Weak, and Brass Knuckles apply per hit (with the
+    first-hit-only bonuses consuming on the first iteration).
+  - `xDamage` (amount per hit) — same but single-target.
+  - `xPlating` (amount per tick) — applies the regular `plating`
+    effect X times so Dexterity stacks each tick.
+- Each loop bails on victory/defeat mid-sweep (Thorns retaliation,
+  Combust death, etc.) so we don't double-fire after a hard stop.
+- firstCardFree (Boiler Vent) reads as X=0 for X-cost cards: cost
+  is forced to 0, no Steam consumed, so X is 0 and the effects no-op.
+  Predictable but worth a future "use original Steam pool when free"
+  tweak if play feels bad.
+
+**Cards** (3 new + upgrades, all in `SHOP_POOL`)
+- **Whirlwind** (X common, allEnemies) — Deal 5 damage to all enemies
+  X times (7 upgraded).
+- **Skewer** (X uncommon, enemy) — Deal 7 damage X times (10 upgraded).
+- **Forge Cycle** (X uncommon, self) — Gain 4 Plating X times (6
+  upgraded). Pairs hard with Dexterity stacking.
+
+**UI**
+- `CardView` cost badge renders `"X"` when `xCost` is set instead of
+  the literal `0`. No other UI changes needed — the badge fades to
+  the dim brass color when unplayable (same as any other card).
+
+### Slice 32 — Hand-shuffle tween + End Turn lock
 Two short follow-ups from the animation work in Slice 31.
 
 **Hand-shuffle tween**
@@ -1158,12 +1199,11 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 ## Backlog (rough priority)
 
 ### Tier 1 — feature gaps still on the StS comparison
-- **X-cost / status / curse cards** — scaling-with-energy cards
-  (Whirlwind-style) and shuffled-in junk cards (Slime, Dazed, Wound,
-  Curse of the Bell). The keyword infra (Slice 23) supports the
-  card shape; the missing pieces are (a) a way to insert curses
-  into a deck/draw mid-combat from events, and (b) the X-cost
-  resolver that reads remaining Steam at play time.
+- **Status / curse cards** — shuffled-in junk cards (Slime, Dazed,
+  Wound, Curse of the Bell). The keyword infra (Slice 23) supports
+  the card shape; the missing pieces are a way to insert curses
+  into a deck/draw mid-combat from events, and an "unplayable" flag
+  for cards that just sit in hand wasting space.
 - **Power-card extensions** — beyond the four core powers
   (Demon Form, Barricade, Metallicize, Combust), StS has 15+ more
   with bespoke hooks: Echo Form (first card each turn plays twice),

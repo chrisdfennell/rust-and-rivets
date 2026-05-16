@@ -1,6 +1,7 @@
 import { CARDS } from './cards';
 import { RELICS } from './relics';
 import type {
+  CardDef,
   CardInstance,
   CombatState,
   EnemyDef,
@@ -462,6 +463,46 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       logTo(state, `Combust active (${eff.amount} AoE end of turn).`);
       break;
     }
+    // ----- X-cost scaling. activeCardX is set by playCard; if missing
+    // (someone calls applyEffect outside a card play), default to 0. -----
+    case 'xDamageAll': {
+      const x = state.activeCardX ?? 0;
+      if (x <= 0) break;
+      // Outer loop = each "iteration" of X. Inner loop = hits every alive
+      // enemy. Bails on victory/defeat mid-sweep (e.g. Thorns kills player).
+      for (let n = 0; n < x; n++) {
+        for (let i = 0; i < state.enemies.length; i++) {
+          if (!isAlive(state.enemies[i])) continue;
+          dealDamageToEnemy(c, eff.amount, i);
+          const phaseNow: string = state.phase;
+          if (phaseNow === 'defeat' || phaseNow === 'victory') break;
+        }
+        const phaseNow: string = state.phase;
+        if (phaseNow === 'defeat' || phaseNow === 'victory') break;
+      }
+      break;
+    }
+    case 'xDamage': {
+      const x = state.activeCardX ?? 0;
+      if (x <= 0) break;
+      for (let n = 0; n < x; n++) {
+        dealDamageToEnemy(c, eff.amount);
+        const phaseNow: string = state.phase;
+        if (phaseNow === 'defeat' || phaseNow === 'victory') break;
+      }
+      break;
+    }
+    case 'xPlating': {
+      const x = state.activeCardX ?? 0;
+      if (x <= 0) break;
+      // Each tick benefits from Dexterity, so we route through the
+      // existing 'plating' effect by calling applyEffect recursively.
+      // Cleaner than duplicating the Dex bonus math here.
+      for (let n = 0; n < x; n++) {
+        applyEffect(state, { kind: 'plating', amount: eff.amount });
+      }
+      break;
+    }
   }
 }
 
@@ -502,17 +543,21 @@ export function usePotion(state: CombatState, def: PotionDef, targetIndex?: numb
   return true;
 }
 
-function effectiveCost(state: CombatState, baseCost: number): number {
+// Resolves a card's actual Steam cost taking into account firstCardFree
+// (Boiler Vent) and the X-cost flag (which consumes whatever Steam the
+// player has left). Returns the amount to deduct from p.steam.
+function effectiveCost(state: CombatState, def: CardDef): number {
   const p = state.player;
   if (p.firstCardFree && p.cardsPlayedThisTurn === 0) return 0;
-  return baseCost;
+  if (def.xCost) return p.steam;
+  return def.cost;
 }
 
 export function canPlay(state: CombatState, uid: number): boolean {
   if (state.phase !== 'playerTurn') return false;
   const card = state.player.hand.find((c) => c.uid === uid);
   if (!card) return false;
-  return state.player.steam >= effectiveCost(state, card.def.cost);
+  return state.player.steam >= effectiveCost(state, card.def);
 }
 
 export function playCard(state: CombatState, uid: number, targetIndex?: number): boolean {
@@ -521,7 +566,7 @@ export function playCard(state: CombatState, uid: number, targetIndex?: number):
   const idx = p.hand.findIndex((c) => c.uid === uid);
   if (idx < 0) return false;
   const card = p.hand[idx];
-  const cost = effectiveCost(state, card.def.cost);
+  const cost = effectiveCost(state, card.def);
   p.steam -= cost;
   if (p.firstCardFree && p.cardsPlayedThisTurn === 0) p.firstCardFree = false;
   p.hand.splice(idx, 1);
@@ -529,6 +574,9 @@ export function playCard(state: CombatState, uid: number, targetIndex?: number):
   // Set the active target so per-target effect handlers know who to hit.
   // For non-enemy-target cards (target: 'self' | 'none') the index is unused.
   state.activeTargetIndex = targetIndex;
+  // For X-cost cards, X equals the Steam actually consumed (so firstCardFree
+  // X-cost plays read as X=0). Effect handlers read state.activeCardX.
+  if (card.def.xCost) state.activeCardX = cost;
 
   for (const eff of card.def.effects) {
     applyEffect(state, eff);
@@ -545,6 +593,7 @@ export function playCard(state: CombatState, uid: number, targetIndex?: number):
   }
 
   state.activeTargetIndex = undefined;
+  state.activeCardX = undefined;
 
   if (card.def.exhaust) p.exhaust.push(card);
   else p.discard.push(card);
