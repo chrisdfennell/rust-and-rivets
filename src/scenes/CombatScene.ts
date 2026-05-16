@@ -76,6 +76,16 @@ export class CombatScene extends Phaser.Scene {
   // needs to click again to either confirm or cancel.
   private suppressNextAimUp = false;
   private potionAimBanner!: Phaser.GameObjects.Text;
+  // Visual draw / discard pile anchors. Cards animate from drawPile when
+  // entering the hand, and toward discardPile when leaving (either played
+  // or discarded at end of turn). Same anchor is used for exhausted cards.
+  private drawPile = { x: 0, y: 0 };
+  private discardPile = { x: 0, y: 0 };
+  // CardViews currently in their play-flourish (post-click, pre-destroy).
+  // layoutHand skips these when computing the stale set so we don't double
+  // up exit tweens, and they stay in cardViews so subsequent refresh calls
+  // don't re-spawn them from the draw pile if the player chained two plays.
+  private playingViews = new Set<CardView>();
 
   constructor() {
     super('Combat');
@@ -93,6 +103,7 @@ export class CombatScene extends Phaser.Scene {
     this.potionSlots = [];
     this.aimingPotionSlot = null;
     this.potionsUsedThisCombat = 0;
+    this.playingViews = new Set();
 
     setupPause(this);
     // Right-click on potion slots discards the potion; we don't want the
@@ -188,6 +199,14 @@ export class CombatScene extends Phaser.Scene {
       fontSize: '14px',
       color: hex(COLORS.boneDim)
     }).setOrigin(0.5, 0);
+
+    // Deck/discard pile anchors. Cards animate from drawPile on draw and
+    // toward discardPile on play / end-of-turn discard. Small stack-of-cards
+    // visuals sit at the anchors so the destinations are legible.
+    this.drawPile = { x: 70, y: height - 80 };
+    this.discardPile = { x: width - 100, y: height - 80 };
+    this.drawPileStack(this.drawPile.x, this.drawPile.y);
+    this.drawPileStack(this.discardPile.x, this.discardPile.y);
 
     // Deck/discard counters
     this.deckText = this.add
@@ -320,6 +339,21 @@ export class CombatScene extends Phaser.Scene {
         baseX: pos.x,
         baseY: pos.y
       });
+    }
+  }
+
+  // Renders a small stack-of-cards icon at (x, y) so the draw/discard
+  // pile destinations are visible to the player. Three slightly offset
+  // rectangles read as a stack at a glance without taking real estate.
+  private drawPileStack(x: number, y: number) {
+    const w = 28;
+    const h = 38;
+    for (let i = 0; i < 3; i++) {
+      const ox = (i - 1) * 2;
+      const oy = -(i - 1) * 2;
+      this.add
+        .rectangle(x + ox, y + oy, w, h, COLORS.bgPanel)
+        .setStrokeStyle(1, COLORS.brassDim);
     }
   }
 
@@ -730,16 +764,40 @@ export class CombatScene extends Phaser.Scene {
     }
     view.setPlayable(false);
     view.disableInteractive();
+    // Mark this view as mid-flourish. layoutHand uses this to skip the
+    // automatic discard-out tween on the upcoming refresh, AND to avoid
+    // re-spawning the card from the draw pile if a chained second play
+    // refreshes the hand before this card's state mutation lands.
+    this.playingViews.add(view);
+    // Two-stage flourish: a brief lift+scale (satisfying "play" beat),
+    // then a sweep toward the discard pile while fading out.
     this.tweens.add({
       targets: view,
-      y: view.y - 50,
-      alpha: 0,
+      y: view.y - 40,
       scaleX: 1.18,
       scaleY: 1.18,
-      duration: 170,
+      duration: 140,
       ease: 'Cubic.Out',
-      onComplete: () => this.applyCardPlay(card, targetIndex)
+      onComplete: () => {
+        this.tweens.add({
+          targets: view,
+          x: this.discardPile.x,
+          y: this.discardPile.y,
+          alpha: 0,
+          scaleX: 0.35,
+          scaleY: 0.35,
+          duration: 200,
+          ease: 'Cubic.In',
+          onComplete: () => {
+            this.playingViews.delete(view);
+            view.destroy();
+          }
+        });
+      }
     });
+    // Apply the play state mutation as the first beat completes, so the rest
+    // of the hand re-flows while the played card sweeps to the pile.
+    this.time.delayedCall(140, () => this.applyCardPlay(card, targetIndex));
   }
 
   private applyCardPlay(card: CardInstance, targetIndex: number | undefined) {
@@ -1003,6 +1061,7 @@ export class CombatScene extends Phaser.Scene {
     const hand = this.state.player.hand;
     const existing = new Map(this.cardViews.map((v) => [v.card.uid, v]));
     const next: CardView[] = [];
+    const newlyCreated = new Set<CardView>();
 
     for (const card of hand) {
       let view = existing.get(card.uid);
@@ -1015,12 +1074,18 @@ export class CombatScene extends Phaser.Scene {
         );
         this.handLayer.add(view);
         if (this.debugHitAreas) this.applyHitAreaDebug(view);
+        newlyCreated.add(view);
       } else {
         existing.delete(card.uid);
       }
       next.push(view);
     }
-    for (const stale of existing.values()) stale.destroy();
+    // Cards still in cardViews but not in current hand have left the hand
+    // (typically end-of-turn discards / exhausts). Float them to the
+    // discard pile then destroy — but skip views that are mid-play-flourish
+    // (their exit is handled in playCardWithFlourish).
+    const staleViews = Array.from(existing.values()).filter((v) => !this.playingViews.has(v));
+    staleViews.forEach((stale, i) => this.animateDiscardOut(stale, i));
     this.cardViews = next;
 
     const { width, height } = this.scale;
@@ -1038,14 +1103,57 @@ export class CombatScene extends Phaser.Scene {
     const spacing = n > 1 ? Math.min(idealSpacing, maxSpread / (n - 1)) : 0;
     const startX = width / 2 - (spacing * (n - 1)) / 2;
 
+    // Stagger draw-in animations by the order new cards appear in the row.
+    let drawStagger = 0;
     for (let i = 0; i < n; i++) {
       const x = startX + i * spacing;
       const view = next[i];
       view.setHome(x, baseY, 0);
       view.setPlayable(canPlay(this.state, view.card.uid));
+      if (newlyCreated.has(view)) {
+        this.animateDrawIn(view, x, baseY, drawStagger);
+        drawStagger += 1;
+      }
     }
 
     this.restoreHandOrder();
+  }
+
+  // Snaps a freshly-created card view to the draw pile and tweens it into
+  // its hand slot. The setHome call before this already positioned the view
+  // at (homeX, homeY); we override that to start at the pile, then tween.
+  private animateDrawIn(view: CardView, homeX: number, homeY: number, stagger: number) {
+    view.x = this.drawPile.x;
+    view.y = this.drawPile.y;
+    view.alpha = 0;
+    view.setScale(0.35);
+    this.tweens.add({
+      targets: view,
+      x: homeX,
+      y: homeY,
+      alpha: 1,
+      scale: 1,
+      duration: 220,
+      delay: stagger * 50,
+      ease: 'Cubic.Out'
+    });
+  }
+
+  // Tweens a card out of the hand toward the discard pile and destroys it
+  // on completion. Used for end-of-turn discards / exhausts. Played cards
+  // don't go through this — playCardWithFlourish runs its own exit tween.
+  private animateDiscardOut(view: CardView, stagger: number) {
+    this.tweens.add({
+      targets: view,
+      x: this.discardPile.x,
+      y: this.discardPile.y,
+      alpha: 0,
+      scale: 0.35,
+      duration: 220,
+      delay: stagger * 40,
+      ease: 'Cubic.In',
+      onComplete: () => view.destroy()
+    });
   }
 
   // Re-establish the fan's z-order: left-to-right with rightmost on top.

@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 30.
+Quick orientation for someone coming in cold. Numbers as of Slice 31.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -53,7 +53,66 @@ Quick orientation for someone coming in cold. Numbers as of Slice 30.
 
 ## Done
 
-### Slice 30 — Run-end summary screen *(current)*
+### Slice 31 — Card draw / discard / play animations *(current)*
+Cards used to pop in and out of the hand instantly. Now they fly
+from a draw-pile anchor into the hand on draw, sweep to a discard-
+pile anchor on play / end-of-turn discard, and the play "flourish"
+chains a brief lift into a tween toward the discard pile.
+
+**Pile anchors** (in [src/scenes/CombatScene.ts](src/scenes/CombatScene.ts))
+- `drawPile = { x: 70, y: height - 80 }` — bottom-left, above the
+  DRAW counter.
+- `discardPile = { x: width - 100, y: height - 80 }` — bottom-right,
+  above the DISCARD/EXHAUST counter.
+- `drawPileStack` renders three slightly-offset 28×38 rectangles
+  at each anchor so the destinations read as a "stack of cards"
+  at a glance.
+
+**Draw-in**
+- `layoutHand` tracks a `newlyCreated` set per call. After it calls
+  `setHome(x, y, 0)` for each card (which snaps the view to its
+  hand slot), it calls `animateDrawIn` for newly-created views.
+  That overrides the view's position to the draw pile (alpha 0,
+  scale 0.35) and tweens it back to the hand slot (alpha 1,
+  scale 1) over 220 ms with a 50 ms stagger between cards.
+- Used for both opening-hand draw and turn-start draw.
+
+**Discard-out**
+- For each stale view (in `cardViews` but no longer in
+  `state.player.hand`), `animateDiscardOut` tweens the view to the
+  discard pile (alpha 0, scale 0.35, 220 ms, 40 ms stagger) and
+  destroys it on complete.
+- Triggered automatically by the existing diff in `layoutHand` —
+  no caller-side bookkeeping needed.
+
+**Play flourish (rewritten)**
+- Stage 1 (140 ms): lift y by 40 + scale up to 1.18 — the
+  satisfying "card played" beat.
+- Stage 2 (200 ms): tween toward `discardPile` with alpha → 0
+  and scale → 0.35. Destroys the view on complete.
+- The state mutation (`applyCardPlay`) fires via a 140 ms
+  `delayedCall` so the rest of the hand re-flows while the played
+  card sweeps to the pile (rather than waiting for the full
+  340 ms exit).
+
+**Chained-play coordination**
+- A `playingViews: Set<CardView>` field tracks views currently in
+  their play flourish.
+- `layoutHand` filters stale views by this set so a card mid-play
+  doesn't get a second exit tween stacked on top of its flourish.
+- Crucially the view is **not** removed from `cardViews` at flourish
+  start — it stays there until the next `refresh()` after
+  `applyCardPlay` mutates state. This means a chained second play
+  that triggers a refresh during the first card's flourish still
+  finds the first view in `existing` and doesn't try to re-spawn
+  it from the draw pile.
+
+Pre-existing limitation, not introduced here: the player can press
+End Turn during a play flourish, in which case the still-pending
+card gets discarded by `endTurn` before its `applyCardPlay` runs.
+Worth fixing later by gating End Turn while `playingViews.size > 0`.
+
+### Slice 30 — Run-end summary screen
 The post-victory and post-defeat experience used to dump you back on
 the Map with a one-line overlay. Now the run ends on a dedicated
 **RunSummary** scene with a stats grid, your final deck, and the
@@ -1108,9 +1167,15 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   stored locally for retrospection.
 
 ### Tier 3 — polish
-- **Card draw/discard animations** — cards fly in from a deck pile
-  on draw and out to a discard pile on play. Currently they pop
-  in instantly.
+- **Hand-shuffle tween** — when a card leaves the hand, the
+  remaining cards still snap to their new positions in
+  `layoutHand` rather than tweening. Could compare old vs new home
+  and add a short ease.
+- **End Turn lock during play flourish** — pre-existing race: if
+  the player presses End Turn while a play flourish is in flight,
+  the played card gets discarded by `endTurn` before its
+  `applyCardPlay` resolves and its effect never fires. Fix by
+  gating End Turn while `playingViews.size > 0`.
 - **Animated enemy idle** — small bob / occasional twitch so
   static silhouettes feel alive.
 - **Sprite consistency pass** — enemies are hand-coded geometry
