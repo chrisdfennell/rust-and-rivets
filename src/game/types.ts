@@ -18,6 +18,10 @@ export type CardEffect =
   | { kind: 'gainDexterity'; amount: number }
   | { kind: 'gainThorns'; amount: number }
   | { kind: 'applyBurn'; amount: number }
+  // Damage that scales with the target's existing Burn stacks. Reads
+  // base + (perBurn × target.burn) so cards like Ignite reward setting
+  // the enemy on fire before unloading. Applies on a single target.
+  | { kind: 'damageScaledByBurn'; base: number; perBurn: number }
   | { kind: 'damageAll'; amount: number }
   | { kind: 'applyVulnerableAll'; amount: number }
   | { kind: 'applyWeakAll'; amount: number }

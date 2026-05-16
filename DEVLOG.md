@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 48.
+Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
@@ -64,7 +64,43 @@ Quick orientation for someone coming in cold. Numbers as of Slice 48.
 
 ## Done
 
-### Slice 48 — Boss-signature relic drops *(current)*
+### Slice 49 — Burn-card pack (Stoker depth) *(current)*
+The Stoker pilot landed in Slice 44 but the Burn card pool stayed
+thin — Pyro Charge, Acid Mist, Cinder Round, Ember Round. Furnace
+Heart (the Stoker's signature relic) carried the whole gimmick
+alone. Added five new cards plus one new effect kind so the
+archetype has real depth across all rarities.
+
+**New effect kind.** `damageScaledByBurn { base, perBurn }` — deals
+`base + (perBurn × target.burn)` damage. Reads target.burn BEFORE
+the hit so the bonus applies cleanly. Resolves through the normal
+`dealDamageToEnemy` pipeline (Strength / Vuln / Weak / Thorns all
+apply). Defined in [src/game/types.ts](src/game/types.ts) and
+handled in [src/game/combat.ts](src/game/combat.ts).
+
+**Five new cards** (all in `SHOP_POOL` + auto-included in
+`REWARD_POOL`):
+
+| Card | Rarity | Cost | Effect |
+|---|---|---|---|
+| Cinder Wave | common | 1 | Apply 2 Burn to ALL enemies |
+| Ember Toss | common | 0 | Apply 3 Burn. Exhaust. |
+| Ignite | uncommon | 1 | Deal 4 + 2/Burn on target |
+| Sear | rare | 2 | Deal 12. Apply 6 Burn. Exhaust. |
+| Brimstone | epic | 2 | 6 damage + 4 Burn to ALL. Exhaust. |
+
+Each has a `+` variant (3 Burn / 4 Burn / 6 dmg / 16 dmg / 8 dmg+5 Burn).
+`isUpgradable` works off the existing `cardId+` convention so no
+upgrade-table change was needed.
+
+**Design intent.** Ember Toss is a 0-cost setup card; Ignite is
+the payoff that scales off whatever Burn anyone else applied
+(Pyro Charge, Acid Mist, Pyroclast Coil signature, Cinder Hound
+opener, etc.). Cinder Wave fills the common-rarity AoE-Burn
+slot so the archetype is accessible from turn-1 shops. Sear is
+the bigger Pyro Charge; Brimstone is the AoE win-condition.
+
+### Slice 48 — Boss-signature relic drops
 Each of the 9 bosses now drops a unique signature relic on kill.
 The relics aren't in the random-roll pool, so the only path to
 owning a specific one is beating that specific boss — gives players

@@ -450,6 +450,15 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       }
       break;
     }
+    case 'damageScaledByBurn': {
+      // Snapshot burn BEFORE the hit. If the attack kills the target,
+      // Strength/Vuln/Weak still flow through dealDamageToEnemy.
+      if (target) {
+        const bonus = target.burn * eff.perBurn;
+        dealDamageToEnemy(c, eff.base + bonus);
+      }
+      break;
+    }
     case 'damageAll': {
       // Hit each alive enemy. Player Thorns retaliation could kill us mid-sweep;
       // bail early if we go down. firstAttackBonus only triggers on the first

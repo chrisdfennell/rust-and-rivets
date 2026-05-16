@@ -229,6 +229,48 @@ export const CARDS: Record<string, CardDef> = {
     'Unplayable. Dead weight in your deck.',
     [], false, undefined, { unplayable: true }),
 
+  // ===== Slice 49 — Burn pack (Stoker depth) =====
+  // The Stoker landed in Slice 44 but the Burn card pool stayed
+  // thin (Pyro Charge, Acid Mist, Cinder Round, Ember Round). These
+  // five cards build out the archetype across all rarities, with
+  // Ignite's damageScaledByBurn payoff turning every prior Burn
+  // application into a damage premultiplier.
+
+  cinderWave: card('cinderWave', 'Cinder Wave', 1, 'allEnemies',
+    'Apply 2 Burn to ALL enemies.',
+    [{ kind: 'applyBurnAll', amount: 2 }], false, 'common'),
+  'cinderWave+': card('cinderWave+', 'Cinder Wave+', 1, 'allEnemies',
+    'Apply 3 Burn to ALL enemies.',
+    [{ kind: 'applyBurnAll', amount: 3 }], false, 'common'),
+
+  emberToss: card('emberToss', 'Ember Toss', 0, 'enemy',
+    'Apply 3 Burn. Exhaust.',
+    [{ kind: 'applyBurn', amount: 3 }], true, 'common'),
+  'emberToss+': card('emberToss+', 'Ember Toss+', 0, 'enemy',
+    'Apply 4 Burn. Exhaust.',
+    [{ kind: 'applyBurn', amount: 4 }], true, 'common'),
+
+  ignite: card('ignite', 'Ignite', 1, 'enemy',
+    'Deal 4 damage. Deal 2 more damage per Burn on the target.',
+    [{ kind: 'damageScaledByBurn', base: 4, perBurn: 2 }], false, 'uncommon'),
+  'ignite+': card('ignite+', 'Ignite+', 1, 'enemy',
+    'Deal 6 damage. Deal 2 more damage per Burn on the target.',
+    [{ kind: 'damageScaledByBurn', base: 6, perBurn: 2 }], false, 'uncommon'),
+
+  sear: card('sear', 'Sear', 2, 'enemy',
+    'Deal 12 damage. Apply 6 Burn. Exhaust.',
+    [{ kind: 'damage', amount: 12 }, { kind: 'applyBurn', amount: 6 }], true, 'rare'),
+  'sear+': card('sear+', 'Sear+', 2, 'enemy',
+    'Deal 16 damage. Apply 8 Burn. Exhaust.',
+    [{ kind: 'damage', amount: 16 }, { kind: 'applyBurn', amount: 8 }], true, 'rare'),
+
+  brimstone: card('brimstone', 'Brimstone', 2, 'allEnemies',
+    'Deal 6 damage to ALL enemies. Apply 4 Burn to ALL enemies. Exhaust.',
+    [{ kind: 'damageAll', amount: 6 }, { kind: 'applyBurnAll', amount: 4 }], true, 'epic'),
+  'brimstone+': card('brimstone+', 'Brimstone+', 2, 'allEnemies',
+    'Deal 8 damage to ALL enemies. Apply 5 Burn to ALL enemies. Exhaust.',
+    [{ kind: 'damageAll', amount: 8 }, { kind: 'applyBurnAll', amount: 5 }], true, 'epic'),
+
   // ===== Status-effect entry points at common rarity =====
   // Each fills a status archetype that previously only had uncommon/rare
   // cards (Burn / Strength / Dexterity), making those decks accessible
@@ -314,7 +356,9 @@ export const SHOP_POOL: string[] = [
   // Slice 39 — common entry points, new rares, legendaries
   'emberRound', 'steelResolve', 'plateAdjust',
   'furnaceStrike', 'reactorSurge',
-  'overdriveCore', 'finalLance'
+  'overdriveCore', 'finalLance',
+  // Slice 49 — Burn pack
+  'cinderWave', 'emberToss', 'ignite', 'sear', 'brimstone'
 ];
 
 export function isUpgradable(cardId: string): boolean {
