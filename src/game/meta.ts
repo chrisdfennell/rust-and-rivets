@@ -35,10 +35,10 @@ export interface AscensionTier {
 // Each tier ADDS to the previous tiers — they stack. A5 has all five
 // modifiers active. Game logic reads `ascension >= N` to gate each effect.
 export const ASCENSION_TIERS: AscensionTier[] = [
-  { level: 1, name: 'Tough Mooks',       description: 'Regular enemies have +25% Hull.' },
+  { level: 1, name: 'Tough Mooks',       description: 'Regular enemies have +25% Hull and +15% damage.' },
   { level: 2, name: 'Reduced Recovery',  description: 'Rest sites heal 20% of max Hull (down from 30%).' },
-  { level: 3, name: 'Hard Elites',       description: 'Elite enemies have +30% Hull.' },
-  { level: 4, name: 'Resilient Bosses',  description: 'Bosses have +30% Hull.' },
+  { level: 3, name: 'Hard Elites',       description: 'Elite enemies have +30% Hull and +20% damage.' },
+  { level: 4, name: 'Resilient Bosses',  description: 'Bosses have +30% Hull and +20% damage.' },
   { level: 5, name: 'Cracked Frame',     description: 'Start each run with -5 max Hull.' }
 ];
 

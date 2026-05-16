@@ -47,6 +47,17 @@ function ascensionHullMult(kind: CombatKind, ascension: number): number {
   return mult;
 }
 
+// Ascension outgoing-damage multiplier. Read by dealDamageToPlayer before
+// Vulnerable / Weak modifiers so the tier scales raw enemy damage, not the
+// final modified number.
+export function ascensionDamageMult(kind: CombatKind, ascension: number): number {
+  let mult = 1;
+  if (kind === 'regular' && ascension >= 1) mult *= 1.15;
+  if (kind === 'elite' && ascension >= 3) mult *= 1.20;
+  if (kind === 'boss' && ascension >= 4) mult *= 1.20;
+  return mult;
+}
+
 export function createCombatState(
   enemyDefs: EnemyDef[],
   persistent: PersistentPlayer,
@@ -100,6 +111,7 @@ export function createCombatState(
     log: [introLine],
     relicIds: relicIds.slice(),
     biggestPlayerHit: 0,
+    enemyDamageMult: ascensionDamageMult(combatKind, ascension),
     turnEvents: []
   };
 
@@ -287,6 +299,9 @@ export function dealDamageToPlayer(c: ResolveCtx, raw: number, attackerIndex?: n
   if (attackerIdx === undefined) attackerIdx = firstAliveIndex(state);
   const attacker = attackerIdx >= 0 ? state.enemies[attackerIdx] : null;
   let dmg = raw + (attacker?.strength ?? 0);
+  // Ascension damage multiplier applies BEFORE Vuln/Weak so it scales the
+  // base hit, not the post-status number. floor() per modifier matches StS.
+  if (state.enemyDamageMult !== 1) dmg = Math.floor(dmg * state.enemyDamageMult);
   if (p.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
   if ((attacker?.weak ?? 0) > 0) dmg = Math.floor(dmg * 0.75);
   const absorbed = Math.min(p.plating, dmg);

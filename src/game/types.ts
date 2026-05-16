@@ -204,6 +204,10 @@ export interface CombatState {
   // Largest single hull-damage hit the player has landed in this combat,
   // bubbled to run.stats.biggestHit on victory/defeat.
   biggestPlayerHit: number;
+  // Ascension damage multiplier applied to enemy outgoing damage in
+  // dealDamageToPlayer. 1.0 = no scaling. Set once at combat init based
+  // on combatKind + ascension tier; never mutated mid-combat.
+  enemyDamageMult: number;
   // Per-turn event log used by CombatScene to play back the enemy turn
   // as a timed sequence. Cleared at the start of endTurn; populated by
   // damage / plating / status helpers as they fire.

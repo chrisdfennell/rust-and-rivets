@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 36.
+Quick orientation for someone coming in cold. Numbers as of Slice 37.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -55,7 +55,40 @@ Quick orientation for someone coming in cold. Numbers as of Slice 36.
 
 ## Done
 
-### Slice 36 — Ascension ladder *(current)*
+### Slice 37 — Ascension damage scaling *(current)*
+Slice 36 shipped HP-only ascension modifiers. Long fights, not harder
+fights. This slice layers outgoing-damage multipliers onto A1 / A3 /
+A4 so each tier actually hurts.
+
+**Multipliers**
+- A1 Tough Mooks: +15% regular-enemy damage (on top of +25% HP).
+- A3 Hard Elites: +20% elite damage (on top of +30% HP).
+- A4 Resilient Bosses: +20% boss damage (on top of +30% HP).
+- A2 and A5 unchanged (rest-heal and starting-hull respectively).
+
+**Wiring**
+- `CombatState` gains `enemyDamageMult: number`, set once at combat
+  init via the new `ascensionDamageMult(kind, ascension)` helper.
+  Default 1.0 means no scaling.
+- `dealDamageToPlayer` applies the multiplier AFTER Strength but
+  BEFORE Vulnerable / Weak — scales the base hit, not the post-
+  status final number. Each modifier still goes through
+  `Math.floor` per StS convention.
+- `IntentView.update` takes a 5th optional `enemyDamageMult` arg.
+  Its display-label recompute applies it in the same order as
+  the engine so the telegraphed damage number matches what
+  actually lands.
+- CombatScene passes `s.enemyDamageMult` to `ui.intent.update`
+  alongside the existing Strength / Weak / Vuln args.
+
+**Tier descriptions**
+`ASCENSION_TIERS` text updated to mention the damage bumps so the
+title-screen selector reads accurately.
+
+No save schema impact — `enemyDamageMult` lives inside
+`CombatState`, which doesn't persist.
+
+### Slice 36 — Ascension ladder
 Five-tier escalating difficulty ladder unlocked by clearing the run
 at the previous tier. Each tier adds a stacking modifier so A5 is
 "all five modifiers active simultaneously". Real replay system.
@@ -1410,10 +1443,6 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   spark-pop on damage, blowing dust on the wasteland horizon.
 
 ### Tier 4 — long-term structural
-- **Ascension damage scaling** — Slice 36 shipped HP-only ascension
-  modifiers. Adding `state.enemyDamageMult` and routing it through
-  `dealDamageToPlayer` would let A1/A3 also bump enemy damage, which
-  feels harder than just longer fights.
 - **More pilots** with distinct signature mechanics. Three is fine
   but each one only differs in starter relic + deck. A "stance-
   shifter" or "summoner" character would push the engine in
