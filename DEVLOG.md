@@ -83,7 +83,153 @@ ships so future sessions can pick up cold.
 - `vite.config.ts` uses `base: './'` so the build is portable across paths
 - Pages source = GitHub Actions; first deploy auto-enabled on workflow run
 
-### Slice 24 — Potions *(current)*
+### Slice 27 — Power cards *(current)*
+Persistent in-combat buff cards that exhaust on play and apply
+permanent state for the rest of the fight. Closes the "Power" gap on
+the original Slay-the-Spire feature comparison.
+
+**Engine**
+- `CardDef` gained a `type?: CardType` field (`'attack' | 'skill' |
+  'power'`). Currently used only for UI labeling — the existing
+  `exhaust: true` flag handles the "consumed on play" half, and the
+  buffs persist on `PlayerState`.
+- `PlayerState` gained four power-buff fields, all reset per combat:
+  `demonForm: number` / `barricade: boolean` / `metallicize: number`
+  / `combust: number`.
+- Four new `CardEffect` kinds drive them: `addDemonForm`,
+  `setBarricade`, `addMetallicize`, `addCombust`. Stacking is
+  additive for the numeric ones.
+- `startPlayerTurn`:
+  - Plating reset gated by `!p.barricade` — Barricade lets plating
+    accumulate across turns.
+  - `demonForm` Strength applied at the top of every turn (which
+    means the turn after the card is played, since playing it
+    happens after that turn's `startPlayerTurn` already ran).
+- `endTurn` (after debuff decay, before phase flip):
+  - Metallicize adds `p.metallicize` plating.
+  - Combust pays 1 hull (bypasses plating), then hits every alive
+    enemy for `p.combust` damage. Honors player Strength /
+    Vulnerable / Weak via `dealDamageToEnemy`. Bails on Thorns
+    retaliation that drops the player. Routes to victory cleanly
+    if it kills the last enemy.
+
+**Cards** (4 new + upgrades, all in `SHOP_POOL`)
+- **Demon Form** (3c rare, power) — +2 Strength every turn start
+  (3+ → +3 Strength). Stacks on itself if you somehow play it twice.
+- **Barricade** (3c→2c+ rare, power) — Plating no longer wears off
+  at the start of your turn. Upgrade lowers the cost rather than
+  changing the effect.
+- **Metallicize** (1c uncommon, power) — +3 plating at end of turn
+  (4+ → +4). Pairs hard with Barricade.
+- **Combust** (1c uncommon, power) — Lose 1 hull, deal 5 to all
+  enemies at end of turn (7+).
+
+**UI**
+- `CardView` keyword badge now includes a `POWER` label rendered in
+  steam-cyan (vs the rust orange used for INNATE/RETAIN/ETHEREAL/
+  EXHAUST). The `EXHAUST` label is suppressed on power cards since
+  every power exhausts — keeps the badge line short.
+
+Build interactions to watch for:
+- **Barricade + Metallicize** = the classic StS turtle. Plating
+  ratchets every turn instead of resetting.
+- **Demon Form + Spike Plating** = damage scaling that also
+  retaliates harder each turn.
+- **Combust + Barricade + Metallicize** = a passive engine that
+  needs no card plays once online.
+
+No save schema changes — all power state lives inside
+`CombatState`, which never persists.
+
+### Slice 26 — Workshop expansion
+Four new meta-progression upgrades and a tighter Workshop layout to
+fit them. Max meta spend doubles from 9 → 18 pts; a full 3-act
+clear still nets 6 pts, so the meta ladder now caps out in ~3 wins
+instead of 2.
+
+**New upgrades** (in [src/game/meta.ts](src/game/meta.ts))
+- **Tempered Frame** (1 pt × 3 lvls) — +2 starting plating each
+  combat per level. Stacks on top of Iron Plating-style relics.
+- **Reserve Tank** (2 pt × 1) — +1 max Steam every combat. Premium
+  cost, no scaling.
+- **Pre-Brew** (1 pt × 3) — Start each run with N random potions in
+  open belt slots. Plays nicely with the Potion Belt relic that
+  grows belt capacity.
+- **Boss Bounty** (1 pt × 1) — +10 scrap from each boss kill.
+  Stacks across all three acts.
+
+**Wiring**
+- `PersistentPlayer` gained two optional fields read by combat at
+  combat start: `maxSteam?: number` (Reserve Tank) and
+  `startingPlating?: number` (Tempered Frame). Both fall back to
+  defaults (`?? 3` / `?? 0`) so old saves load cleanly without a
+  schema bump.
+- `RunState` gained `bossBonus?: number` (Boss Bounty), applied in
+  `completeCombat` on boss kills. The function returns the bonus
+  so the victory line surfaces it: `+10 scrap. Press SPACE to ...`.
+- `createCombatState` applies `startingPlating` AFTER relic
+  `onCombatStart` hooks so it stacks on top.
+
+**WorkshopScene layout**
+- Row spacing 96 → 56, panel height 80 → 50, fonts shrunk to keep
+  text readable. 8 rows fit comfortably at 720p between the
+  POINTS header (~140 px) and the BACK button (660 px).
+
+### Slice 25 — Potion polish + UI fixes
+Quality-of-life work on the potion belt and a long-standing input
+bug on cards.
+
+**Right-click discard**
+- Right-click any filled potion slot in combat discards the potion
+  (with a 120 ms red flash before the slot clears). Context menu
+  is disabled on the combat-scene canvas via
+  `this.input.mouse?.disableContextMenu()` so the right-click
+  reaches us.
+- Tooltip now reads `(right-click to discard)` under the
+  description so the binding is discoverable.
+- Discard cancels potion aim mode if the discarded slot was being
+  aimed.
+
+**Three potion relics** ([src/game/relics.ts](src/game/relics.ts))
+- **Potion Belt** — `onPickup` pushes a `null` onto `run.potions`
+  to grow the belt; `firstEmptyPotionSlot` and the UI already
+  iterate `potions.length`, so the extra slot lights up
+  automatically. `save.ts::normalizePotions` updated to preserve
+  array lengths greater than 3 instead of truncating.
+- **Sacred Bark** — `combat.usePotion` runs the effect loop twice
+  if the relic is owned. Vulnerable Potion → 6 to all. Fire
+  Potion → 40 damage (Strength applies on both hits; Brass
+  Knuckles consumes only on the first).
+- **Toy Ornithopter** — +4 hull heal after every potion use,
+  capped at maxHull. Logged.
+
+**Card hit-area fix** ([src/ui/CardView.ts](src/ui/CardView.ts))
+- Phaser's `pointWithinHitArea` adds `displayOriginX/Y` to the
+  pointer BEFORE checking the hit-area Rectangle (see
+  `node_modules/phaser/src/input/InputManager.js` ~line 963).
+  For a GameObject with origin (0.5, 0.5) and size (140, 170),
+  this means the Rectangle's `(0, 0)` corresponds to the
+  top-left of the bounds, NOT the center.
+- The previous code passed `Rectangle(-CARD_W/2, -CARD_H/2, ...)`
+  on the theory that the rect was center-anchored, which put the
+  real hit area in the up-and-left quadrant of each card — exactly
+  matching the green debug overlay being offset from the visible
+  cards.
+- Fixed by passing `Rectangle(0, 0, CARD_W, CARD_H)` instead, and
+  dropping the LIFT-extension `applySlot` machinery entirely.
+  Hover-lift remains a visual-only flourish on the inner container.
+
+**UI placement nits**
+- Potion belt moved from `(180, height − 130)` to
+  `(80, height − 240)` so the slots no longer sit behind the
+  leftmost cards (the hand layer is added after the belt, so it
+  renders on top).
+- Title screen audio toggles moved 12 px up
+  (`audioY = secondaryY + 44` from `+56`) and the auto-save
+  footer text 16 px down (`height − 8` from `height − 24`) to
+  give the two rows a clean 10 px gap at 720p.
+
+### Slice 24 — Potions
 A 3-slot potion belt with drops, shop sales, and a dedicated in-combat
 aim mode. Brings the system Slay the Spire calls "always there if you
 need it" online.
@@ -762,19 +908,20 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 - **More enemies** — only 3 regular act 1 mooks. Add ~3 more for variety
 - **Event nodes (`?`)** — narrative choice rooms with branching outcomes
   (gain/lose scrap/hull, get/lose a card, gain a relic, take damage, etc.)
-- **Potion discard UI** — players can currently get stuck with potions
-  they don't want (belt fills, drops auto-suppress). Right-click belt
-  slot → confirm discard, or a small ✕ on hover.
-- **Potion-related relics** — Potion Belt (+1 slot), Sacred Bark (potions
-  hit double-strength), Toy Ornithopter (heal on potion use), etc.
-  Hooks `onPotionUsed(state, def)` and `onPotionPickup(run, id)`.
-- **Power cards** — persistent in-combat status cards à la Demon Form /
-  Inflame / Barricade. Would need a `power` card type that exhausts on
-  play but registers a permanent buff for the rest of combat.
-- **X-cost / Innate-only / Ethereal status cards** — scaling-with-energy
-  cards (Whirlwind-style), shuffled-in junk (Slime, Dazed, Wound). The
-  keyword infra (Slice 23) supports the latter already; the missing
-  piece is a way to insert curses into a deck/draw mid-combat.
+- **X-cost / status / curse cards** — scaling-with-energy cards
+  (Whirlwind-style), shuffled-in junk (Slime, Dazed, Wound, Curse of
+  the Bell). The keyword infra (Slice 23) supports the latter
+  already; the missing piece is a way to insert curses into a
+  deck/draw mid-combat (event hook + card pool).
+- **Power-card extensions** — beyond the four core powers (Demon
+  Form, Barricade, Metallicize, Combust), StS has 15+ more with
+  bespoke hooks (Echo Form, Mayhem, Brutality, Sadistic Nature).
+  Each adds a new turn-start / card-play / damage-event hook to
+  the engine.
+- **Potion use outside combat** — events that mention drinking
+  can't currently tap into the belt. Would need a non-combat code
+  path that resolves potion effects against a fake `CombatState`
+  or a minimal run-state mutator.
 
 ### Tier 2 — depth and polish
 - **Status effects beyond Vuln/Weak**:
