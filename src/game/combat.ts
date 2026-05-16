@@ -434,9 +434,28 @@ export function usePotion(state: CombatState, def: PotionDef, targetIndex?: numb
   if (!canUsePotion(state)) return false;
   state.activeTargetIndex = targetIndex;
   logTo(state, `You drink ${def.name}.`);
-  for (const eff of def.effects) {
-    applyEffect(state, eff);
-    if (state.phase === 'victory' || state.phase === 'defeat') break;
+  // Sacred Bark: every effect resolves twice. Looping the whole effect list
+  // (rather than doubling individual amounts) means draw/heal/steam scale
+  // naturally, and damage hits twice (Strength applies both times, Brass
+  // Knuckles' first-hit bonus consumes on the first).
+  const reps = state.relicIds.includes('sacredBark') ? 2 : 1;
+  for (let r = 0; r < reps; r++) {
+    for (const eff of def.effects) {
+      applyEffect(state, eff);
+      const phaseNow: string = state.phase;
+      if (phaseNow === 'victory' || phaseNow === 'defeat') break;
+    }
+    const phaseNow: string = state.phase;
+    if (phaseNow === 'victory' || phaseNow === 'defeat') break;
+  }
+  // Toy Ornithopter: passive +4 heal on every potion use.
+  if (state.relicIds.includes('toyOrnithopter') && state.phase === 'playerTurn') {
+    const p = state.player;
+    const healed = Math.min(4, p.maxHull - p.hull);
+    if (healed > 0) {
+      p.hull += healed;
+      logTo(state, `Ornithopter repairs ${healed} hull.`);
+    }
   }
   state.activeTargetIndex = undefined;
   return true;

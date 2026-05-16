@@ -159,6 +159,33 @@ const SPIKE_MANTLE: Relic = {
   }
 };
 
+// Pads the potion belt with an extra empty slot on pickup. Combat reads
+// potions.length as the authoritative slot count, so the belt grows
+// naturally with no UI changes.
+const POTION_BELT: Relic = {
+  id: 'potionBelt',
+  name: 'Potion Belt',
+  description: 'Gain 1 additional potion slot.',
+  onPickup: (run) => {
+    run.potions.push(null);
+  }
+};
+
+// Sacred Bark and Toy Ornithopter are checked directly in combat.usePotion
+// — no hooks needed since the relic interface doesn't (yet) include
+// onPotionUsed. Adding two relics doesn't justify the abstraction.
+const SACRED_BARK: Relic = {
+  id: 'sacredBark',
+  name: 'Sacred Bark',
+  description: 'Potion effects are applied twice.'
+};
+
+const TOY_ORNITHOPTER: Relic = {
+  id: 'toyOrnithopter',
+  name: 'Toy Ornithopter',
+  description: 'Heal 4 Hull every time you use a potion.'
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
@@ -174,7 +201,10 @@ export const RELICS: Record<string, Relic> = {
   [SLAG_WRENCH.id]: SLAG_WRENCH,
   [POWER_CELL.id]: POWER_CELL,
   [BUFFER_COIL.id]: BUFFER_COIL,
-  [SPIKE_MANTLE.id]: SPIKE_MANTLE
+  [SPIKE_MANTLE.id]: SPIKE_MANTLE,
+  [POTION_BELT.id]: POTION_BELT,
+  [SACRED_BARK.id]: SACRED_BARK,
+  [TOY_ORNITHOPTER.id]: TOY_ORNITHOPTER
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { createCombatState, endTurn, playCard, canPlay, usePotion, canUsePotion } from '../game/combat';
-import { getRun, completeCombat, failCombat, clearPotionSlot } from '../game/run';
+import { getRun, completeCombat, failCombat, clearPotionSlot, discardPotion } from '../game/run';
 import { POTIONS } from '../game/potions';
 import type { CombatState, CardInstance, EnemyState } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
@@ -92,6 +92,9 @@ export class CombatScene extends Phaser.Scene {
     this.aimingPotionSlot = null;
 
     setupPause(this);
+    // Right-click on potion slots discards the potion; we don't want the
+    // browser's context menu intercepting that click anywhere on the canvas.
+    this.input.mouse?.disableContextMenu();
 
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
@@ -371,7 +374,10 @@ export class CombatScene extends Phaser.Scene {
       container.add([glow, bg, label]);
       bg.setInteractive({ useHandCursor: true });
       const idx = i;
-      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPotionSlotClick(idx, pointer));
+      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.rightButtonDown()) this.onPotionSlotDiscard(idx);
+        else this.onPotionSlotClick(idx, pointer);
+      });
       bg.on('pointerover', () => this.onPotionHover(idx, true));
       bg.on('pointerout', () => this.onPotionHover(idx, false));
       this.potionSlots.push({ container, bg, glow, label });
@@ -437,8 +443,23 @@ export class CombatScene extends Phaser.Scene {
     }
     const def = POTIONS[id];
     if (!def) return;
-    this.potionTooltip.setText(`${def.name}\n${def.description}`);
+    this.potionTooltip.setText(`${def.name}\n${def.description}\n(right-click to discard)`);
     this.potionTooltip.setVisible(true);
+  }
+
+  private onPotionSlotDiscard(slot: number) {
+    if (!getRun().potions[slot]) return;
+    // If we were aiming this slot, cancel the aim first.
+    if (this.aimingPotionSlot === slot) this.exitPotionAim();
+    this.cancelEndTurnConfirm();
+    // Flash the slot red briefly so the player sees the discard register.
+    const ui = this.potionSlots[slot];
+    if (ui) {
+      ui.bg.setFillStyle(COLORS.danger);
+      this.time.delayedCall(120, () => this.refreshPotionBelt());
+    }
+    discardPotion(slot);
+    this.potionTooltip.setVisible(false);
   }
 
   private onPotionSlotClick(slot: number, _pointer: Phaser.Input.Pointer) {

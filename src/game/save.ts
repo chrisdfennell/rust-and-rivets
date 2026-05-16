@@ -73,12 +73,14 @@ function normalizeShop(raw: ShopState | null | undefined): ShopState | null {
   return { ...raw, potionOffer: raw.potionOffer ?? null };
 }
 
-// Pre-potion saves lack the field; pad or truncate to POTION_SLOT_COUNT so
-// the runtime always has a fixed-length belt.
+// Pre-potion saves lack the field; pad to at least POTION_SLOT_COUNT. The
+// Potion Belt relic grows the array past 3, so preserve any longer length
+// the save came in with rather than truncating.
 function normalizePotions(raw: unknown): (string | null)[] {
   const arr = Array.isArray(raw) ? raw : [];
-  const out: (string | null)[] = Array(POTION_SLOT_COUNT).fill(null);
-  for (let i = 0; i < POTION_SLOT_COUNT; i++) {
+  const targetLen = Math.max(POTION_SLOT_COUNT, arr.length);
+  const out: (string | null)[] = Array(targetLen).fill(null);
+  for (let i = 0; i < targetLen; i++) {
     const v = arr[i];
     if (typeof v === 'string') out[i] = v;
   }
