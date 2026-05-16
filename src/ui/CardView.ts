@@ -61,9 +61,9 @@ export class CardView extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0.5);
 
     this.costBadge = scene.add.circle(-CARD_W / 2 + 16, -CARD_H / 2 + 16, 14, COLORS.steam);
-    // X-cost cards render an "X" on the badge instead of the literal cost,
-    // matching the convention from games like Slay the Spire.
-    const costLabel = card.def.xCost ? 'X' : String(card.def.cost);
+    // X-cost cards render "X"; unplayable status/curse cards render "—"
+    // (no cost is meaningful since they can't be played).
+    const costLabel = card.def.unplayable ? '—' : card.def.xCost ? 'X' : String(card.def.cost);
     this.costText = scene.add
       .text(-CARD_W / 2 + 16, -CARD_H / 2 + 16, costLabel, {
         fontFamily: FONTS.display,
@@ -86,6 +86,7 @@ export class CardView extends Phaser.GameObjects.Container {
     this.visual.add([this.bg, this.border, this.nameText, this.costBadge, this.costText, this.descText]);
 
     const keywords: string[] = [];
+    if (card.def.unplayable) keywords.push('UNPLAYABLE');
     if (card.def.type === 'power') keywords.push('POWER');
     if (card.def.innate) keywords.push('INNATE');
     if (card.def.retain) keywords.push('RETAIN');
@@ -94,11 +95,14 @@ export class CardView extends Phaser.GameObjects.Container {
     // the badge line short on power cards.
     if (card.def.exhaust && card.def.type !== 'power') keywords.push('EXHAUST');
     if (keywords.length > 0) {
+      const color = card.def.unplayable ? COLORS.danger
+        : card.def.type === 'power' ? COLORS.steam
+        : COLORS.rust;
       this.keywordText = scene.add
         .text(0, CARD_H / 2 - 14, keywords.join(' • '), {
           fontFamily: FONTS.body,
           fontSize: '10px',
-          color: hex(card.def.type === 'power' ? COLORS.steam : COLORS.rust)
+          color: hex(color)
         })
         .setOrigin(0.5, 0.5);
       this.visual.add(this.keywordText);

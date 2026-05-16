@@ -9,7 +9,15 @@ const card = (
   effects: CardDef['effects'],
   exhaust?: boolean,
   rarity?: CardRarity,
-  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean; type?: CardType; xCost?: boolean }
+  flags?: {
+    retain?: boolean;
+    ethereal?: boolean;
+    innate?: boolean;
+    type?: CardType;
+    xCost?: boolean;
+    unplayable?: boolean;
+    endOfTurnDamageInHand?: number;
+  }
 ): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity, ...flags });
 
 export const CARDS: Record<string, CardDef> = {
@@ -204,7 +212,22 @@ export const CARDS: Record<string, CardDef> = {
   forgeCycle: card('forgeCycle', 'Forge Cycle', 0, 'self', 'Gain 4 Plating X times.',
     [{ kind: 'xPlating', amount: 4 }], false, 'uncommon', { xCost: true }),
   'forgeCycle+': card('forgeCycle+', 'Forge Cycle+', 0, 'self', 'Gain 6 Plating X times.',
-    [{ kind: 'xPlating', amount: 6 }], false, 'uncommon', { xCost: true })
+    [{ kind: 'xPlating', amount: 6 }], false, 'uncommon', { xCost: true }),
+
+  // ===== Status / curse cards. Not in SHOP_POOL or REWARD_POOL — only
+  // enter the player's deck via enemy actions (status) or events (curse).
+  slagGlob: card('slagGlob', 'Slag Glob', 1, 'none',
+    'Useless slag. Exhaust on play.',
+    [], true),
+  shrapnel: card('shrapnel', 'Shrapnel', 0, 'none',
+    'Unplayable. Ethereal — exhausts if held at end of turn.',
+    [], false, undefined, { unplayable: true, ethereal: true }),
+  heatDamage: card('heatDamage', 'Heat Damage', 0, 'none',
+    'Unplayable. Lose 2 Hull at the end of every turn it is in your hand.',
+    [], false, undefined, { unplayable: true, endOfTurnDamageInHand: 2 }),
+  oldRust: card('oldRust', 'Old Rust', 0, 'none',
+    'Unplayable. Dead weight in your deck.',
+    [], false, undefined, { unplayable: true })
 };
 
 export const STARTER_DECK: string[] = [

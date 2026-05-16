@@ -4,7 +4,8 @@ import {
   gainEnemyPlating,
   applyVulnerableToPlayer,
   applyWeakToPlayer,
-  applyBurnToPlayer
+  applyBurnToPlayer,
+  addCardToDiscard
 } from './combat';
 
 export const SCRAP_RAIDER: EnemyDef = {
@@ -163,12 +164,25 @@ export const RUST_SPRAYER: EnemyDef = {
         }
       };
     }
-    if (!last.startsWith('Corrode') && roll < 0.85) {
+    if (!last.startsWith('Corrode') && roll < 0.7) {
       return {
         intent: { kind: 'debuff', label: 'Corrode: Weak + Vuln' },
         resolve: (ctx) => {
           applyWeakToPlayer(ctx, 2);
           applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    if (!last.startsWith('Slag Lob') && roll < 0.9) {
+      const dmg = 4;
+      return {
+        // Lobs a status card (Slag Glob) into the player's discard pile.
+        // Player has to either spend a steam to exhaust it or just live
+        // with the dead draw next time it cycles around.
+        intent: { kind: 'debuff', label: `Slag Lob: ${dmg} + Slag Glob`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'slagGlob');
         }
       };
     }

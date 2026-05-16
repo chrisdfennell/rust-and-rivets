@@ -505,6 +505,42 @@ const ECHOING_VAULT: EventDef = {
   ]
 };
 
+const CURSED_IDOL: EventDef = {
+  id: 'cursedIdol',
+  title: 'CURSED IDOL',
+  body:
+    'A small brass effigy of a long-dead pilot leers from a wayside shrine. ' +
+    'A sealed crate is wired to it. The crate hums. Pilgrims have left ' +
+    'rust-flowers around the idol — and a hand-scrawled warning.',
+  choices: [
+    {
+      label: 'TAKE THE PRIZE',
+      description: 'Gain a random Relic. Add a Heat Damage curse to your deck.',
+      enabled: (run) => pickRelicFor(new Set(run.relics)) !== null,
+      resolve: (run) => {
+        const id = grantRelic(run);
+        if (!id) return 'The shrine has nothing the road hasn\'t already given you.';
+        run.player.deck.push('heatDamage');
+        return `Bolted on: ${RELICS[id]?.name ?? id}. A Heat Damage card slots into your gear, warm to the touch.`;
+      }
+    },
+    {
+      label: 'PRY FOR PARTS',
+      description: '-5 Hull. Gain 30 Scrap. The shrine is left intact.',
+      resolve: (run) => {
+        losePlayerHull(run, 5);
+        run.scrap += 30;
+        return '-5 Hull. The brass casing peels free. +30 Scrap.';
+      }
+    },
+    {
+      label: 'WALK PAST',
+      description: 'Some warnings deserve respect.',
+      resolve: () => 'You leave the idol to its watch.'
+    }
+  ]
+};
+
 export const ALL_EVENTS: EventDef[] = [
   SALVAGED_MECH,
   WANDERING_TRADER,
@@ -517,7 +553,8 @@ export const ALL_EVENTS: EventDef[] = [
   JUNKERS_BET,
   PILGRIMS_SHRINE,
   SCAVENGED_BREW_KIT,
-  ECHOING_VAULT
+  ECHOING_VAULT,
+  CURSED_IDOL
 ];
 
 export const EVENTS_BY_ID: Record<string, EventDef> = Object.fromEntries(

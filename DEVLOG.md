@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 33.
+Quick orientation for someone coming in cold. Numbers as of Slice 34.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -23,9 +23,11 @@ Quick orientation for someone coming in cold. Numbers as of Slice 33.
   player pick a boon (Repair / Refit / Salvage).
 - **Characters:** 3 pilots (Pilot / Engineer / Saboteur) with unique
   starter decks, hull pools, and signature relics.
-- **Cards:** ~50 base + `+` upgraded variants. Types: attack / skill /
+- **Cards:** ~54 base + `+` upgraded variants. Types: attack / skill /
   power. Keywords: exhaust, retain, ethereal, innate, AoE
-  (`target: 'allEnemies'`). Rarities: common / uncommon / rare.
+  (`target: 'allEnemies'`), X-cost, unplayable. Rarities: common /
+  uncommon / rare. Status / curse cards (Slag Glob, Shrapnel, Heat
+  Damage, Old Rust) inject via enemy actions and events.
 - **Powers** (persistent in-combat buffs): Demon Form, Barricade,
   Metallicize, Combust.
 - **Relics:** 18 total, with hooks `onCombatStart` / `onCombatEnd` /
@@ -40,8 +42,8 @@ Quick orientation for someone coming in cold. Numbers as of Slice 33.
 - **Combat:** Up to 3 simultaneous enemies, drag-to-target for
   single-enemy cards, dedicated aim mode for enemy-target potions.
 - **Map node kinds:** combat / elite / shop / rest / event / boss.
-  **12 events** with multi-choice outcomes (including potion-flavored
-  ones).
+  **13 events** with multi-choice outcomes (including potion-flavored
+  ones, plus a Cursed Idol that hands out a free relic + a curse).
 - **Meta:** Workshop with 8 upgrades (max spend 18 pts). Points
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
@@ -53,7 +55,61 @@ Quick orientation for someone coming in cold. Numbers as of Slice 33.
 
 ## Done
 
-### Slice 33 — X-cost cards *(current)*
+### Slice 34 — Status / curse cards *(current)*
+Closes the last big StS mechanic gap. Enemies and events can now
+inject "junk" cards into the player's deck that clutter the hand and
+optionally hurt the player while held.
+
+**New card flags** (on `CardDef`)
+- `unplayable: boolean` — `canPlay` returns false. Cost badge renders
+  "—". The card stays in the hand until end of turn or until a
+  mechanic forces it elsewhere.
+- `endOfTurnDamageInHand: number` — if still in hand at end of turn,
+  the player takes this much hull damage (bypasses plating). Fires
+  BEFORE hand routing so ethereal curses (e.g. Shrapnel) sting even
+  though they auto-exhaust seconds later.
+
+**Card insertion helpers** (exported from `combat.ts`)
+- `addCardToDiscard(c, cardId)` — pushes a fresh instance onto the
+  player's discard pile. Used by enemy resolve closures.
+- `addCardToDraw(c, cardId)` — inserts at a random index in the draw
+  pile so the player can't game when it surfaces.
+- `addCardToHand(c, cardId)` — pushes to hand directly; overflows
+  (>= 10 cards) cascade to discard.
+
+**Cards** (4 new, NOT in `SHOP_POOL` / `REWARD_POOL`)
+- **Slag Glob** (status, 1c, none, exhaust) — Plays for nothing. The
+  classic "wastes a steam" filler.
+- **Shrapnel** (status, unplayable, ethereal) — Stays in hand one
+  turn, then auto-exhausts. Pure draw-clutter.
+- **Heat Damage** (curse, unplayable, 2 hull per turn in hand) — Real
+  threat: every turn it's drawn, you take 2 hull.
+- **Old Rust** (curse, unplayable) — Permanent deck weight. Dilutes
+  draws until you spend a shop removal.
+
+**Enemy hook**
+- **Rust Sprayer** gains a "Slag Lob" action: 4 damage + adds a Slag
+  Glob to discard. Replaces some of the existing Corrode probability
+  weight; the existing Plating Mist fallback remains.
+- Slag Lob's intent label exercises the Slice-29 intent damage
+  display fix automatically (`intent.damage = 4`).
+
+**Event**
+- **Cursed Idol** — three-choice event. Take the prize (random
+  relic + Heat Damage curse), pry for parts (-5 hull + 30 scrap), or
+  walk past.
+
+**UI**
+- `CardView` keyword badge prepends `UNPLAYABLE` in the danger-red
+  color (vs the rust orange used for INNATE/RETAIN/ETHEREAL/EXHAUST
+  and steam-cyan for POWER).
+- Cost badge label cascade: unplayable → "—", xCost → "X", else the
+  literal cost number.
+
+Event pool 12 → 13. Card pool grows by 4 (non-shop) to 54 base + `+`
+upgrades.
+
+### Slice 33 — X-cost cards
 The last major mechanic gap from the original Slay-the-Spire feature
 comparison. Cards with cost "X" consume ALL remaining Steam at play
 time and scale their effects by the amount consumed.
@@ -1199,11 +1255,6 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 ## Backlog (rough priority)
 
 ### Tier 1 — feature gaps still on the StS comparison
-- **Status / curse cards** — shuffled-in junk cards (Slime, Dazed,
-  Wound, Curse of the Bell). The keyword infra (Slice 23) supports
-  the card shape; the missing pieces are a way to insert curses
-  into a deck/draw mid-combat from events, and an "unplayable" flag
-  for cards that just sit in hand wasting space.
 - **Power-card extensions** — beyond the four core powers
   (Demon Form, Barricade, Metallicize, Combust), StS has 15+ more
   with bespoke hooks: Echo Form (first card each turn plays twice),

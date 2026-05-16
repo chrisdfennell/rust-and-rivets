@@ -73,6 +73,15 @@ export interface CardDef {
   // amount into x-effect kinds. `cost` is treated as 0 for canPlay
   // (always playable); the cost badge renders "X" instead of a number.
   xCost?: boolean;
+  // Cannot be played from hand — `canPlay` returns false. Used for
+  // status / curse cards that exist purely as deck clutter (Wound,
+  // Dazed, Heat Damage). Cost badge renders "—" for clarity.
+  unplayable?: boolean;
+  // If still in hand at end of turn, the player takes this much hull
+  // damage (bypasses plating). Used for curses like Heat Damage. Fires
+  // BEFORE the regular hand-routing step so even ethereal curses sting
+  // before they auto-exhaust.
+  endOfTurnDamageInHand?: number;
 }
 
 export interface CardInstance {

@@ -557,7 +557,40 @@ export function canPlay(state: CombatState, uid: number): boolean {
   if (state.phase !== 'playerTurn') return false;
   const card = state.player.hand.find((c) => c.uid === uid);
   if (!card) return false;
+  if (card.def.unplayable) return false;
   return state.player.steam >= effectiveCost(state, card.def);
+}
+
+// ----- Mid-combat card insertion. Used by enemy actions that punish the
+// player with status / curse cards (e.g. Rust Sprayer's Slag Lob).
+export function addCardToDiscard(c: ResolveCtx, cardId: string): void {
+  const def = CARDS[cardId];
+  if (!def) return;
+  c.state.player.discard.push(instance(cardId));
+  c.log(`A ${def.name} clatters into your discard pile.`);
+}
+
+export function addCardToDraw(c: ResolveCtx, cardId: string): void {
+  const def = CARDS[cardId];
+  if (!def) return;
+  // Insert at a random index so it isn't always next-drawn.
+  const draw = c.state.player.draw;
+  const idx = draw.length === 0 ? 0 : Math.floor(Math.random() * (draw.length + 1));
+  draw.splice(idx, 0, instance(cardId));
+  c.log(`A ${def.name} jams into your draw pile.`);
+}
+
+export function addCardToHand(c: ResolveCtx, cardId: string): void {
+  const def = CARDS[cardId];
+  if (!def) return;
+  // Hand is soft-capped at 10 in StS; we follow the same convention to
+  // keep the row layout sane. Overflow goes to discard.
+  if (c.state.player.hand.length >= 10) {
+    addCardToDiscard(c, cardId);
+    return;
+  }
+  c.state.player.hand.push(instance(cardId));
+  c.log(`A ${def.name} jams into your hand.`);
 }
 
 export function playCard(state: CombatState, uid: number, targetIndex?: number): boolean {
@@ -610,6 +643,20 @@ export interface EndTurnHooks {
 export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (state.phase !== 'playerTurn') return;
   const p = state.player;
+  // Curse / status cards that hurt the player while held in hand at end
+  // of turn. Fires BEFORE hand routing so ethereal curses (e.g. Shrapnel)
+  // can still sting before they auto-exhaust. Bypasses plating.
+  for (const card of p.hand) {
+    const dmg = card.def.endOfTurnDamageInHand ?? 0;
+    if (dmg <= 0) continue;
+    p.hull = Math.max(0, p.hull - dmg);
+    logTo(state, `${card.def.name} sears you for ${dmg}.`);
+    if (p.hull <= 0) {
+      state.phase = 'defeat';
+      logTo(state, 'Your mech goes dark.');
+      return;
+    }
+  }
   // Cards in hand at end of turn route by keyword:
   //  - retain → stay in hand
   //  - ethereal → exhaust
