@@ -795,27 +795,23 @@ export class CombatScene extends Phaser.Scene {
     const n = next.length;
     if (n === 0) return;
 
+    // Simple horizontal row: cards evenly spaced, no overlap, no rotation,
+    // no arc. Each card's hit area is the full CARD_W centered on the card.
+    // This is the most reliable layout — Phaser routes pointer events
+    // cleanly because hit areas don't overlap and each card's visual
+    // matches its hit area exactly.
     const maxSpread = width - 360;
-    const idealSpacing = CARD_W * 0.78;
+    const idealSpacing = CARD_W + 10; // 10px gap between cards
     const spacing = n > 1 ? Math.min(idealSpacing, maxSpread / (n - 1)) : 0;
     const startX = width / 2 - (spacing * (n - 1)) / 2;
-    const arc = 16;
-    const rotMax = 0.08;
 
     for (let i = 0; i < n; i++) {
-      const t = n === 1 ? 0 : i / (n - 1) - 0.5;
       const x = startX + i * spacing;
-      const y = baseY + Math.abs(t) * arc * 2;
-      const rot = t * rotMax * 2;
       const view = next[i];
-      view.setHome(x, y, rot);
-      // Slot = card's visible portion. Left edge at the card's visual left
-      // edge (-CARD_W/2). Right edge at where the next card starts being
-      // drawn over this one (= spacing - CARD_W/2). The rightmost card has
-      // no neighbor on the right, so it gets the full half-card to its right.
-      const leftExtent = CARD_W / 2;
-      const rightExtent = i === n - 1 ? CARD_W / 2 : spacing - CARD_W / 2;
-      view.setSlot(leftExtent, rightExtent);
+      view.setHome(x, baseY, 0);
+      // Full-width centered slot for every card. With no overlap, there's
+      // no need for the asymmetric left-aligned slot.
+      view.setSlot(CARD_W / 2, CARD_W / 2);
       view.setPlayable(canPlay(this.state, view.card.uid));
     }
 
