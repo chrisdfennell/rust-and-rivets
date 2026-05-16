@@ -14,11 +14,13 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 27.
+Quick orientation for someone coming in cold. Numbers as of Slice 29.
 
-- **Run length:** 3 acts, ~20 nodes each, single boss per act. Win =
-  defeat Stormheart (act 3 boss). InterActScene between each act lets
-  the player pick a boon (Repair / Refit / Salvage).
+- **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
+  bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
+  Iron Sovereign / Pyroclast Engine, Stormheart / The Wraith). Win =
+  defeat the act-3 boss. InterActScene between each act lets the
+  player pick a boon (Repair / Refit / Salvage).
 - **Characters:** 3 pilots (Pilot / Engineer / Saboteur) with unique
   starter decks, hull pools, and signature relics.
 - **Cards:** ~50 base + `+` upgraded variants. Types: attack / skill /
@@ -33,11 +35,13 @@ Quick orientation for someone coming in cold. Numbers as of Slice 27.
   relic). Right-click to discard. 40% drop chance after regular
   combats, guaranteed after elites, never overflows.
 - **Statuses:** Vulnerable, Weak, Strength, Dexterity, Burn, Thorns,
-  Plating. Player & enemies both.
+  Plating. Player & enemies both. Intent display shows the actual
+  damage you'll take (post-Str/Vuln/Weak), not the raw base number.
 - **Combat:** Up to 3 simultaneous enemies, drag-to-target for
   single-enemy cards, dedicated aim mode for enemy-target potions.
 - **Map node kinds:** combat / elite / shop / rest / event / boss.
-  6 events with multi-choice outcomes.
+  **12 events** with multi-choice outcomes (including potion-flavored
+  ones).
 - **Meta:** Workshop with 8 upgrades (max spend 18 pts). Points
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
@@ -49,7 +53,87 @@ Quick orientation for someone coming in cold. Numbers as of Slice 27.
 
 ## Done
 
-### Slice 27 — Power cards *(current)*
+### Slice 29 — Intent damage display fix + 6 new events *(current)*
+Two unrelated wins bundled because they ship together.
+
+**Intent damage display** ([src/ui/IntentView.ts](src/ui/IntentView.ts))
+- `IntentView.update` now takes optional `attackerStr / attackerWeak
+  / playerVuln` args and recomputes the displayed damage to match
+  `dealDamageToPlayer`'s math (`(base + str) * 1.5^vuln * 0.75^weak`).
+- The recomputed value is substituted into the existing label
+  string ("Crushing Punch: 12" → "Crushing Punch: 16" once Salvage
+  Colossus has stacked +4 Strength via Bolt-On).
+- Substitution uses a digit-boundary lookaround
+  `(?<!\\d)N(?!\\d)` instead of `\\b…\\b` because word boundaries
+  fail to match `5` inside `5x3` (the `x` is a word char).
+- CombatScene.refresh passes `e.strength, e.weak, s.player.vulnerable`
+  per-enemy on every refresh.
+
+**Six new events** ([src/game/events.ts](src/game/events.ts), pool 6 → 12)
+- **Brewer's Cart** — buy a potion (35 scrap) or 50/50 gamble for a
+  free one. First event that exercises the new potion-belt
+  inventory inserter.
+- **Forgotten Cache** — force open (-4 hull, random loot: scrap /
+  potion / card) or pick the lock (70% rare card, 30% -3 hull).
+- **Junker's Bet** — coin flip at 30 or 60 scrap stakes. Pure
+  gambling, no other reward path.
+- **Pilgrim's Shrine** — sacrifice a random deck card for a relic,
+  or pray for +3 max hull and a heal. First event that
+  combines deck-removal with relic-grant.
+- **Scavenged Brew Kit** — take 3 random potions (fills the belt)
+  or scrap it for 25 scrap. Bulk-fills the belt for free.
+- **Echoing Vault** — -10 hull for a guaranteed upgraded card, or
+  chant back for a 50/50 relic-vs-common-card outcome.
+
+Two new helpers in events.ts: `tryAddPotion(run, id)` places into
+the first empty slot and returns the id on success;
+`potionName(id)` for log messages.
+
+### Slice 28 — Boss variety (alternate per act)
+Each act now rolls one of two bosses at boss-node entry instead of
+the previously-fixed single boss. Replaces the "by run 3 you've
+memorized them all" failure mode.
+
+**New bosses** (in [src/game/enemies.ts](src/game/enemies.ts))
+- **Salvage Colossus** (Act 1, 95 HP) — stacks Strength via
+  repeated `Bolt-On` casts. Mutates `e.strength` directly from
+  the resolve closure (reads `state.activeAttackerIndex`).
+  Foundry Tyrant is consistent pressure; this one snowballs if
+  not burst-killed or Weak-spammed.
+- **Pyroclast Engine** (Act 2, 130 HP) — Burn stacker. Cycles
+  Ignition / Ember Burst / Vent Heat to layer Burn ticks on the
+  player while still dealing direct damage. Iron Sovereign is
+  one big telegraphed nuke; this one is a slow grind.
+- **The Wraith** (Act 3, 150 HP) — Drain heal (8 dmg → +12 hull
+  for the boss) + Shroud (Weak 2 + Vuln 2) + `Phasing... →
+  Spectral Strike: 30` telegraph. Stormheart is raw firepower;
+  this one is sustain + debuff stacking.
+
+**Wiring**
+- `ACT{1,2,3}_BOSS_POOL` arrays. `getActBoss(act, rng?)` and
+  `getBossEncounter(act, rng?)` pick from the pool. The chosen
+  boss is persisted via `run.pendingEnemyIds` so refreshing
+  mid-fight resumes the same boss; a fresh run rolls again.
+- All three bosses registered in `ENEMY_DEFS` so the save
+  hydrate path can rebuild them from their string ids.
+
+**Sprites** (in [src/ui/MechSprite.ts](src/ui/MechSprite.ts))
+- `drawSalvageColossus` — lopsided junk-giant with asymmetric
+  legs, a clamp arm, a massive spiked hammer arm, single
+  shoulder smokestack. Subtle sway tween.
+- `drawPyroclastEngine` — tracked furnace tank with magma-core
+  chest, vent grilles, three short smokestacks. Pulse-scale
+  tween for the magma glow.
+- `drawTheWraith` — tall narrow specter knight in indigo cape
+  (no legs), hooded helm with cyan glowing eyes, twin curved
+  blades, floating-wisp particles. Slow vertical float tween.
+- All three registered in `ENEMY_SPRITES`.
+
+**Known UX gap** (fixed in Slice 29) — when Salvage Colossus
+stacked Strength, its intent labels still showed base damage.
+Slice 29 fixes this for all enemies, not just the Colossus.
+
+### Slice 27 — Power cards
 Persistent in-combat buff cards that exhaust on play and apply
 permanent state for the rest of the fight. Closes the "Power" gap on
 the original Slay-the-Spire feature comparison.
@@ -950,19 +1034,22 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   minimal run-state mutator.
 
 ### Tier 2 — content depth
-- **More events** — only 6 right now; StS has ~30. Easiest content
-  to add since they're pure run-state mutators.
+- **More events** — 12 events shipped; StS has ~30. Still room to
+  grow, especially events that exercise powers, the new bosses, or
+  status effects.
+- **Even more bosses** — each act has 2 bosses (Slice 28). A pool
+  of 3 per act would push past "I've seen them all" after a few
+  more wins.
 - **More relics with bespoke hooks** — 18 is solid but several
   niches are missing (cards-cost-modifiers, deck-search, retain-
   trigger relics).
-- **Boss variety within an act** — each act has one fixed boss.
-  A pool of 2-3 bosses per act with random selection would lift
-  replay value.
 - **Run-end statistics screen** — cards drafted, scrap earned,
   damage dealt, biggest hit, etc. Useful for the post-win moment.
 - **Daily seed / shareable runs** — same seed for everyone on a
   given date; share button copies a permalink that imports the
-  exact run state.
+  exact run state. Would require seeded RNG threaded through map
+  gen, encounter pick, card pool, etc. (currently uses
+  `Math.random` directly throughout).
 - **Run history** — past runs (win/loss, final deck, deaths)
   stored locally for retrospection.
 
