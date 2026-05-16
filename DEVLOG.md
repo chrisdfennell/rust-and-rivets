@@ -63,23 +63,31 @@ Quick orientation for someone coming in cold. Numbers as of Slice 41.
 ### Slice 41 — Procedural ambient music *(current)*
 Replaced the 13 MB `industrial_ambiance.mp3` with a Web-Audio-synthesized
 ambient track. Same dieselpunk vibe (low drone, steam hiss, distant
-clangs and thumps) with zero asset download.
+clangs and thumps) plus an actual cycling chord progression and a
+melodic line so it reads as music, not a stationary horn.
 
-**Layers** (all running continuously once `startMusic()` fires)
-- **Sub-bass drone** — 55 Hz sine routed through a gain, with a 0.07 Hz
-  detune LFO at ±4 cents so it breathes instead of sitting dead-flat.
-- **Mid pad** — three detuned sawtooths at 110 / 131 / 165 Hz (A2 / C3
-  / E3 = A-minor triad) into a lowpass. Each voice has its own slow
-  LFO (0.05–0.09 Hz) modulating the filter cutoff so the chord never
-  pumps in unison.
+**Initial attempt** was a static sawtooth-pad triad with a slow filter
+LFO — sounded like a horn drone. Replaced with the layout below.
+
+**Current layers** (all running continuously once `startMusic()` fires)
+- **Sub-bass drone** — 55 Hz sine with a 0.07 Hz detune LFO at ±4
+  cents so it breathes instead of sitting dead-flat. Volume 0.20.
+- **Chord progression** — cycles **Am → F → G → E** every 6 s with
+  2 s crossfades. Each chord is three sine voices (pad register: A2 /
+  C3 / E3 style), volume 0.055 per voice. Sine waves keep the pad
+  clean; the chord changes give it musical motion.
+- **Sparse melody** — single triangle-wave notes from the **A-minor
+  pentatonic** (A and E weighted toward the root/fifth). Fires every
+  6–14 s with a fast attack / 2.4 s exponential decay. Each note
+  passes through a **feedback delay** (0.42 s, 0.42 feedback) routed
+  into master, so notes echo into the chord pad and add depth.
 - **Steam hiss** — looped noise buffer through a bandpass with a slow
-  center-frequency sweep (0.06 Hz LFO over ±600 Hz).
-- **Random clangs** — every 8–16 s, a 0.45 s burst of bandpass-
+  center-frequency sweep (0.06 Hz LFO over ±600 Hz). Volume 0.03.
+- **Random clangs** — every 12–20 s, a 0.45 s burst of bandpass-
   filtered noise (Q=14, random center 0.9–2.1 kHz) with exponential
-  gain decay. Reads as distant metallic strikes.
-- **Random thumps** — every 4–7 s, a sub-bass 80 Hz sine bump with
-  fast attack / exponential decay over ~0.5 s. Reads as subterranean
-  pulse.
+  gain decay.
+- **Random thumps** — every 6–10 s, a sub-bass 80 Hz sine bump with
+  fast attack / exponential decay over ~0.5 s.
 
 **Bundle impact**
 - Removed `import ambientUrl from '../../assets/industrial_ambiance.mp3'`,

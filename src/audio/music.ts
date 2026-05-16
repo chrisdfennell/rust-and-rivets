@@ -1,16 +1,20 @@
-// Procedural industrial-ambient music built on Web Audio. Replaces the
-// 13 MB mp3 asset previously imported here — same vibe (low drone, steam
-// hiss, occasional metallic clangs, distant thumps), zero download.
+// Procedural industrial-ambient music built on Web Audio.
 //
-// Layers running continuously once startMusic() fires:
-//   - Sub-bass drone (55 Hz sine + slow detune LFO)
-//   - Mid pad (A-minor triad, detuned saws → lowpass with slow LFO)
-//   - Steam hiss (looping noise → bandpass with slow center sweep)
-//   - Random metallic clangs (8-16 s intervals)
-//   - Random low thumps (4-7 s intervals)
+// Replaces the 13 MB mp3 asset that used to live in assets/. The synth
+// has six layers running together:
 //
-// Public API matches the old mp3 player so TitleScene / PauseScene don't
-// need to change. The `_scene` params are ignored — kept for shape parity.
+//   1. Sub-bass drone (55 Hz sine with slow detune wobble)
+//   2. Chord progression — Am / F / C / G cycling every 8s, each chord
+//      played as three sine voices with linear fade in/out
+//   3. Sparse melody — single triangle-wave notes from A-minor pentatonic,
+//      fed through a feedback delay so they echo into the pad
+//   4. Steam hiss (bandpass-filtered noise, slow center sweep)
+//   5. Random metallic clangs (bandpass noise bursts, 12-20s)
+//   6. Random distant thumps (sub-bass sine bumps, 6-10s)
+//
+// The old "saw-pad with filter LFO" got swapped out because it read as a
+// horn drone rather than music. Sine chord voices + an actual melody
+// gives it the slow-progression feel.
 
 import { getAudioSettings, setMusicMutedPref } from './settings';
 
@@ -18,6 +22,10 @@ const DEFAULT_VOLUME = 0.32;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+// Melody pipes through this delay node so each note tails into a long
+// echo, which gives the ambient track depth without needing a real
+// convolution reverb.
+let melodyDelayIn: GainNode | null = null;
 let started = false;
 let muted = getAudioSettings().musicMuted;
 
@@ -46,15 +54,36 @@ function makeNoiseBuffer(c: AudioContext, durationSec: number): AudioBuffer {
   return buf;
 }
 
-// Kept for back-compat with any caller that still imports it. The new
-// synth implementation doesn't actually use a cache key.
+// Kept for back-compat with any caller that still imports it.
 export const AMBIENT_KEY = 'industrialAmbiance';
 
-// No-op: nothing to preload for the synth version. Kept as an export so
-// existing TitleScene preload() calls don't have to change.
 export function preloadMusic(_scene: unknown): void {
   void _scene;
 }
+
+// ----- Note frequency helpers -----
+// A minor chord progression at a low pad register. Each entry is one
+// chord, three voices. Cycled in playChordLoop.
+const CHORD_PROGRESSION: number[][] = [
+  [110, 131, 165], // Am — A2 / C3 / E3
+  [ 87, 110, 131], // F  — F2 / A2 / C3
+  [ 98, 123, 147], // G  — G2 / B2 / D3
+  [ 82, 110, 131]  // E  — E2 / A2 / C3 (Esus-ish; pulls back to Am)
+];
+const CHORD_DURATION_S = 8; // each chord holds for 8s, with 2s crossfades
+
+// A minor pentatonic for the melody voice. Notes are picked randomly,
+// weighted toward A and E (root + fifth) so phrases feel grounded.
+const MELODY_NOTES: number[] = [
+  220, // A3 (root, weighted)
+  220,
+  262, // C4
+  294, // D4
+  330, // E4 (fifth, weighted)
+  330,
+  392, // G4
+  440  // A4
+];
 
 export function startMusic(_scene: unknown): void {
   void _scene;
@@ -72,15 +101,30 @@ export function startMusic(_scene: unknown): void {
   document.addEventListener('pointerdown', unlock);
   document.addEventListener('keydown', unlock);
 
-  // ----- Sub-bass drone (constant) -----
+  // ----- Melody delay/feedback bus (built before melody schedules so notes
+  // can route through it from their very first hit). -----
+  melodyDelayIn = c.createGain();
+  melodyDelayIn.gain.value = 1;
+  const delay = c.createDelay(2);
+  delay.delayTime.value = 0.42;
+  const feedback = c.createGain();
+  feedback.gain.value = 0.42;
+  const delayMix = c.createGain();
+  delayMix.gain.value = 0.55;
+  melodyDelayIn.connect(delay);
+  delay.connect(feedback);
+  feedback.connect(delay);
+  delay.connect(delayMix);
+  delayMix.connect(master);
+
+  // ----- Sub-bass drone -----
   const sub = c.createOscillator();
   sub.type = 'sine';
   sub.frequency.value = 55; // A1
   const subGain = c.createGain();
-  subGain.gain.value = 0.30;
+  subGain.gain.value = 0.20;
   sub.connect(subGain).connect(master);
   sub.start();
-  // Slow detune wobble so the drone breathes instead of sitting dead-flat.
   const subLFO = c.createOscillator();
   subLFO.frequency.value = 0.07;
   const subLFODepth = c.createGain();
@@ -88,34 +132,34 @@ export function startMusic(_scene: unknown): void {
   subLFO.connect(subLFODepth).connect(sub.detune);
   subLFO.start();
 
-  // ----- Mid pad: A-minor triad, detuned saws → lowpass -----
-  const padFreqs = [110, 131, 165]; // A2 / C3 / E3
-  const padDetune = [-7, 0, 7];
-  for (let i = 0; i < padFreqs.length; i++) {
-    const osc = c.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = padFreqs[i];
-    osc.detune.value = padDetune[i];
-    const lpf = c.createBiquadFilter();
-    lpf.type = 'lowpass';
-    lpf.frequency.value = 520;
-    lpf.Q.value = 0.6;
-    const g = c.createGain();
-    g.gain.value = 0.06;
-    osc.connect(lpf).connect(g).connect(master);
-    osc.start();
-    // Per-voice filter LFO at slightly different rates so the pad
-    // never lines up — keeps it from sounding like a single chord
-    // pumping in unison.
-    const lfo = c.createOscillator();
-    lfo.frequency.value = 0.05 + i * 0.02;
-    const lfoDepth = c.createGain();
-    lfoDepth.gain.value = 140;
-    lfo.connect(lfoDepth).connect(lpf.frequency);
-    lfo.start();
-  }
+  // ----- Chord progression: cycles through CHORD_PROGRESSION endlessly -----
+  let chordIdx = 0;
+  const playNextChord = () => {
+    const cc = getCtx();
+    if (!cc || !master) return;
+    const now = cc.currentTime;
+    const freqs = CHORD_PROGRESSION[chordIdx];
+    for (const f of freqs) {
+      const osc = cc.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = cc.createGain();
+      // 2s fade in, hold, 2s fade out — overlaps the next chord's fade-in
+      // so transitions feel continuous instead of pulsing.
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.055, now + 2);
+      g.gain.setValueAtTime(0.055, now + CHORD_DURATION_S - 2);
+      g.gain.linearRampToValueAtTime(0, now + CHORD_DURATION_S);
+      osc.connect(g).connect(master);
+      osc.start(now);
+      osc.stop(now + CHORD_DURATION_S + 0.05);
+    }
+    chordIdx = (chordIdx + 1) % CHORD_PROGRESSION.length;
+  };
+  playNextChord();
+  setInterval(playNextChord, (CHORD_DURATION_S - 2) * 1000);
 
-  // ----- Steam hiss: looping noise → bandpass with slow center sweep -----
+  // ----- Steam hiss -----
   const hissBuf = makeNoiseBuffer(c, 2);
   const hissSrc = c.createBufferSource();
   hissSrc.buffer = hissBuf;
@@ -125,7 +169,7 @@ export function startMusic(_scene: unknown): void {
   hissBP.frequency.value = 2400;
   hissBP.Q.value = 0.8;
   const hissGain = c.createGain();
-  hissGain.gain.value = 0.05;
+  hissGain.gain.value = 0.03;
   hissSrc.connect(hissBP).connect(hissGain).connect(master);
   hissSrc.start();
   const hissLFO = c.createOscillator();
@@ -135,28 +179,63 @@ export function startMusic(_scene: unknown): void {
   hissLFO.connect(hissLFODepth).connect(hissBP.frequency);
   hissLFO.start();
 
-  // ----- Random clangs every 8-16s -----
+  // ----- Melody: sparse single notes routed through the delay bus -----
+  const scheduleMelody = () => {
+    // Wait 6-14s between notes; sparse and contemplative.
+    const delayMs = 6000 + Math.random() * 8000;
+    setTimeout(() => {
+      playMelodyNote();
+      scheduleMelody();
+    }, delayMs);
+  };
+  // Kick off the first note a few seconds in so the chord pad settles first.
+  setTimeout(() => {
+    playMelodyNote();
+    scheduleMelody();
+  }, 4000);
+
+  // ----- Random clangs every 12-20s -----
   const scheduleClang = () => {
-    const delay = 8000 + Math.random() * 8000;
+    const delayMs = 12000 + Math.random() * 8000;
     setTimeout(() => {
       playClang();
       scheduleClang();
-    }, delay);
+    }, delayMs);
   };
   scheduleClang();
 
-  // ----- Random distant thumps every 4-7s -----
+  // ----- Random thumps every 6-10s -----
   const schedulePulse = () => {
-    const delay = 4000 + Math.random() * 3000;
+    const delayMs = 6000 + Math.random() * 4000;
     setTimeout(() => {
       playPulse();
       schedulePulse();
-    }, delay);
+    }, delayMs);
   };
   schedulePulse();
 }
 
-// Short bandpass-filtered noise burst — reads as a distant metallic clang.
+// Bell-like triangle-wave note, dry-mixed to master + wet through delay.
+function playMelodyNote() {
+  const c = getCtx();
+  if (!c || !master || !melodyDelayIn) return;
+  const note = MELODY_NOTES[Math.floor(Math.random() * MELODY_NOTES.length)];
+  const osc = c.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = note;
+  const g = c.createGain();
+  const now = c.currentTime;
+  // Fast attack, long exponential decay → soft bell.
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.09, now + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+  osc.connect(g);
+  g.connect(master);          // dry signal
+  g.connect(melodyDelayIn);   // echo tail
+  osc.start(now);
+  osc.stop(now + 2.5);
+}
+
 function playClang() {
   const c = getCtx();
   if (!c || !master) return;
@@ -169,14 +248,13 @@ function playClang() {
   bp.Q.value = 14;
   const g = c.createGain();
   const now = c.currentTime;
-  g.gain.setValueAtTime(0.18, now);
+  g.gain.setValueAtTime(0.12, now);
   g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
   src.connect(bp).connect(g).connect(master);
   src.start();
   src.stop(now + 0.5);
 }
 
-// Low-frequency sine bump — reads as a distant subterranean thump.
 function playPulse() {
   const c = getCtx();
   if (!c || !master) return;
@@ -186,10 +264,10 @@ function playPulse() {
   const g = c.createGain();
   const now = c.currentTime;
   g.gain.setValueAtTime(0, now);
-  g.gain.linearRampToValueAtTime(0.15, now + 0.05);
+  g.gain.linearRampToValueAtTime(0.10, now + 0.05);
   g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
   osc.connect(g).connect(master);
-  osc.start();
+  osc.start(now);
   osc.stop(now + 0.55);
 }
 
