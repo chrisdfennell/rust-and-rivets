@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 42.
+Quick orientation for someone coming in cold. Numbers as of Slice 43.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -46,8 +46,10 @@ Quick orientation for someone coming in cold. Numbers as of Slice 42.
 - **Combat:** Up to 3 simultaneous enemies, drag-to-target for
   single-enemy cards, dedicated aim mode for enemy-target potions.
 - **Map node kinds:** combat / elite / shop / rest / event / boss.
-  **13 events** with multi-choice outcomes (including potion-flavored
-  ones, plus a Cursed Idol that hands out a free relic + a curse).
+  **30 events** with multi-choice outcomes — original 13 plus a
+  Slice-43 batch covering paid card removal, archetype-specific
+  drops (random Power / random AoE), max-hull-trade vendors, sealed
+  loot boxes, and a snake-oil salesman who might sell you a curse.
 - **Meta:** Workshop with 8 upgrades (max spend 18 pts). Points
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
@@ -60,7 +62,67 @@ Quick orientation for someone coming in cold. Numbers as of Slice 42.
 
 ## Done
 
-### Slice 42 — Animated enemy idles *(current)*
+### Slice 43 — Event pool 13 → 30 *(current)*
+Seventeen new events bring the pool to 30, matching the StS-style
+density. The previous 13 were heavy on small risk/reward and potion
+acquisition; this batch fills gaps the older set didn't cover —
+paid removal, archetype-specific card drops, max-hull-trade vendors,
+sealed loot boxes, and a few outright gambling boxes.
+
+**New events**
+- **Junkyard Tinker** — pay 30 scrap to upgrade a random deck card.
+  Alternative to Rest sites since rest+upgrade requires giving up the
+  heal.
+- **Black Market** — choose: scrap a random card for 50, buy a rare
+  card for 70, or leave. Paid deck-removal alternative to the shop's
+  one-time service.
+- **Conduit Trance** — pick "induce a Power" or "induce a Sweep" to
+  gain a random card filtered to that archetype. Builds-around get
+  a deterministic step.
+- **Whirlwind Survivor** — moral choice: help the dying pilot
+  (-12 Hull, gain a rare card) or loot the wreck (+60 Scrap, -3
+  max Hull).
+- **Frozen Engine** — cannibalize a wreck for 2 random potions at
+  -8 Hull, or 50/50 jump-start for a relic vs -10 Hull.
+- **Cipher Wheel** — solve a puzzle (+15 Scrap + a potion if slot
+  open) or smash it (+40 Scrap, -1 max Hull).
+- **Crashed Drone** — strip for 25 scrap (-2 Hull) or salvage a
+  random common card.
+- **Toll Bridge** — pay 30 scrap, take 8 Hull, or sneak (50/50:
+  free vs -12 Hull). Three distinct cost shapes for the same outcome.
+- **Mirrored Pool** — look deeper for a 50/50 relic vs -8 Hull, or
+  smash for +30 Scrap.
+- **Sealed Crate Auction** — bid 35 scrap on a one-third chance each
+  of card / potion / +60 scrap refund.
+- **Pilgrim Healer** — pay 40 scrap to heal to full, or pray for a
+  free +8 Hull.
+- **Steel Hermit** — sit and listen (-1 max Hull, gain an uncommon
+  card AND +20 Scrap). Permanent max-hull cost for compounding gain.
+- **Snake-Oil Salesman** — 30 scrap for a 70/30 random potion vs
+  Heat Damage curse. The first event that can stick a permanent
+  curse on a careless choice.
+- **Boiler Spirit** — listen (+5 Hull, gain a Slag Glob curse) or
+  banish (-5 Hull, gain a rare card).
+- **Old Soldier's Cache** — force open for -8 Hull + 2 random cards,
+  or pick the lock for 50/50 (2 cards vs -3 Hull and nothing).
+- **Drone Swarm** — capture one (-3 Hull, +1 potion + 15 scrap) or
+  shoot the swarm down (+25 Scrap).
+- **Cracked Engineer** — accept the field test: +60 Scrap but two
+  Slag Globs jam into your deck. Pure curse-for-cash.
+
+**Wiring**
+- `events.ts` now also imports `isUpgradable` and `SHOP_POOL` from
+  cards so the upgrade and archetype-filter events can do their thing.
+- Each new event lives next to the existing helpers
+  (`losePlayerHull`, `gainPlayerHull`, `tryAddPotion`, `grantRelic`,
+  `pickRandomPotionId`, `pickRewardCards`, `cardName`, `potionName`).
+  No new helpers needed.
+
+Practical impact: an average run hits ~7 event nodes, so 30 events
+means a single playthrough sees ~25% of them. Repeat exposure now
+needs ~4 runs instead of ~2.
+
+### Slice 42 — Animated enemy idles
 Every enemy in the lineup (24 total: regulars, elites, bosses, and the
 slice-28 boss alts) now has an infinite idle tween so the field reads
 as alive between actions. Bosses already had per-character tweens from
@@ -1610,9 +1672,11 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   minimal run-state mutator.
 
 ### Tier 2 — content depth
-- **More events** — 12 events shipped; StS has ~30. Still room to
-  grow, especially events that exercise powers, the new bosses, or
-  status effects.
+- **Even more events** — Slice 43 brought the pool to 30 (matching
+  StS density). Future entries could go deeper on boss-specific
+  flavor (events that hint at the boss waiting at the top of the
+  act) or character-flavored ones (Pilot / Engineer / Saboteur
+  unique choices).
 - **Even more bosses** — each act has 2 bosses (Slice 28). A pool
   of 3 per act would push past "I've seen them all" after a few
   more wins.
