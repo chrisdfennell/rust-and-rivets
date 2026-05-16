@@ -101,8 +101,11 @@ export class EventScene extends Phaser.Scene {
         { width: 280, height: 70, fontSize: 17, fill: COLORS.rust, hoverFill: COLORS.danger }
       );
       btn.setEnabled(enabled);
+      // Container.add() is enough — adding the button to the scene's
+      // top-level display list too (this.add.existing) defeats
+      // choicesView.setVisible(false), leaving the button visible during
+      // the result phase.
       this.choicesView.add(btn);
-      this.add.existing(btn);
 
       const desc = this.add
         .text(cx, cy + 58, choice.description, {
@@ -142,8 +145,9 @@ export class EventScene extends Phaser.Scene {
       () => this.exit(),
       { width: 240, height: 56, fontSize: 17, fill: COLORS.shield, hoverFill: 0x6f9dbf }
     );
+    // Same as buildChoices — don't double-register on the scene display
+    // list, or resultView's visibility toggle stops applying to it.
     this.resultView.add(continueBtn);
-    this.add.existing(continueBtn);
   }
 
   private pick(choice: EventChoice) {
