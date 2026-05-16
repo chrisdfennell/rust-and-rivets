@@ -54,8 +54,15 @@ export function generateMap(rng: () => number = Math.random): MapData {
     connect(prev, boss);
   }
 
-  // Assign room kinds. Floor 0 = combat (entries). Pre-boss floor = rest.
-  // Floor 1 = combat-heavy. Floors 2..FLOORS-3 = full mix with elites.
+  // Assign room kinds. The first three rows (floors 0–2) deliberately
+  // have NO shops or rests — players have no scrap to spend and no
+  // damage to heal that early, so those nodes would just be wasted real
+  // estate. Pre-boss floor (FLOORS-2) is always rest. Boss floor is boss.
+  //
+  // Floor 0:       entry combat (no roll).
+  // Floor 1:       combat / event only — smooth opener.
+  // Floor 2:       elite allowed, no shop/rest yet.
+  // Floors 3..-3: full mix (elite / shop / rest / event / combat).
   for (const node of nodes.values()) {
     if (node.kind === 'boss') continue;
     if (node.floor === 0) continue;
@@ -65,10 +72,11 @@ export function generateMap(rng: () => number = Math.random): MapData {
     }
     const roll = rng();
     if (node.floor === 1) {
-      // Smoother opening: no elites here
-      if (roll < 0.12) node.kind = 'shop';
-      else if (roll < 0.24) node.kind = 'rest';
-      else if (roll < 0.36) node.kind = 'event';
+      if (roll < 0.25) node.kind = 'event';
+      else node.kind = 'combat';
+    } else if (node.floor === 2) {
+      if (roll < 0.14) node.kind = 'elite';
+      else if (roll < 0.34) node.kind = 'event';
       else node.kind = 'combat';
     } else {
       if (roll < 0.14) node.kind = 'elite';

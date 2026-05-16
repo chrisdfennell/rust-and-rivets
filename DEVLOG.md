@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 39.
+Quick orientation for someone coming in cold. Numbers as of Slice 40.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -59,7 +59,29 @@ Quick orientation for someone coming in cold. Numbers as of Slice 39.
 
 ## Done
 
-### Slice 39 — Rarity expansion + 7 new cards + visual rarity *(current)*
+### Slice 40 — Map-pacing: no shops or rests in the first three floors *(current)*
+Playtest observation: early shops were dead weight — you have no scrap
+to spend — and early rest sites wasted a slot because you hadn't taken
+damage yet. Tightened map generation in
+[src/game/map.ts](src/game/map.ts) so shops and rests can only appear on
+floors 3 and 4 (the four mid-floors out of the 7-floor map):
+
+- **Floor 0** entry: combat (unchanged).
+- **Floor 1**: combat or event (~25% event). No elite / shop / rest.
+- **Floor 2**: combat, event, or elite (~14% elite, ~20% event). No
+  shop / rest yet.
+- **Floors 3–4**: full mix (elite / shop / rest / event / combat) at
+  the same weights as before.
+- **Floor 5** (`FLOORS-2`): forced rest (unchanged).
+- **Floor 6**: boss (unchanged).
+
+Trade-off: the window for shops/rests is narrower (2 floors instead of
+4), but the probability distribution stays the same, so a path through
+the mid-floors still encounters ~1 of each on average. The previous map
+could randomly land your only rest site on floor 1 where it heals
+nothing useful — that failure mode is gone.
+
+### Slice 39 — Rarity expansion + 7 new cards + visual rarity
 Three things bundled because they're all about how rarity reads:
 
 **Rarity tiers expanded to five**
