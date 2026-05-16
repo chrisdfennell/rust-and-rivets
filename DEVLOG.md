@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 47.
+Quick orientation for someone coming in cold. Numbers as of Slice 48.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
@@ -64,7 +64,42 @@ Quick orientation for someone coming in cold. Numbers as of Slice 47.
 
 ## Done
 
-### Slice 47 — Export/Import as .json file + drag-and-drop *(current)*
+### Slice 48 — Boss-signature relic drops *(current)*
+Each of the 9 bosses now drops a unique signature relic on kill.
+The relics aren't in the random-roll pool, so the only path to
+owning a specific one is beating that specific boss — gives players
+a reason to want each of the 3-per-act boss options to come up.
+
+**Mechanic match.** Each signature mirrors the boss's own mechanic
+so the trophy reads as "I learned this boss's trick":
+
+| Boss | Signature | Effect |
+|---|---|---|
+| Foundry Tyrant | Tyrant's Bellows | Start combat: apply 3 Burn to all enemies |
+| Salvage Colossus | Colossus Arm | Start combat with +2 Strength |
+| Reclaimer Prime | Reclaimer Spike | Start combat with 4 Thorns |
+| Iron Sovereign | Sovereign Plating | Start combat with +8 Plating |
+| Pyroclast Engine | Pyroclast Coil | End of turn: apply 1 Burn to all enemies |
+| Vault Warden | Warden's Lock | Heal 6 Hull after each combat |
+| Stormheart | Stormheart Core | Start combat: 10 damage to a random enemy |
+| The Wraith | Wraith Veil | End of turn: +5 Plating if you have none |
+| Cyclone King | Cyclone Crown | Start combat with +1 Dexterity |
+
+**Implementation.**
+- New `signature?: boolean` flag on the `Relic` interface
+  ([src/game/relics.ts](src/game/relics.ts)). `pickRelicFor`
+  filters these out, so elite drops / events / workshop unlocks
+  can never roll a boss signature.
+- `BOSS_SIGNATURE_RELICS: Record<bossId, relicId>` map drives the
+  lookup. Adding a future boss means adding one entry here.
+- `completeCombat` ([src/game/run.ts](src/game/run.ts:349))
+  captures `slainBossId` from `r.pendingEnemies[0].id` before
+  clearing the pending list, then auto-grants the matching relic
+  via `addRelic` in the boss-kill branch. Works for both
+  non-final bosses (lead into InterAct) and the final-act boss
+  (relic shows up on the run-summary trophy bar).
+
+### Slice 47 — Export/Import as .json file + drag-and-drop
 Replaced the clipboard-and-paste save flow with proper file
 operations. Two issues to fix and one feature to add.
 

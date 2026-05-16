@@ -7,7 +7,7 @@ import {
   getBossEncounter,
   isFinalAct
 } from './enemies';
-import { RELICS, pickRelicFor } from './relics';
+import { RELICS, pickRelicFor, BOSS_SIGNATURE_RELICS } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
 import { applyMetaToRun, grantMetaPoints, loadMeta } from './meta';
 import { getCharacter } from './characters';
@@ -348,6 +348,11 @@ function mergeCombatStats(r: RunState, payload: CombatStatsPayload | undefined) 
 
 export function completeCombat(survivingHull: number, combatStats?: CombatStatsPayload): number {
   const r = getRun();
+  // Capture the boss ID before pendingEnemies is cleared — needed
+  // below to look up the boss-signature relic drop.
+  const slainBossId = (r.pendingEnemies && r.pendingEnemies.length > 0)
+    ? r.pendingEnemies[0].id
+    : null;
   r.player.hull = survivingHull;
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
   r.pendingEnemies = null;
@@ -372,6 +377,13 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
     // Boss Bounty workshop upgrade adds a flat scrap bonus to boss kills.
     const bonus = r.bossBonus ?? 0;
     if (bonus > 0) r.scrap += bonus;
+    // Boss-signature relic drop (Slice 48). Each of the 9 bosses has a
+    // unique relic tied to its mechanic; beating that boss is the only
+    // way to own it. Granted automatically — no claim UI needed.
+    if (slainBossId) {
+      const sig = BOSS_SIGNATURE_RELICS[slainBossId];
+      if (sig) addRelic(sig, false);
+    }
     if (isFinalAct(r.act)) {
       r.result = 'victory';
     } else {

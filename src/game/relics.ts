@@ -6,6 +6,11 @@ export interface Relic {
   id: string;
   name: string;
   description: string;
+  // Signature relics only drop from a specific boss kill. They're
+  // excluded from random rolls (elite drops, events, workshop unlocks)
+  // so picking up "Tyrant's Bellows" can only happen by beating
+  // Foundry Tyrant — gives players a reason to want a specific boss.
+  signature?: boolean;
   onCombatStart?: (state: CombatState) => void;
   onCombatEnd?: (run: RunState) => void;
   onPickup?: (run: RunState) => void;
@@ -302,6 +307,143 @@ const FURNACE_HEART: Relic = {
   }
 };
 
+// ===== Boss-signature relics (Slice 48) =====
+//
+// Each of the 9 bosses drops a unique relic on kill. They're tagged
+// `signature: true` so `pickRelicFor` skips them — the only path to
+// owning one is beating that specific boss. Effects mirror the boss's
+// own mechanic (Tyrant's Bellows applies Burn, Reclaimer Spike grants
+// Thorns, etc.) so the trophy reads as "I learned this boss's trick."
+
+const TYRANTS_BELLOWS: Relic = {
+  id: 'tyrantsBellows',
+  name: "Tyrant's Bellows",
+  description: 'Start each combat by applying 3 Burn to ALL enemies.',
+  signature: true,
+  onCombatStart: (state) => {
+    let any = false;
+    for (const e of state.enemies) {
+      if (e.hull > 0) { e.burn += 3; any = true; }
+    }
+    if (any) state.log.push("Tyrant's Bellows: every enemy is Burning.");
+  }
+};
+
+const COLOSSUS_ARM: Relic = {
+  id: 'colossusArm',
+  name: 'Colossus Arm',
+  description: 'Start each combat with +2 Strength.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.strength += 2;
+    state.log.push('Colossus Arm: +2 Strength.');
+  }
+};
+
+const RECLAIMER_SPIKE: Relic = {
+  id: 'reclaimerSpike',
+  name: 'Reclaimer Spike',
+  description: 'Start each combat with 4 Thorns.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.thorns += 4;
+    state.log.push('Reclaimer Spike: +4 Thorns.');
+  }
+};
+
+const SOVEREIGN_PLATING: Relic = {
+  id: 'sovereignPlating',
+  name: 'Sovereign Plating',
+  description: 'Start each combat with +8 Plating.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.plating += 8;
+    state.log.push('Sovereign Plating: +8 Plating.');
+  }
+};
+
+const PYROCLAST_COIL: Relic = {
+  id: 'pyroclastCoil',
+  name: 'Pyroclast Coil',
+  description: 'At the end of each turn, apply 1 Burn to all enemies.',
+  signature: true,
+  onTurnEnd: (state) => {
+    let any = false;
+    for (const e of state.enemies) {
+      if (e.hull > 0) { e.burn += 1; any = true; }
+    }
+    if (any) state.log.push('Pyroclast Coil: every enemy gains 1 Burn.');
+  }
+};
+
+const WARDENS_LOCK: Relic = {
+  id: 'wardensLock',
+  name: "Warden's Lock",
+  description: 'Heal 6 Hull after each combat.',
+  signature: true,
+  onCombatEnd: (run) => {
+    const before = run.player.hull;
+    run.player.hull = Math.min(run.player.maxHull, run.player.hull + 6);
+    if (run.player.hull > before) {
+      // No log channel in run scope; the relic bar update is the cue.
+    }
+  }
+};
+
+const STORMHEART_CORE: Relic = {
+  id: 'stormheartCore',
+  name: 'Stormheart Core',
+  description: 'At the start of each combat, deal 10 damage to a random enemy.',
+  signature: true,
+  onCombatStart: (state) => {
+    const alive = aliveEnemies(state);
+    if (alive.length === 0) return;
+    const target = alive[Math.floor(Math.random() * alive.length)];
+    const idx = state.enemies.indexOf(target);
+    dealDamageToEnemy({ state, log: (m) => state.log.push(m) }, 10, idx);
+    state.log.push('Stormheart Core arcs a bolt.');
+  }
+};
+
+const WRAITH_VEIL: Relic = {
+  id: 'wraithVeil',
+  name: 'Wraith Veil',
+  description: 'At the end of each turn, if you have no Plating, gain 5 Plating.',
+  signature: true,
+  onTurnEnd: (state) => {
+    if (state.player.plating <= 0) {
+      state.player.plating += 5;
+      state.log.push('Wraith Veil: +5 Plating.');
+    }
+  }
+};
+
+const CYCLONE_CROWN: Relic = {
+  id: 'cycloneCrown',
+  name: 'Cyclone Crown',
+  description: 'Start each combat with +1 Dexterity.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.dexterity += 1;
+    state.log.push('Cyclone Crown: +1 Dexterity.');
+  }
+};
+
+// Maps boss enemy ID → signature relic ID. Used by completeCombat to
+// stage the right drop when that specific boss is killed. Adding a
+// new boss means adding an entry here too.
+export const BOSS_SIGNATURE_RELICS: Record<string, string> = {
+  foundryTyrant:   TYRANTS_BELLOWS.id,
+  salvageColossus: COLOSSUS_ARM.id,
+  reclaimerPrime:  RECLAIMER_SPIKE.id,
+  ironSovereign:   SOVEREIGN_PLATING.id,
+  pyroclastEngine: PYROCLAST_COIL.id,
+  vaultWarden:     WARDENS_LOCK.id,
+  stormheart:      STORMHEART_CORE.id,
+  theWraith:       WRAITH_VEIL.id,
+  cycloneKing:     CYCLONE_CROWN.id
+};
+
 export const RELICS: Record<string, Relic> = {
   [PRESSURE_GAUGE.id]: PRESSURE_GAUGE,
   [IRON_PLATING.id]: IRON_PLATING,
@@ -327,13 +469,24 @@ export const RELICS: Record<string, Relic> = {
   [BATTLE_CAP.id]: BATTLE_CAP,
   [AUTO_MORTAR.id]: AUTO_MORTAR,
   [BRISTLE_PLATE.id]: BRISTLE_PLATE,
-  [FURNACE_HEART.id]: FURNACE_HEART
+  [FURNACE_HEART.id]: FURNACE_HEART,
+  [TYRANTS_BELLOWS.id]:   TYRANTS_BELLOWS,
+  [COLOSSUS_ARM.id]:      COLOSSUS_ARM,
+  [RECLAIMER_SPIKE.id]:   RECLAIMER_SPIKE,
+  [SOVEREIGN_PLATING.id]: SOVEREIGN_PLATING,
+  [PYROCLAST_COIL.id]:    PYROCLAST_COIL,
+  [WARDENS_LOCK.id]:      WARDENS_LOCK,
+  [STORMHEART_CORE.id]:   STORMHEART_CORE,
+  [WRAITH_VEIL.id]:       WRAITH_VEIL,
+  [CYCLONE_CROWN.id]:     CYCLONE_CROWN
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);
 
+// Random rolls (elite drops, events, workshop unlocks) exclude
+// signature relics — those are gated behind specific boss kills.
 export function pickRelicFor(owned: Set<string>, rng: () => number = Math.random): string | null {
-  const available = ALL_RELIC_IDS.filter((id) => !owned.has(id));
+  const available = ALL_RELIC_IDS.filter((id) => !owned.has(id) && !RELICS[id].signature);
   if (available.length === 0) return null;
   return available[Math.floor(rng() * available.length)];
 }
