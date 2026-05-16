@@ -445,18 +445,14 @@ export class CombatScene extends Phaser.Scene {
   private handleClickPlay(card: CardInstance, view: CardView) {
     if (!canPlay(this.state, card.uid)) return;
     if (card.def.target === 'enemy') {
-      const alive = this.state.enemies
-        .map((e, i) => ({ e, i }))
-        .filter(({ e }) => e.hull > 0);
-      if (alive.length === 1) {
-        this.playCardWithFlourish(card, view, alive[0].i);
-        return;
-      }
-      // Multiple enemies — require a drag-to-target; ignore the click.
-      this.flashHint('Drag to a target');
+      // Auto-target the first alive enemy. Drag is still available for
+      // explicit target selection in multi-enemy fights.
+      const aliveIdx = this.state.enemies.findIndex((e) => e.hull > 0);
+      if (aliveIdx < 0) return;
+      this.playCardWithFlourish(card, view, aliveIdx);
       return;
     }
-    // self / none — click plays.
+    // self / none / allEnemies — click plays.
     this.playCardWithFlourish(card, view, undefined);
   }
 
@@ -668,29 +664,6 @@ export class CombatScene extends Phaser.Scene {
       yoyo: true,
       repeat: 2,
       onComplete: () => (target.x = ox)
-    });
-  }
-
-  private flashHint(msg: string) {
-    const { width, height } = this.scale;
-    const t = this.add
-      .text(width / 2, height - 220, msg, {
-        fontFamily: FONTS.display,
-        fontSize: '15px',
-        color: hex(COLORS.steam),
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3
-      })
-      .setOrigin(0.5)
-      .setDepth(950);
-    this.tweens.add({
-      targets: t,
-      alpha: 0,
-      y: t.y - 20,
-      duration: 700,
-      ease: 'Cubic.Out',
-      onComplete: () => t.destroy()
     });
   }
 
