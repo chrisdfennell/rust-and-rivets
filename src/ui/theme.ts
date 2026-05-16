@@ -23,6 +23,18 @@ export const COLORS = {
   cardBorderDim: 0x6b4f23
 };
 
+// Card-border tint by rarity, exposed as its own map so CardView can swap
+// colors without hardcoding constants. Unplayable cards still fall back to
+// `cardBorderDim` regardless of rarity (the playable signal trumps the
+// rarity signal — players need to know if a card is playable at a glance).
+export const RARITY_COLORS: Record<'common' | 'uncommon' | 'rare' | 'epic' | 'legendary', number> = {
+  common:    0xb88a3e, // brass-ish (matches default cardBorder)
+  uncommon:  0x6b9b4f, // muted green
+  rare:      0x4f7a9b, // shield-blue
+  epic:      0x9b4fa6, // purple
+  legendary: 0xd97a2a  // amber / orange
+};
+
 export const FONTS = {
   body: 'Courier New, monospace',
   display: 'Courier New, monospace'

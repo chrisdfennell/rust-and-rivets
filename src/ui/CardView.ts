@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { CardInstance } from '../game/types';
-import { COLORS, FONTS, hex } from './theme';
+import { COLORS, FONTS, hex, RARITY_COLORS } from './theme';
 
 export const CARD_W = 140;
 export const CARD_H = 170;
@@ -13,6 +13,10 @@ export class CardView extends Phaser.GameObjects.Container {
   private visual: Phaser.GameObjects.Container;
   private bg: Phaser.GameObjects.Rectangle;
   private border: Phaser.GameObjects.Rectangle;
+  // Rarity tint stamped on the border (set in constructor, dimmed on
+  // unplayable via setPlayable). cardBorderDim is the universal "can't
+  // play" color so playability still reads cleanly over rarity.
+  private rarityColor: number;
   private nameText: Phaser.GameObjects.Text;
   private costBadge: Phaser.GameObjects.Arc;
   private costText: Phaser.GameObjects.Text;
@@ -45,9 +49,10 @@ export class CardView extends Phaser.GameObjects.Container {
     this.visual = scene.add.container(0, 0);
 
     this.bg = scene.add.rectangle(0, 0, CARD_W, CARD_H, COLORS.cardBg).setStrokeStyle(0);
+    this.rarityColor = RARITY_COLORS[card.def.rarity ?? 'common'];
     this.border = scene.add
       .rectangle(0, 0, CARD_W, CARD_H)
-      .setStrokeStyle(2, COLORS.cardBorder)
+      .setStrokeStyle(2, this.rarityColor)
       .setFillStyle();
 
     this.nameText = scene.add
@@ -84,6 +89,38 @@ export class CardView extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0.5);
 
     this.visual.add([this.bg, this.border, this.nameText, this.costBadge, this.costText, this.descText]);
+
+    // Rarity indicator in the top-right: 1 / 2 / 3 stars for
+    // rare / epic / legendary, tinted to match the border. Commons and
+    // uncommons stay clean — the border tint alone telegraphs them.
+    const rarity = card.def.rarity ?? 'common';
+    if (rarity === 'rare' || rarity === 'epic' || rarity === 'legendary') {
+      const stars = rarity === 'legendary' ? '★★★' : rarity === 'epic' ? '★★' : '★';
+      const rarityBadge = scene.add
+        .text(CARD_W / 2 - 6, -CARD_H / 2 + 12, stars, {
+          fontFamily: FONTS.display,
+          fontSize: '10px',
+          color: hex(this.rarityColor),
+          fontStyle: 'bold'
+        })
+        .setOrigin(1, 0.5);
+      this.visual.add(rarityBadge);
+    }
+
+    // Upgrade indicator — small upward triangle next to the cost badge
+    // for any card whose id ends in '+'. Brass-tinted so it doesn't clash
+    // with the rarity color and reads as "elevated / upgraded".
+    if (card.def.id.endsWith('+')) {
+      const upgradeBadge = scene.add
+        .text(-CARD_W / 2 + 32, -CARD_H / 2 + 16, '▲', {
+          fontFamily: FONTS.display,
+          fontSize: '12px',
+          color: hex(COLORS.brass),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0, 0.5);
+      this.visual.add(upgradeBadge);
+    }
 
     const keywords: string[] = [];
     if (card.def.unplayable) keywords.push('UNPLAYABLE');
@@ -182,7 +219,9 @@ export class CardView extends Phaser.GameObjects.Container {
     if (this.playable === p) return;
     this.playable = p;
     this.bg.setFillStyle(p ? COLORS.cardBgPlayable : COLORS.cardBgUnplayable);
-    this.border.setStrokeStyle(2, p ? COLORS.cardBorder : COLORS.cardBorderDim);
+    // Playable cards show the rarity tint; unplayable falls back to the
+    // universal dim brass so the playable signal isn't masked by rarity.
+    this.border.setStrokeStyle(2, p ? this.rarityColor : COLORS.cardBorderDim);
     this.nameText.setColor(p ? hex(COLORS.bone) : hex(COLORS.boneDim));
     this.descText.setColor(p ? hex(COLORS.bone) : hex(COLORS.boneDim));
     this.costBadge.setFillStyle(p ? COLORS.steam : COLORS.brassDim);

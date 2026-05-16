@@ -135,9 +135,9 @@ export const CARDS: Record<string, CardDef> = {
     [{ kind: 'plating', amount: 6 }, { kind: 'gainThorns', amount: 4 }], false, 'common'),
 
   ironWill: card('ironWill', 'Iron Will', 2, 'self', 'Gain 2 Strength. Gain 2 Dexterity. Exhaust.',
-    [{ kind: 'gainStrength', amount: 2 }, { kind: 'gainDexterity', amount: 2 }], true, 'rare'),
+    [{ kind: 'gainStrength', amount: 2 }, { kind: 'gainDexterity', amount: 2 }], true, 'epic'),
   'ironWill+': card('ironWill+', 'Iron Will+', 2, 'self', 'Gain 3 Strength. Gain 3 Dexterity. Exhaust.',
-    [{ kind: 'gainStrength', amount: 3 }, { kind: 'gainDexterity', amount: 3 }], true, 'rare'),
+    [{ kind: 'gainStrength', amount: 3 }, { kind: 'gainDexterity', amount: 3 }], true, 'epic'),
 
   // ===== Slice 22: AoE cards (target: 'allEnemies') =====
   shrapnelBurst: card('shrapnelBurst', 'Shrapnel Burst', 1, 'allEnemies', 'Deal 6 damage to ALL enemies.',
@@ -178,14 +178,14 @@ export const CARDS: Record<string, CardDef> = {
 
   // ===== Powers — persistent in-combat buffs that exhaust on play =====
   demonForm: card('demonForm', 'Demon Form', 3, 'self', 'Power. At the start of each turn, gain 2 Strength.',
-    [{ kind: 'addDemonForm', amount: 2 }], true, 'rare', { type: 'power' }),
+    [{ kind: 'addDemonForm', amount: 2 }], true, 'epic', { type: 'power' }),
   'demonForm+': card('demonForm+', 'Demon Form+', 3, 'self', 'Power. At the start of each turn, gain 3 Strength.',
-    [{ kind: 'addDemonForm', amount: 3 }], true, 'rare', { type: 'power' }),
+    [{ kind: 'addDemonForm', amount: 3 }], true, 'epic', { type: 'power' }),
 
   barricade: card('barricade', 'Barricade', 3, 'self', 'Power. Plating no longer wears off at the start of your turn.',
-    [{ kind: 'setBarricade' }], true, 'rare', { type: 'power' }),
+    [{ kind: 'setBarricade' }], true, 'epic', { type: 'power' }),
   'barricade+': card('barricade+', 'Barricade+', 2, 'self', 'Power. Plating no longer wears off at the start of your turn.',
-    [{ kind: 'setBarricade' }], true, 'rare', { type: 'power' }),
+    [{ kind: 'setBarricade' }], true, 'epic', { type: 'power' }),
 
   metallicize: card('metallicize', 'Metallicize', 1, 'self', 'Power. At the end of each turn, gain 3 Plating.',
     [{ kind: 'addMetallicize', amount: 3 }], true, 'uncommon', { type: 'power' }),
@@ -227,7 +227,71 @@ export const CARDS: Record<string, CardDef> = {
     [], false, undefined, { unplayable: true, endOfTurnDamageInHand: 2 }),
   oldRust: card('oldRust', 'Old Rust', 0, 'none',
     'Unplayable. Dead weight in your deck.',
-    [], false, undefined, { unplayable: true })
+    [], false, undefined, { unplayable: true }),
+
+  // ===== Status-effect entry points at common rarity =====
+  // Each fills a status archetype that previously only had uncommon/rare
+  // cards (Burn / Strength / Dexterity), making those decks accessible
+  // from early shop / reward picks.
+  emberRound: card('emberRound', 'Ember Round', 1, 'enemy',
+    'Deal 5 damage. Apply 2 Burn.',
+    [{ kind: 'damage', amount: 5 }, { kind: 'applyBurn', amount: 2 }], false, 'common'),
+  'emberRound+': card('emberRound+', 'Ember Round+', 1, 'enemy',
+    'Deal 7 damage. Apply 3 Burn.',
+    [{ kind: 'damage', amount: 7 }, { kind: 'applyBurn', amount: 3 }], false, 'common'),
+
+  steelResolve: card('steelResolve', 'Steel Resolve', 1, 'self',
+    'Gain 1 Strength. Exhaust.',
+    [{ kind: 'gainStrength', amount: 1 }], true, 'common'),
+  'steelResolve+': card('steelResolve+', 'Steel Resolve+', 1, 'self',
+    'Gain 2 Strength. Exhaust.',
+    [{ kind: 'gainStrength', amount: 2 }], true, 'common'),
+
+  plateAdjust: card('plateAdjust', 'Plate Adjust', 1, 'self',
+    'Gain 1 Dexterity. Exhaust.',
+    [{ kind: 'gainDexterity', amount: 1 }], true, 'common'),
+  'plateAdjust+': card('plateAdjust+', 'Plate Adjust+', 1, 'self',
+    'Gain 2 Dexterity. Exhaust.',
+    [{ kind: 'gainDexterity', amount: 2 }], true, 'common'),
+
+  // ===== New rare cards =====
+  furnaceStrike: card('furnaceStrike', 'Furnace Strike', 2, 'enemy',
+    'Deal 18 damage. Apply 5 Burn.',
+    [{ kind: 'damage', amount: 18 }, { kind: 'applyBurn', amount: 5 }], false, 'epic'),
+  'furnaceStrike+': card('furnaceStrike+', 'Furnace Strike+', 2, 'enemy',
+    'Deal 22 damage. Apply 7 Burn.',
+    [{ kind: 'damage', amount: 22 }, { kind: 'applyBurn', amount: 7 }], false, 'epic'),
+
+  reactorSurge: card('reactorSurge', 'Reactor Surge', 2, 'enemy',
+    'Deal 14 damage. Apply 3 Vulnerable.',
+    [{ kind: 'damage', amount: 14 }, { kind: 'applyVulnerable', amount: 3 }], false, 'rare'),
+  'reactorSurge+': card('reactorSurge+', 'Reactor Surge+', 2, 'enemy',
+    'Deal 18 damage. Apply 4 Vulnerable.',
+    [{ kind: 'damage', amount: 18 }, { kind: 'applyVulnerable', amount: 4 }], false, 'rare'),
+
+  // ===== Legendary cards. Show up rarely (2% combat / 10% elite weight)
+  // and are designed to be deck-defining single-pick payoffs.
+  overdriveCore: card('overdriveCore', 'Overdrive Core', 2, 'self',
+    'Gain 2 Strength, 2 Dexterity, and 2 Thorns. Exhaust.',
+    [
+      { kind: 'gainStrength', amount: 2 },
+      { kind: 'gainDexterity', amount: 2 },
+      { kind: 'gainThorns', amount: 2 }
+    ], true, 'legendary'),
+  'overdriveCore+': card('overdriveCore+', 'Overdrive Core+', 2, 'self',
+    'Gain 3 Strength, 3 Dexterity, and 3 Thorns. Exhaust.',
+    [
+      { kind: 'gainStrength', amount: 3 },
+      { kind: 'gainDexterity', amount: 3 },
+      { kind: 'gainThorns', amount: 3 }
+    ], true, 'legendary'),
+
+  finalLance: card('finalLance', 'Final Lance', 0, 'enemy',
+    'Deal 12 damage X times. Exhaust.',
+    [{ kind: 'xDamage', amount: 12 }], true, 'legendary', { xCost: true }),
+  'finalLance+': card('finalLance+', 'Final Lance+', 0, 'enemy',
+    'Deal 15 damage X times. Exhaust.',
+    [{ kind: 'xDamage', amount: 15 }], true, 'legendary', { xCost: true })
 };
 
 export const STARTER_DECK: string[] = [
@@ -246,7 +310,11 @@ export const SHOP_POOL: string[] = [
   'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion',
   'pressureReading', 'holdPosition', 'glassRound',
   'demonForm', 'barricade', 'metallicize', 'combust',
-  'whirlwind', 'skewer', 'forgeCycle'
+  'whirlwind', 'skewer', 'forgeCycle',
+  // Slice 39 — common entry points, new rares, legendaries
+  'emberRound', 'steelResolve', 'plateAdjust',
+  'furnaceStrike', 'reactorSurge',
+  'overdriveCore', 'finalLance'
 ];
 
 export function isUpgradable(cardId: string): boolean {
@@ -259,8 +327,16 @@ export function upgradeCardId(cardId: string): string {
 
 export const REWARD_POOL: string[] = SHOP_POOL.slice();
 
-const RARITY_WEIGHTS_COMBAT: Record<CardRarity, number> = { common: 70, uncommon: 25, rare: 5 };
-const RARITY_WEIGHTS_ELITE: Record<CardRarity, number> = { common: 30, uncommon: 50, rare: 20 };
+// Reward-pool rarity weights. Five tiers as of Slice 39:
+// common / uncommon / rare / epic / legendary. Epic sits between rare and
+// legendary (~4% combat / 13% elite). Legendary is the rarest tier and
+// should feel deck-defining when it shows up.
+const RARITY_WEIGHTS_COMBAT: Record<CardRarity, number> = {
+  common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1
+};
+const RARITY_WEIGHTS_ELITE: Record<CardRarity, number> = {
+  common: 18, uncommon: 40, rare: 22, epic: 13, legendary: 7
+};
 
 export function pickRewardCards(count: number, isElite: boolean, rng: () => number = Math.random): string[] {
   const weights = isElite ? RARITY_WEIGHTS_ELITE : RARITY_WEIGHTS_COMBAT;

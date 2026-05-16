@@ -30,7 +30,12 @@ export const POTIONS: Record<string, PotionDef> = {
 
 export const POTION_POOL: string[] = Object.keys(POTIONS);
 
-const RARITY_WEIGHTS: Record<CardRarity, number> = { common: 65, uncommon: 30, rare: 5 };
+// Potions only span common/uncommon/rare. Epic and legendary weights are
+// 0 since no potions of those tiers exist; the fields are required by the
+// shared CardRarity type.
+const RARITY_WEIGHTS: Record<CardRarity, number> = {
+  common: 65, uncommon: 30, rare: 5, epic: 0, legendary: 0
+};
 
 export function pickRandomPotionId(rng: () => number = Math.random): string {
   const choices = POTION_POOL.map((id) => ({ id, w: RARITY_WEIGHTS[POTIONS[id].rarity ?? 'common'] }));

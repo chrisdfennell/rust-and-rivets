@@ -35,7 +35,7 @@ export type CardEffect =
   | { kind: 'xDamage'; amount: number }
   | { kind: 'xPlating'; amount: number };
 
-export type CardRarity = 'common' | 'uncommon' | 'rare';
+export type CardRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export type PotionEffect = CardEffect;
 

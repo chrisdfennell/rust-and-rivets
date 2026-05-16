@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 38.
+Quick orientation for someone coming in cold. Numbers as of Slice 39.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -23,10 +23,13 @@ Quick orientation for someone coming in cold. Numbers as of Slice 38.
   player pick a boon (Repair / Refit / Salvage).
 - **Characters:** 3 pilots (Pilot / Engineer / Saboteur) with unique
   starter decks, hull pools, and signature relics.
-- **Cards:** ~54 base + `+` upgraded variants. Types: attack / skill /
+- **Cards:** ~61 base + `+` upgraded variants. Types: attack / skill /
   power. Keywords: exhaust, retain, ethereal, innate, AoE
   (`target: 'allEnemies'`), X-cost, unplayable. Rarities: common /
-  uncommon / rare. Status / curse cards (Slag Glob, Shrapnel, Heat
+  uncommon / rare / epic / legendary, each border-tinted on `CardView`
+  (brass / green / blue / purple / orange). Star indicator
+  (★ / ★★ / ★★★) for rare / epic / legendary; upgrade indicator (▲)
+  for `+` variants. Status / curse cards (Slag Glob, Shrapnel, Heat
   Damage, Old Rust) inject via enemy actions and events.
 - **Powers** (persistent in-combat buffs): Demon Form, Barricade,
   Metallicize, Combust.
@@ -56,7 +59,55 @@ Quick orientation for someone coming in cold. Numbers as of Slice 38.
 
 ## Done
 
-### Slice 38 — Six new relics *(current)*
+### Slice 39 — Rarity expansion + 7 new cards + visual rarity *(current)*
+Three things bundled because they're all about how rarity reads:
+
+**Rarity tiers expanded to five**
+- `CardRarity` gains `'epic'` between `'rare'` and `'legendary'`.
+- New reward-pool weights:
+  - Combat: 60 / 25 / 10 / 4 / 1
+  - Elite:  18 / 40 / 22 / 13 / 7
+- Practical odds of seeing at least one legendary in a 3-card reward
+  pick: ~3% in regular combats, ~20% in elite rooms.
+- 4 strong existing rares promoted to epic (Iron Will, Demon Form,
+  Barricade, Furnace Strike — the scaling-power deck-defining ones).
+- Potions still span only common/uncommon/rare; their weight map
+  carries `epic: 0` and `legendary: 0` for type-checking.
+
+**Visual rarity** (in [src/ui/theme.ts](src/ui/theme.ts) and
+[src/ui/CardView.ts](src/ui/CardView.ts))
+- New `RARITY_COLORS` palette: common brass / uncommon green / rare
+  shield-blue / epic purple / legendary amber-orange.
+- `CardView` stores a `rarityColor` field; the card border uses it
+  when playable, falls back to `cardBorderDim` when unplayable so the
+  playable signal still wins.
+- Top-right star indicator now covers three tiers:
+  ★ rare / ★★ epic / ★★★ legendary, tinted to match the border.
+- New top-left **upgrade indicator (▲)** in brass for any card whose
+  id ends in `+`. Sits next to the cost badge so it's visible without
+  reading the name.
+
+**Seven new cards**
+- Common entry points (so every status archetype has a turn-1
+  acquisition path):
+  - **Ember Round** (1c, 5 dmg + 2 Burn; 7/3+) — fills the Burn
+    archetype that previously only existed at uncommon+.
+  - **Steel Resolve** (1c, +1 Strength, exhaust; +2 upgraded) —
+    common Strength.
+  - **Plate Adjust** (1c, +1 Dexterity, exhaust; +2 upgraded) —
+    common Dexterity.
+- New rare:
+  - **Reactor Surge** (2c, 14 dmg + 3 Vulnerable; 18/4+) — a single-
+    target Vulnerable nuke, fills the gap between Hammer Strike
+    (common, 1 Vuln) and Forge Wave (rare AoE, 1 Vuln).
+- New legendaries:
+  - **Overdrive Core** (2c, +2 Str / +2 Dex / +2 Thorns, exhaust;
+    3/3/3 upgraded) — three-status mega-buff in one card.
+  - **Final Lance** (X, exhaust, 12 dmg X times; 15 upgraded) —
+    legendary version of Skewer. With max Steam + Strength, hits
+    well into the 60+ range.
+
+### Slice 38 — Six new relics
 The relic pool jumps from 18 → 24, with one tiny engine addition
 (`Relic.onTurnEnd`) to support the two passive-effect entries.
 Niches the previous set didn't really exercise — exhaust synergy,
