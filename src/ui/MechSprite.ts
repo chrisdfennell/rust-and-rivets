@@ -1595,6 +1595,262 @@ export function drawStormheart(scene: Phaser.Scene, x: number, y: number): Phase
   return c;
 }
 
+// Salvage Colossus — Act 1 alt boss. Lopsided junk-giant; one arm hammer-
+// fist with extra welded plates, the other a clamp. Smokestack on the
+// shoulder. Reads as "patchwork tank" vs Foundry Tyrant's "furnace mech".
+export function drawSalvageColossus(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 10);
+  const g = scene.add.graphics();
+
+  // Asymmetric legs — left wider than right
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, 70, 40, 80);
+  g.fillRect(38, 70, 30, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-78, 142, 52, 22);
+  g.fillRect(34, 142, 40, 22);
+
+  // Torso — boxy, with extra welded scrap plates
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-80, -36, 162, 104);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, -24, 60, 34); // welded patch left
+  g.fillRect(20, 8, 50, 28);    // welded patch right
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, 36, 100, 14);
+
+  // Rivets all over the patches
+  g.fillStyle(COLORS.brass);
+  for (const [rx, ry] of [
+    [-66, -16], [-30, -16], [-66, 4], [-30, 4],
+    [28, 16], [60, 16], [28, 32], [60, 32]
+  ]) g.fillCircle(rx, ry, 3);
+
+  // Head — small, off-center cockpit
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-18, -64, 44, 28);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-12, -56, 16, 10); // visor
+  g.fillStyle(COLORS.danger);
+  g.fillRect(8, -56, 12, 6);    // red eye
+
+  // Massive hammer-arm (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(86, -28, 30, 76);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(76, 48, 50, 36); // hammer head
+  g.fillStyle(COLORS.brass);
+  g.fillRect(72, 80, 58, 6);
+  // Spikes on hammer
+  g.fillStyle(COLORS.steelDark);
+  for (const sx of [80, 96, 112]) g.fillRect(sx, 38, 6, 12);
+
+  // Clamp arm (left)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-116, -20, 26, 60);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-128, 36, 16, 28); // upper jaw
+  g.fillRect(-108, 36, 16, 28); // lower jaw
+
+  // Single off-center smokestack (shoulder)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(48, -84, 14, 50);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(46, -88, 18, 6);
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(55, -102, 8);
+  g.fillCircle(64, -114, 6);
+
+  c.add(g);
+
+  // Subtle hulking sway
+  scene.tweens.add({
+    targets: c,
+    x: x + 2,
+    duration: 1100,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// Pyroclast Engine — Act 2 alt boss. Tracked furnace-tank, low-slung and
+// wide, with vent grilles glowing orange and a magma core in the center.
+// Reads as "rolling forge" vs Iron Sovereign's "fortress tank".
+export function drawPyroclastEngine(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 4);
+  const g = scene.add.graphics();
+
+  // Wide tracked base (no legs)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-110, 60, 220, 50);
+  g.fillStyle(COLORS.steel);
+  // tread plates
+  for (let i = 0; i < 11; i++) {
+    g.fillRect(-104 + i * 20, 92, 14, 12);
+  }
+  // wheel hubs
+  g.fillStyle(COLORS.brassDim);
+  for (const wx of [-86, -42, 0, 42, 86]) {
+    g.fillCircle(wx, 88, 8);
+    g.fillStyle(COLORS.brass);
+    g.fillCircle(wx, 88, 4);
+    g.fillStyle(COLORS.brassDim);
+  }
+
+  // Wide torso/turret
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-86, -34, 172, 92);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-78, -26, 156, 10);
+  g.fillRect(-78, 42, 156, 10);
+
+  // Magma core (chest) — pulsing orange
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-30, -10, 60, 50);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-26, -6, 52, 42);
+  g.fillStyle(0xffa030);
+  g.fillRect(-22, -2, 44, 34);
+  g.fillStyle(0xfff060);
+  g.fillCircle(0, 16, 10);
+
+  // Vent grilles flanking the core
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-72, -8, 28, 44);
+  g.fillRect(44, -8, 28, 44);
+  g.fillStyle(0xffa030);
+  for (let i = 0; i < 4; i++) {
+    g.fillRect(-70, -6 + i * 11, 24, 4);
+    g.fillRect(46, -6 + i * 11, 24, 4);
+  }
+
+  // Smokestacks — three short stubby ones (no head, the smokestacks ARE the silhouette top)
+  g.fillStyle(COLORS.steelDark);
+  for (const sx of [-50, 0, 50]) g.fillRect(sx - 8, -64, 16, 30);
+  g.fillStyle(COLORS.brassDim);
+  for (const sx of [-50, 0, 50]) g.fillRect(sx - 10, -68, 20, 6);
+  g.fillStyle(0xffa030);
+  for (const sx of [-50, 0, 50]) g.fillCircle(sx, -56, 4);
+  // smoke
+  g.fillStyle(COLORS.boneDim, 0.45);
+  g.fillCircle(-45, -82, 6);
+  g.fillCircle(5, -88, 7);
+  g.fillCircle(55, -80, 6);
+
+  // Small sensor strip on top of core
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-20, -32, 40, 4);
+
+  c.add(g);
+
+  // Pulsing magma glow via scale
+  scene.tweens.add({
+    targets: c,
+    scaleX: 1.014,
+    scaleY: 1.014,
+    duration: 600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
+// The Wraith — Act 3 alt boss. Tall, narrow specter knight with a flowing
+// cape (no legs visible), faceplate showing two glowing eyes, twin curved
+// blades. Reads as "ghost duelist" vs Stormheart's "lightning fortress".
+export function drawTheWraith(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y - 20);
+  const g = scene.add.graphics();
+
+  // Cape skirt (no legs)
+  g.fillStyle(0x1a1e3a); // dark indigo
+  g.fillTriangle(-60, 30, 60, 30, 0, 160);
+  g.fillStyle(0x2a3060);
+  g.fillTriangle(-46, 50, 46, 50, 0, 150);
+  // Cape edge — wispy bottom
+  g.fillStyle(0x1a1e3a);
+  for (let i = 0; i < 6; i++) {
+    const cx = -50 + i * 20;
+    g.fillTriangle(cx, 150, cx + 14, 150, cx + 7, 168);
+  }
+
+  // Narrow torso
+  g.fillStyle(0x3a3050);
+  g.fillRect(-32, -38, 64, 78);
+  g.fillStyle(0x5048a0);
+  g.fillRect(-26, -32, 52, 8);
+  g.fillStyle(0x2a3060);
+  g.fillRect(-26, 30, 52, 8);
+
+  // Sash / belt
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-32, 22, 64, 8);
+
+  // Hood / helm
+  g.fillStyle(0x2a2748);
+  g.fillTriangle(-30, -56, 30, -56, 0, -90);
+  g.fillRect(-30, -56, 60, 24);
+  g.fillStyle(0x1a1830);
+  g.fillRect(-22, -50, 44, 16); // face shadow
+  // Eyes — cyan glow
+  g.fillStyle(COLORS.steam);
+  g.fillCircle(-10, -42, 4);
+  g.fillCircle(10, -42, 4);
+  g.fillStyle(0xffffff, 0.7);
+  g.fillCircle(-10, -42, 2);
+  g.fillCircle(10, -42, 2);
+
+  // Shoulder pauldrons
+  g.fillStyle(0x2a2748);
+  g.fillRect(-50, -36, 18, 28);
+  g.fillRect(32, -36, 18, 28);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, -40, 18, 4);
+  g.fillRect(32, -40, 18, 4);
+
+  // Twin curved blades — right arm
+  g.fillStyle(0x3a3050);
+  g.fillRect(46, -10, 14, 50);
+  g.fillStyle(COLORS.steel);
+  // blade curve approximated by triangles
+  g.fillTriangle(58, 40, 86, 30, 76, 70);
+  g.fillStyle(COLORS.steam);
+  g.fillTriangle(60, 42, 80, 38, 74, 64);
+  // Left blade
+  g.fillStyle(0x3a3050);
+  g.fillRect(-60, -10, 14, 50);
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-58, 40, -86, 30, -76, 70);
+  g.fillStyle(COLORS.steam);
+  g.fillTriangle(-60, 42, -80, 38, -74, 64);
+
+  // Floating wisps around the figure
+  g.fillStyle(COLORS.steam, 0.35);
+  g.fillCircle(-70, -10, 5);
+  g.fillCircle(72, 20, 4);
+  g.fillCircle(40, -70, 3);
+  g.fillCircle(-30, -78, 4);
+
+  c.add(g);
+
+  // Slow ethereal float
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 5,
+    duration: 1400,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+
+  return c;
+}
+
 export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
@@ -1616,5 +1872,8 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   lightningSprite: drawLightningSprite,
   cloudReaver: drawCloudReaver,
   skyMarshal: drawSkyMarshal,
-  stormheart: drawStormheart
+  stormheart: drawStormheart,
+  salvageColossus: drawSalvageColossus,
+  pyroclastEngine: drawPyroclastEngine,
+  theWraith: drawTheWraith
 };

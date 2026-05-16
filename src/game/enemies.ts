@@ -612,6 +612,61 @@ export const IRON_SOVEREIGN: EnemyDef = {
   }
 };
 
+// Salvage Colossus — Act 1 alternate boss. Where Foundry Tyrant is steady
+// pressure, the Colossus stacks Strength via Bolt-On so each pass hits
+// harder. Players need to either burst it down or strip Strength.
+export const SALVAGE_COLOSSUS: EnemyDef = {
+  id: 'salvageColossus',
+  name: 'Salvage Colossus',
+  maxHull: 95,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'buff', label: 'Bolt-On: +2 Strength' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 2;
+          ctx.log('The Colossus bolts on a heavier arm (+2 Strength).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Bolt-On') && roll < 0.22) {
+      return {
+        intent: { kind: 'buff', label: 'Bolt-On: +2 Strength' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 2;
+          ctx.log('More salvage clamps on (+2 Strength).');
+        }
+      };
+    }
+    if (!last.startsWith('Crushing Punch') && roll < 0.55) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Crushing Punch: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Salvage Storm') && roll < 0.85) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'attack', label: `Salvage Storm: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Plate Wall: +14' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 14)
+    };
+  }
+};
+
 export const FOUNDRY_TYRANT: EnemyDef = {
   id: 'foundryTyrant',
   name: 'Foundry Tyrant',
@@ -661,6 +716,63 @@ export const FOUNDRY_TYRANT: EnemyDef = {
     return {
       intent: { kind: 'attack', label: `Furnace Slam: ${dmg}`, damage: dmg, hits: 1 },
       resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+// Pyroclast Engine — Act 2 alternate boss. Burns dominate this fight:
+// the boss stacks Burn on the player so passively bleeding hull becomes
+// a real concern, and pairs heavy attacks with end-of-turn ticks.
+export const PYROCLAST_ENGINE: EnemyDef = {
+  id: 'pyroclastEngine',
+  name: 'Pyroclast Engine',
+  maxHull: 130,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Ignition: +10 + Burn 3' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 10);
+          applyBurnToPlayer(ctx, 3);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Ember Burst') && roll < 0.30) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'debuff', label: `Ember Burst: ${dmg} + Burn 4` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    if (!last.startsWith('Magma Slam') && roll < 0.55) {
+      const dmg = 22;
+      return {
+        intent: { kind: 'attack', label: `Magma Slam: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Vent Heat') && roll < 0.80) {
+      return {
+        intent: { kind: 'defend', label: 'Vent Heat: +14 + Burn 3' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 14);
+          applyBurnToPlayer(ctx, 3);
+        }
+      };
+    }
+    const dmg = 6;
+    return {
+      intent: { kind: 'attack', label: `Cinder Volley: ${dmg}x3`, damage: dmg, hits: 3 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+      }
     };
   }
 };
@@ -975,6 +1087,87 @@ export const STORMHEART: EnemyDef = {
   }
 };
 
+// The Wraith — Act 3 alternate boss. Heavy debuffs and a self-heal.
+// Stormheart is about huge telegraphed swings; the Wraith is about
+// grinding the player down via Vuln/Weak stacking and Drain healing.
+export const THE_WRAITH: EnemyDef = {
+  id: 'theWraith',
+  name: 'The Wraith',
+  maxHull: 150,
+  pickAction: ({ turn, rng, memory, lastIntent }): EnemyAction => {
+    if (memory.phasing) {
+      memory.phasing = false;
+      const dmg = 30;
+      return {
+        intent: { kind: 'attack', label: `Spectral Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Shroud: +20 + Weak 2 + Vuln 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 20);
+          applyWeakToPlayer(ctx, 2);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Phasing') && roll < 0.20) {
+      memory.phasing = true;
+      return {
+        intent: { kind: 'buff', label: 'Phasing...' },
+        resolve: (ctx) => ctx.log('The Wraith vanishes between realms.')
+      };
+    }
+    if (!last.startsWith('Chain Lightning') && roll < 0.45) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Chain Lightning: ${dmg}x4`, damage: dmg, hits: 4 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Drain') && roll < 0.70) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'debuff', label: `Drain: ${dmg} → heal 12` },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          const me = ctx.state.enemies[idx];
+          const healed = Math.min(12, me.maxHull - me.hull);
+          if (healed > 0) {
+            me.hull += healed;
+            ctx.log(`The Wraith siphons ${healed} hull from your machine.`);
+          }
+        }
+      };
+    }
+    if (!last.startsWith('Shroud') && roll < 0.90) {
+      return {
+        intent: { kind: 'defend', label: 'Shroud: +18 + Weak 2 + Vuln 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 18);
+          applyWeakToPlayer(ctx, 2);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const dmg = 16;
+    return {
+      intent: { kind: 'attack', label: `Spectral Slash: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
 export const ACT1_POOL: EnemyDef[] = [
   SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
   RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
@@ -986,6 +1179,13 @@ export const ACT2_ELITE_POOL: EnemyDef[] = [MAGMA_SENTINEL, RECLAIMER_MK2];
 
 export const ACT3_POOL: EnemyDef[] = [STRATUS_DRONE, SKY_PIRATE, LIGHTNING_SPRITE];
 export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
+
+// Boss pools — each act picks one random boss at boss-node entry. The
+// selection is persisted via run.pendingEnemyIds so refresh resumes the
+// same boss, but a new run rolls a fresh choice.
+export const ACT1_BOSS_POOL: EnemyDef[] = [FOUNDRY_TYRANT, SALVAGE_COLOSSUS];
+export const ACT2_BOSS_POOL: EnemyDef[] = [IRON_SOVEREIGN, PYROCLAST_ENGINE];
+export const ACT3_BOSS_POOL: EnemyDef[] = [STORMHEART, THE_WRAITH];
 
 function regularPoolFor(act: number): EnemyDef[] {
   if (act >= 3) return ACT3_POOL;
@@ -1009,10 +1209,15 @@ export function pickEliteEnemy(act: number, rng: () => number): EnemyDef {
   return pool[Math.floor(rng() * pool.length)];
 }
 
-export function getActBoss(act: number): EnemyDef {
-  if (act >= 3) return STORMHEART;
-  if (act === 2) return IRON_SOVEREIGN;
-  return FOUNDRY_TYRANT;
+function bossPoolFor(act: number): EnemyDef[] {
+  if (act >= 3) return ACT3_BOSS_POOL;
+  if (act === 2) return ACT2_BOSS_POOL;
+  return ACT1_BOSS_POOL;
+}
+
+export function getActBoss(act: number, rng: () => number = Math.random): EnemyDef {
+  const pool = bossPoolFor(act);
+  return pool[Math.floor(rng() * pool.length)];
 }
 
 // ===== Encounter pickers — return arrays so future fights can be 1-N enemies. =====
@@ -1061,10 +1266,10 @@ export function pickEliteEncounter(act: number, rng: () => number = Math.random)
   return [pickEliteEnemy(act, rng)];
 }
 
-export function getBossEncounter(act: number): EnemyDef[] {
+export function getBossEncounter(act: number, rng: () => number = Math.random): EnemyDef[] {
   // Bosses stay solo — the fight is their pattern, adding minions would
   // break their balance. Easy to revisit later (e.g. boss-with-adds).
-  return [getActBoss(act)];
+  return [getActBoss(act, rng)];
 }
 
 export function getActName(act: number): string {
@@ -1098,5 +1303,8 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [LIGHTNING_SPRITE.id]: LIGHTNING_SPRITE,
   [CLOUD_REAVER.id]: CLOUD_REAVER,
   [SKY_MARSHAL.id]: SKY_MARSHAL,
-  [STORMHEART.id]: STORMHEART
+  [STORMHEART.id]: STORMHEART,
+  [SALVAGE_COLOSSUS.id]: SALVAGE_COLOSSUS,
+  [PYROCLAST_ENGINE.id]: PYROCLAST_ENGINE,
+  [THE_WRAITH.id]: THE_WRAITH
 };

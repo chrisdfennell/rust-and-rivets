@@ -162,7 +162,7 @@ export function enterNode(nodeId: string): void {
   } else if (node.kind === 'elite') {
     r.pendingEnemies = pickEliteEncounter(r.act, Math.random);
   } else if (node.kind === 'boss') {
-    r.pendingEnemies = getBossEncounter(r.act);
+    r.pendingEnemies = getBossEncounter(r.act, Math.random);
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
   } else if (node.kind === 'event') {
