@@ -173,7 +173,7 @@ export class TitleScene extends Phaser.Scene {
     this.add.existing(importBtn);
 
     // Audio mute toggles
-    const audioY = secondaryY + 56;
+    const audioY = secondaryY + 44;
     this.makeMuteToggle(
       width / 2 - 120,
       audioY,
@@ -190,7 +190,7 @@ export class TitleScene extends Phaser.Scene {
     );
 
     this.add
-      .text(width / 2, height - 24, 'Your run auto-saves between rooms.', {
+      .text(width / 2, height - 8, 'Your run auto-saves between rooms.', {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
