@@ -201,10 +201,12 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     // Deck/discard pile anchors. Cards animate from drawPile on draw and
-    // toward discardPile on play / end-of-turn discard. Small stack-of-cards
-    // visuals sit at the anchors so the destinations are legible.
-    this.drawPile = { x: 70, y: height - 80 };
-    this.discardPile = { x: width - 100, y: height - 80 };
+    // toward discardPile on play / end-of-turn discard. Tucked into the
+    // narrow band between the steam panel / end-turn button (which end at
+    // height-80 / height-98) and the counter text at height-40, so they
+    // never overlap the HUD above them.
+    this.drawPile = { x: 70, y: height - 62 };
+    this.discardPile = { x: width - 100, y: height - 62 };
     this.drawPileStack(this.drawPile.x, this.drawPile.y);
     this.drawPileStack(this.discardPile.x, this.discardPile.y);
 
@@ -346,11 +348,14 @@ export class CombatScene extends Phaser.Scene {
   // pile destinations are visible to the player. Three slightly offset
   // rectangles read as a stack at a glance without taking real estate.
   private drawPileStack(x: number, y: number) {
-    const w = 28;
-    const h = 38;
-    for (let i = 0; i < 3; i++) {
-      const ox = (i - 1) * 2;
-      const oy = -(i - 1) * 2;
+    const w = 20;
+    const h = 26;
+    // Two slightly-offset rects so the anchor reads as a small stack
+    // without being a chunky 38px tower (which clipped the steam panel
+    // border at the old y=height-80).
+    for (let i = 0; i < 2; i++) {
+      const ox = i * 2 - 1;
+      const oy = -(i * 2 - 1);
       this.add
         .rectangle(x + ox, y + oy, w, h, COLORS.bgPanel)
         .setStrokeStyle(1, COLORS.brassDim);
