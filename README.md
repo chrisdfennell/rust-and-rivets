@@ -1,166 +1,43 @@
-<!--
-  GitHub strips <style> blocks on render, so the CSS below only kicks
-  in inside renderers that respect it (VS Code preview, IntelliJ, most
-  static-site generators). On GitHub the colored badges + Mermaid
-  diagram still carry the visual punch.
--->
-<style>
-  /* ─── Palette pulled straight from src/ui/theme.ts ─────────────── */
-  :root {
-    --rr-bg:        #14110f;
-    --rr-panel:     #1f1a16;
-    --rr-rust:      #8a3b1f;
-    --rr-brass:     #b88a3e;
-    --rr-brass-dim: #6b4f23;
-    --rr-steel:     #4a4640;
-    --rr-steel-dk:  #2a2724;
-    --rr-bone:      #d9c9a3;
-    --rr-bone-dim:  #8a7d5e;
-    --rr-hull:      #c44a2a;
-    --rr-plating:   #4f7a9b;
-    --rr-steam:     #d9ae4a;
-    --rr-danger:    #c44a2a;
-    --rr-shield:    #4f7a9b;
-    --rr-buff:      #6b9b4f;
-    --rr-burn:      #ff6b1f;
-  }
-
-  .rr-hero {
-    background: linear-gradient(135deg, var(--rr-bg) 0%, var(--rr-panel) 50%, var(--rr-steel-dk) 100%);
-    border: 2px solid var(--rr-brass);
-    border-radius: 10px;
-    padding: 36px 24px;
-    margin: 16px 0 24px;
-    text-align: center;
-    box-shadow: 0 0 24px rgba(184, 138, 62, 0.25), inset 0 0 32px rgba(0, 0, 0, 0.6);
-  }
-  .rr-hero h1 {
-    color: var(--rr-brass);
-    letter-spacing: 0.18em;
-    font-size: 3em;
-    margin: 0 0 8px;
-    text-shadow: 0 0 14px rgba(184, 138, 62, 0.5), 2px 2px 0 var(--rr-rust);
-    border: none;
-  }
-  .rr-hero .rr-sub {
-    color: var(--rr-bone);
-    font-style: italic;
-    font-size: 1.15em;
-    margin: 8px 0 18px;
-  }
-
-  .rr-pitch {
-    border-left: 4px solid var(--rr-brass);
-    background: rgba(184, 138, 62, 0.07);
-    padding: 14px 20px;
-    border-radius: 0 6px 6px 0;
-    margin: 16px 0;
-  }
-
-  .rr-section-rule {
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, var(--rr-brass) 50%, transparent 100%);
-    border: 0;
-    margin: 36px 0 24px;
-  }
-
-  .rr-chip {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.78em;
-    font-weight: 700;
-    font-family: ui-monospace, "Courier New", monospace;
-    margin: 2px;
-    letter-spacing: 0.05em;
-    border: 1px solid rgba(0, 0, 0, 0.4);
-  }
-  .rr-rust   { background: var(--rr-rust);    color: #fff; }
-  .rr-brass  { background: var(--rr-brass);   color: var(--rr-bg); }
-  .rr-steel  { background: var(--rr-steel);   color: var(--rr-bone); }
-  .rr-shield { background: var(--rr-shield);  color: #fff; }
-  .rr-fire   { background: var(--rr-danger);  color: #fff; }
-  .rr-burn   { background: var(--rr-burn);    color: #fff; }
-  .rr-buff   { background: var(--rr-buff);    color: #fff; }
-  .rr-bone   { background: var(--rr-bone);    color: var(--rr-bg); }
-  .rr-steam  { background: var(--rr-steam);   color: var(--rr-bg); }
-  .rr-dim    { background: var(--rr-brass-dim); color: var(--rr-bone); }
-
-  table.rr-features {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 8px;
-    margin: 12px 0;
-  }
-  table.rr-features td {
-    border: 1px solid var(--rr-brass-dim);
-    border-radius: 6px;
-    padding: 18px;
-    background: linear-gradient(180deg, rgba(31, 26, 22, 0.5) 0%, rgba(20, 17, 15, 0.5) 100%);
-    vertical-align: top;
-    width: 50%;
-  }
-  table.rr-features h3 {
-    color: var(--rr-brass);
-    margin: 0 0 10px;
-    border-bottom: 1px solid var(--rr-brass-dim);
-    padding-bottom: 6px;
-    letter-spacing: 0.06em;
-  }
-
-  table.rr-pilots {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  table.rr-pilots th {
-    background: var(--rr-steel-dk);
-    color: var(--rr-brass);
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 2px solid var(--rr-brass);
-    letter-spacing: 0.08em;
-  }
-  table.rr-pilots td {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--rr-brass-dim);
-    vertical-align: top;
-  }
-  table.rr-pilots tr:hover td {
-    background: rgba(184, 138, 62, 0.05);
-  }
-  table.rr-pilots .pilot-name {
-    color: var(--rr-brass);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-</style>
-
-<div class="rr-hero" align="center">
-
-# RUST &amp; RIVETS
-
-<p class="rr-sub"><i>A dieselpunk roguelike deckbuilder — pilot a salvaged mech through the wasteland</i></p>
-
-[![Play in Browser](https://img.shields.io/badge/▶_PLAY-in_browser-c44a2a?style=for-the-badge&labelColor=14110f)](https://chrisdfennell.github.io/rust-and-rivets/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=14110f)](https://www.typescriptlang.org/)
-[![Phaser 3](https://img.shields.io/badge/Phaser-3.80-b88a3e?style=for-the-badge&logo=phaser&logoColor=white&labelColor=14110f)](https://phaser.io/)
-[![Vite](https://img.shields.io/badge/Vite-5.2-6b9b4f?style=for-the-badge&logo=vite&logoColor=white&labelColor=14110f)](https://vitejs.dev/)
+<div align="center">
 
 <br>
 
-![Slice 46](https://img.shields.io/badge/version-v0.1.0_·_slice_46-b88a3e?style=flat-square&labelColor=14110f)
+# RUST &nbsp;&amp;&nbsp; RIVETS
+
+### *A dieselpunk roguelike deckbuilder*
+
+**Pilot a salvaged mech through three acts of rusting wasteland.**
+**Forge a deck. Survive the foundry. Reach the cloudline.**
+
+<br>
+
+[![PLAY IN BROWSER](https://img.shields.io/badge/▶%20%20PLAY%20IN%20BROWSER%20%20◀-c44a2a?style=for-the-badge&labelColor=14110f)](https://chrisdfennell.github.io/rust-and-rivets/)
+
+<br>
+
+![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=14110f)
+![Phaser 3](https://img.shields.io/badge/Phaser-3.80-b88a3e?style=for-the-badge&logo=phaser&logoColor=white&labelColor=14110f)
+![Vite](https://img.shields.io/badge/Vite-5.2-6b9b4f?style=for-the-badge&logo=vite&logoColor=white&labelColor=14110f)
+
+<br>
+
+![Version](https://img.shields.io/badge/version-v0.1.0_·_slice_46-b88a3e?style=flat-square&labelColor=14110f)
+&nbsp;
 ![Bosses](https://img.shields.io/badge/bosses-9_across_3_acts-c44a2a?style=flat-square&labelColor=14110f)
+&nbsp;
 ![Pilots](https://img.shields.io/badge/pilots-4-4f7a9b?style=flat-square&labelColor=14110f)
+&nbsp;
 ![Cards](https://img.shields.io/badge/cards-~61_+_upgrades-6b9b4f?style=flat-square&labelColor=14110f)
+&nbsp;
 ![Events](https://img.shields.io/badge/events-30-d9ae4a?style=flat-square&labelColor=14110f)
+
+<br>
 
 </div>
 
-<hr class="rr-section-rule">
+---
 
 ## The Pitch
-
-<div class="rr-pitch">
 
 **Rust &amp; Rivets** is a single-player roguelike deckbuilder in the
 lineage of *Slay the Spire* — reimagined with grease, soot, and brass.
@@ -174,132 +51,107 @@ in code with `Phaser.Graphics`, and the soundtrack is generated live
 by the Web Audio API. The whole thing fits in a folder and runs in
 any modern browser.
 
-</div>
-
 > [!TIP]
-> **Try it now:** [**chrisdfennell.github.io/rust-and-rivets**](https://chrisdfennell.github.io/rust-and-rivets/) &nbsp;·&nbsp;
-> No install, no signup, save persists in `localStorage`.
+> **Try it now →** [**chrisdfennell.github.io/rust-and-rivets**](https://chrisdfennell.github.io/rust-and-rivets/)
+> &nbsp;·&nbsp; No install, no signup, save persists in `localStorage`.
 
-<hr class="rr-section-rule">
+---
 
 ## Features at a Glance
 
-<table class="rr-features">
+<table>
 <tr>
-<td>
+<td valign="top" width="50%">
 
 ### Run Structure
-- **3 acts** · **~20 nodes** each
+
+- **3 acts** &nbsp;·&nbsp; **~20 nodes** each
 - **9 bosses** total — each act picks 1 of 3
-- **6 elite** · **10 regular** enemies across all acts
+- **6 elites** &nbsp;·&nbsp; **10 regulars** across all acts
 - **30 narrative events** with multi-choice outcomes
-- **InterAct boons** between acts
-  <span class="rr-chip rr-rust">Repair</span>
-  <span class="rr-chip rr-steel">Refit</span>
-  <span class="rr-chip rr-brass">Salvage</span>
+- **InterAct boons** between acts:
+
+  ![Repair](https://img.shields.io/badge/REPAIR-8a3b1f?style=flat-square)
+  ![Refit](https://img.shields.io/badge/REFIT-4a4640?style=flat-square)
+  ![Salvage](https://img.shields.io/badge/SALVAGE-b88a3e?style=flat-square)
 
 </td>
-<td>
+<td valign="top" width="50%">
 
 ### Deck &amp; Cards
+
 - **~61 base** cards, each with a `+` upgrade
 - **5 rarities**, border-tinted on every card:
-  <span class="rr-chip rr-dim">common</span>
-  <span class="rr-chip rr-buff">uncommon</span>
-  <span class="rr-chip rr-shield">rare</span>
-  <span class="rr-chip" style="background:#9b4fa6;color:#fff">epic</span>
-  <span class="rr-chip" style="background:#d97a2a;color:#fff">legendary</span>
-- Keywords: exhaust · retain · ethereal · innate · AoE · X-cost
+
+  ![Common](https://img.shields.io/badge/COMMON-b88a3e?style=flat-square)
+  ![Uncommon](https://img.shields.io/badge/UNCOMMON-6b9b4f?style=flat-square)
+  ![Rare](https://img.shields.io/badge/RARE-4f7a9b?style=flat-square)
+  ![Epic](https://img.shields.io/badge/EPIC-9b4fa6?style=flat-square)
+  ![Legendary](https://img.shields.io/badge/LEGENDARY-d97a2a?style=flat-square)
+
+- Keywords: *exhaust · retain · ethereal · innate · AoE · X-cost*
 - **Status / curse cards** injected by enemies and events
 - **4 powers**: Demon Form, Barricade, Metallicize, Combust
 
 </td>
 </tr>
 <tr>
-<td>
+<td valign="top" width="50%">
 
 ### Mechs &amp; Meta
+
 - **24 relics** with rich lifecycle hooks
-  <small>(`onCombatStart` · `onTurnEnd` · `onCardPlayed` ...)</small>
+  <br><sub>`onCombatStart` · `onTurnEnd` · `onCardPlayed` ...</sub>
 - **8 potions** in a 3-slot belt (expandable)
 - **Workshop meta-progression** — 8 upgrades, 18-point cap
 - **Save / load** to `localStorage` after every mutation
 - **Export / Import** via base64 bundle (run + meta)
 
 </td>
-<td>
+<td valign="top" width="50%">
 
 ### Pure-Code Aesthetics
+
 - **All sprites drawn in code** — no PNGs, no atlas
 - **Procedural Web Audio** ambient + SFX — no asset files
-- **Drag-to-target** combat; **aim mode** for potions
+- **Drag-to-target** combat &nbsp;·&nbsp; **aim mode** for potions
 - **Animated idle tweens** on every enemy
-- Stack: **Phaser 3** · **TypeScript 5** · **Vite**
+- Stack: **Phaser 3** &nbsp;·&nbsp; **TypeScript 5** &nbsp;·&nbsp; **Vite**
 
 </td>
 </tr>
 </table>
 
-<hr class="rr-section-rule">
+---
 
 ## Status Keywords
 
 The same palette the game uses (`src/ui/theme.ts`) carries straight
-into the cards, intents, and chips. If you see a color, it means
-something.
+into the cards, intents, and effect chips. **If you see a color, it
+means something.**
 
-<p>
-<span class="rr-chip rr-fire">VULNERABLE</span> takes +50% damage
-<span class="rr-chip rr-buff">WEAK</span> deals −25% damage
-<span class="rr-chip rr-burn">BURN</span> end-of-turn hull tick
-<span class="rr-chip rr-bone">THORNS</span> retaliates on hit
-<span class="rr-chip rr-shield">PLATING</span> shield, wipes turn-end
-<span class="rr-chip rr-rust">STRENGTH</span> +1 damage per stack
-<span class="rr-chip rr-steam">DEXTERITY</span> +1 plating per skill
-</p>
+| Status | What it does |
+|---|---|
+| ![Vulnerable](https://img.shields.io/badge/VULNERABLE-c44a2a?style=for-the-badge&labelColor=14110f) | Takes **+50%** damage while stacked |
+| ![Weak](https://img.shields.io/badge/WEAK-6b9b4f?style=for-the-badge&labelColor=14110f) | Deals **−25%** damage while stacked |
+| ![Burn](https://img.shields.io/badge/BURN-ff6b1f?style=for-the-badge&labelColor=14110f) | End-of-turn hull tick |
+| ![Thorns](https://img.shields.io/badge/THORNS-d9c9a3?style=for-the-badge&labelColor=14110f) | Retaliates on every hit taken |
+| ![Plating](https://img.shields.io/badge/PLATING-4f7a9b?style=for-the-badge&labelColor=14110f) | Shield, wipes at end of turn |
+| ![Strength](https://img.shields.io/badge/STRENGTH-8a3b1f?style=for-the-badge&labelColor=14110f) | **+1 damage** per stack |
+| ![Dexterity](https://img.shields.io/badge/DEXTERITY-d9ae4a?style=for-the-badge&labelColor=14110f) | **+1 plating** per skill played |
 
-<hr class="rr-section-rule">
+---
 
 ## The Pilots
 
-<table class="rr-pilots">
-<thead>
-<tr>
-  <th>Pilot</th>
-  <th>Hull</th>
-  <th>Signature Relic</th>
-  <th>Identity</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td class="pilot-name">THE PILOT</td>
-  <td><span class="rr-chip rr-fire">65 HP</span></td>
-  <td><em>none — clean slate</em></td>
-  <td>Balanced operator. The standard rig — no surprises, no flaws.</td>
-</tr>
-<tr>
-  <td class="pilot-name">THE ENGINEER</td>
-  <td><span class="rr-chip rr-fire">60 HP</span></td>
-  <td><span class="rr-chip rr-shield">Iron Plating</span></td>
-  <td>Layered armor, careful hands. Trades raw hull for plating.</td>
-</tr>
-<tr>
-  <td class="pilot-name">THE SABOTEUR</td>
-  <td><span class="rr-chip rr-fire">55 HP</span></td>
-  <td><span class="rr-chip rr-buff">Calibration Spike</span></td>
-  <td>Toxic. Fragile. Sharp. Begin every fight with the enemy already compromised.</td>
-</tr>
-<tr>
-  <td class="pilot-name">THE STOKER</td>
-  <td><span class="rr-chip rr-fire">55 HP</span></td>
-  <td><span class="rr-chip rr-burn">Furnace Heart</span></td>
-  <td>Set them alight. Reap the smoke. Burning enemies ramp Strength every turn.</td>
-</tr>
-</tbody>
-</table>
+| Pilot | Hull | Signature Relic | Identity |
+|---|---|---|---|
+| **THE PILOT** | ![65](https://img.shields.io/badge/65_HP-c44a2a?style=flat-square&labelColor=14110f) | *none — clean slate* | Balanced operator. The standard rig — no surprises, no flaws. |
+| **THE ENGINEER** | ![60](https://img.shields.io/badge/60_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Iron Plating](https://img.shields.io/badge/Iron_Plating-4f7a9b?style=flat-square&labelColor=14110f) | Layered armor, careful hands. Trades raw hull for plating. |
+| **THE SABOTEUR** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Calibration Spike](https://img.shields.io/badge/Calibration_Spike-6b9b4f?style=flat-square&labelColor=14110f) | Toxic. Fragile. Sharp. Begin every fight with the enemy already compromised. |
+| **THE STOKER** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Furnace Heart](https://img.shields.io/badge/Furnace_Heart-ff6b1f?style=flat-square&labelColor=14110f) | Set them alight. Reap the smoke. Burning enemies ramp Strength every turn. |
 
-<hr class="rr-section-rule">
+---
 
 ## The Run
 
@@ -352,13 +204,13 @@ flowchart LR
     classDef win   fill:#6b9b4f,stroke:#d9c9a3,stroke-width:2px,color:#14110f
 ```
 
-<hr class="rr-section-rule">
+---
 
 ## Getting Started
 
 > [!NOTE]
-> Requires **Node 18+**. No native deps, no headless browser, no
-> test framework — `npm run build` is the gate.
+> Requires **Node 18+**. No native deps, no headless browser, no test
+> framework — `npm run build` is the gate.
 
 ```bash
 # Clone
@@ -378,7 +230,7 @@ npm run build
 npm run preview
 ```
 
-<hr class="rr-section-rule">
+---
 
 ## Project Layout
 
@@ -406,47 +258,46 @@ The split between `src/game/` (pure logic) and `src/scenes/` + `src/ui/`
 (Phaser presentation) is the project's central discipline. The game
 logic is testable in isolation; the rendering layer is throwaway.
 
-<hr class="rr-section-rule">
+---
 
 ## Design Philosophy
 
 > [!IMPORTANT]
-> *"Every enemy intent should be readable in under a second. Every
-> card decision should feel like it has a wrong answer."*
+> *"Every enemy intent should be readable in under a second. Every card
+> decision should feel like it has a wrong answer."*
 
 A few load-bearing rules:
 
-- <span class="rr-chip rr-brass">READABILITY</span>
-  **Intents show real damage.** The number under an enemy's icon is
-  the damage you'll actually take this turn — post-Strength,
+- ![Readability](https://img.shields.io/badge/READABILITY-b88a3e?style=flat-square&labelColor=14110f)
+  &nbsp; **Intents show real damage.** The number under an enemy's
+  icon is the damage you'll actually take this turn — post-Strength,
   post-Vulnerable, post-Weak. No mental math, no surprises.
 
-- <span class="rr-chip rr-shield">VARIETY</span>
-  **Bosses pick from a pool.** Each act has 3 bosses; you don't know
-  which until you arrive. Decks that auto-pilot through one boss
+- ![Variety](https://img.shields.io/badge/VARIETY-4f7a9b?style=flat-square&labelColor=14110f)
+  &nbsp; **Bosses pick from a pool.** Each act has 3 bosses; you don't
+  know which until you arrive. Decks that auto-pilot through one boss
   get punished by another.
 
-- <span class="rr-chip rr-rust">CRAFTMANSHIP</span>
-  **Pure procedural art.** No PNGs, no audio files. The cost of a
-  new enemy is one function in `MechSprite.ts` and one entry in
+- ![Craftsmanship](https://img.shields.io/badge/CRAFTSMANSHIP-8a3b1f?style=flat-square&labelColor=14110f)
+  &nbsp; **Pure procedural art.** No PNGs, no audio files. The cost of
+  a new enemy is one function in `MechSprite.ts` and one entry in
   `enemies.ts`.
 
-- <span class="rr-chip rr-buff">RELIABILITY</span>
-  **Save constantly.** Every game-state mutation persists to
+- ![Reliability](https://img.shields.io/badge/RELIABILITY-6b9b4f?style=flat-square&labelColor=14110f)
+  &nbsp; **Save constantly.** Every game-state mutation persists to
   `localStorage`. Refresh mid-fight, resume mid-fight. A bug should
   never cost a run.
 
 The full development history — slice by slice, why each decision was
 made — lives in **[DEVLOG.md](DEVLOG.md)**.
 
-<hr class="rr-section-rule">
+---
 
 ## Status
 
-![Version](https://img.shields.io/badge/version-v0.1.0-b88a3e?style=flat-square&labelColor=14110f)
-![Slice](https://img.shields.io/badge/latest_slice-46-c44a2a?style=flat-square&labelColor=14110f)
-![Status](https://img.shields.io/badge/status-playable_end--to--end-6b9b4f?style=flat-square&labelColor=14110f)
-![License](https://img.shields.io/badge/license-none_yet-8a7d5e?style=flat-square&labelColor=14110f)
+![Version](https://img.shields.io/badge/version-v0.1.0-b88a3e?style=for-the-badge&labelColor=14110f)
+![Slice](https://img.shields.io/badge/latest_slice-46-c44a2a?style=for-the-badge&labelColor=14110f)
+![Status](https://img.shields.io/badge/status-playable_end--to--end-6b9b4f?style=for-the-badge&labelColor=14110f)
 
 Four pilots. Nine bosses. Thirty events. Twenty-four relics. Balance
 is being tuned in public; the [DEVLOG](DEVLOG.md) is the running record.
@@ -454,13 +305,15 @@ is being tuned in public; the [DEVLOG](DEVLOG.md) is the running record.
 This is a solo personal project. Issues and PRs welcome but aren't
 the development driver — the project ships on its own cadence.
 
-<hr class="rr-section-rule">
+---
 
 <div align="center">
 
-[**▶ Play in Browser**](https://chrisdfennell.github.io/rust-and-rivets/) &nbsp;·&nbsp;
-[**Devlog**](DEVLOG.md) &nbsp;·&nbsp;
-[**Source on GitHub**](https://github.com/chrisdfennell/rust-and-rivets)
+[![Play](https://img.shields.io/badge/▶_Play_in_Browser-c44a2a?style=for-the-badge&labelColor=14110f)](https://chrisdfennell.github.io/rust-and-rivets/)
+&nbsp;
+[![Devlog](https://img.shields.io/badge/📓_Devlog-b88a3e?style=for-the-badge&labelColor=14110f)](DEVLOG.md)
+&nbsp;
+[![Source](https://img.shields.io/badge/⌨_Source-1f1a16?style=for-the-badge&labelColor=14110f)](https://github.com/chrisdfennell/rust-and-rivets)
 
 <br>
 
