@@ -207,8 +207,10 @@ export class CombatScene extends Phaser.Scene {
       align: 'right'
     }).setOrigin(1, 0);
 
-    // Potion belt — row of slots to the right of the steam gauge.
-    this.makePotionBelt(180, height - 130);
+    // Potion belt — row of slots above the hand. Card tops sit at
+    // ~height - 186; placing the belt at height - 240 leaves a ~30 px
+    // gap below it so cards never overlap the slots.
+    this.makePotionBelt(80, height - 240);
 
     // End turn button
     this.makeEndTurnButton(width - 130, height - 130);
