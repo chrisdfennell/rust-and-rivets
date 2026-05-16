@@ -101,12 +101,14 @@ export class CardView extends Phaser.GameObjects.Container {
     this.add(this.visual);
 
     // Hit area lives on the outer container and matches the card's visible
-    // rectangle EXACTLY (CARD_W × CARD_H, centered on origin). Hover-lift
-    // moves only the inner visual, so the hit area stays put — the cursor
-    // remains over the card for the lower ~130 px even while it's lifted.
+    // rectangle EXACTLY (CARD_W × CARD_H). Phaser's hit-area Rectangle uses
+    // top-left-anchored local coords (Phaser adds displayOriginX/Y to the
+    // pointer before testing), so for a GameObject with origin (0.5, 0.5)
+    // the rect MUST start at (0, 0) — not at (-CARD_W/2, -CARD_H/2), which
+    // would put it in the up-left quadrant. See InputManager.pointWithinHitArea.
     this.setSize(CARD_W, CARD_H);
     this.setInteractive(
-      new Phaser.Geom.Rectangle(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H),
+      new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H),
       Phaser.Geom.Rectangle.Contains
     );
 
