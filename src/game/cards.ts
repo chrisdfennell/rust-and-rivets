@@ -1,4 +1,4 @@
-import type { CardDef, CardRarity } from './types';
+import type { CardDef, CardRarity, CardType } from './types';
 
 const card = (
   id: string,
@@ -9,7 +9,7 @@ const card = (
   effects: CardDef['effects'],
   exhaust?: boolean,
   rarity?: CardRarity,
-  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean }
+  flags?: { retain?: boolean; ethereal?: boolean; innate?: boolean; type?: CardType }
 ): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity, ...flags });
 
 export const CARDS: Record<string, CardDef> = {
@@ -166,7 +166,28 @@ export const CARDS: Record<string, CardDef> = {
   glassRound: card('glassRound', 'Glass Round', 0, 'enemy', 'Deal 12 damage. Ethereal. Exhaust.',
     [{ kind: 'damage', amount: 12 }], true, 'rare', { ethereal: true }),
   'glassRound+': card('glassRound+', 'Glass Round+', 0, 'enemy', 'Deal 16 damage. Ethereal. Exhaust.',
-    [{ kind: 'damage', amount: 16 }], true, 'rare', { ethereal: true })
+    [{ kind: 'damage', amount: 16 }], true, 'rare', { ethereal: true }),
+
+  // ===== Powers — persistent in-combat buffs that exhaust on play =====
+  demonForm: card('demonForm', 'Demon Form', 3, 'self', 'Power. At the start of each turn, gain 2 Strength.',
+    [{ kind: 'addDemonForm', amount: 2 }], true, 'rare', { type: 'power' }),
+  'demonForm+': card('demonForm+', 'Demon Form+', 3, 'self', 'Power. At the start of each turn, gain 3 Strength.',
+    [{ kind: 'addDemonForm', amount: 3 }], true, 'rare', { type: 'power' }),
+
+  barricade: card('barricade', 'Barricade', 3, 'self', 'Power. Plating no longer wears off at the start of your turn.',
+    [{ kind: 'setBarricade' }], true, 'rare', { type: 'power' }),
+  'barricade+': card('barricade+', 'Barricade+', 2, 'self', 'Power. Plating no longer wears off at the start of your turn.',
+    [{ kind: 'setBarricade' }], true, 'rare', { type: 'power' }),
+
+  metallicize: card('metallicize', 'Metallicize', 1, 'self', 'Power. At the end of each turn, gain 3 Plating.',
+    [{ kind: 'addMetallicize', amount: 3 }], true, 'uncommon', { type: 'power' }),
+  'metallicize+': card('metallicize+', 'Metallicize+', 1, 'self', 'Power. At the end of each turn, gain 4 Plating.',
+    [{ kind: 'addMetallicize', amount: 4 }], true, 'uncommon', { type: 'power' }),
+
+  combust: card('combust', 'Combust', 1, 'allEnemies', 'Power. At the end of each turn, lose 1 hull and deal 5 damage to ALL enemies.',
+    [{ kind: 'addCombust', amount: 5 }], true, 'uncommon', { type: 'power' }),
+  'combust+': card('combust+', 'Combust+', 1, 'allEnemies', 'Power. At the end of each turn, lose 1 hull and deal 7 damage to ALL enemies.',
+    [{ kind: 'addCombust', amount: 7 }], true, 'uncommon', { type: 'power' })
 };
 
 export const STARTER_DECK: string[] = [
@@ -183,7 +204,8 @@ export const SHOP_POOL: string[] = [
   'battleForge', 'bufferPlate', 'pyroCharge', 'cinderRound',
   'spikePlating', 'ironWill',
   'shrapnelBurst', 'forgeWave', 'acidMist', 'concussion',
-  'pressureReading', 'holdPosition', 'glassRound'
+  'pressureReading', 'holdPosition', 'glassRound',
+  'demonForm', 'barricade', 'metallicize', 'combust'
 ];
 
 export function isUpgradable(cardId: string): boolean {

@@ -83,16 +83,19 @@ export class CardView extends Phaser.GameObjects.Container {
     this.visual.add([this.bg, this.border, this.nameText, this.costBadge, this.costText, this.descText]);
 
     const keywords: string[] = [];
+    if (card.def.type === 'power') keywords.push('POWER');
     if (card.def.innate) keywords.push('INNATE');
     if (card.def.retain) keywords.push('RETAIN');
     if (card.def.ethereal) keywords.push('ETHEREAL');
-    if (card.def.exhaust) keywords.push('EXHAUST');
+    // POWER implies EXHAUST in our system, so don't show both — keeps
+    // the badge line short on power cards.
+    if (card.def.exhaust && card.def.type !== 'power') keywords.push('EXHAUST');
     if (keywords.length > 0) {
       this.keywordText = scene.add
         .text(0, CARD_H / 2 - 14, keywords.join(' • '), {
           fontFamily: FONTS.body,
           fontSize: '10px',
-          color: hex(COLORS.rust)
+          color: hex(card.def.type === 'power' ? COLORS.steam : COLORS.rust)
         })
         .setOrigin(0.5, 0.5);
       this.visual.add(this.keywordText);

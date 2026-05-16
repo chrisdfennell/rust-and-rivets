@@ -21,7 +21,13 @@ export type CardEffect =
   | { kind: 'damageAll'; amount: number }
   | { kind: 'applyVulnerableAll'; amount: number }
   | { kind: 'applyWeakAll'; amount: number }
-  | { kind: 'applyBurnAll'; amount: number };
+  | { kind: 'applyBurnAll'; amount: number }
+  // ----- Power-card activations. These mutate persistent in-combat
+  // state on PlayerState which the combat loop reads each turn.
+  | { kind: 'addDemonForm'; amount: number }
+  | { kind: 'setBarricade' }
+  | { kind: 'addMetallicize'; amount: number }
+  | { kind: 'addCombust'; amount: number };
 
 export type CardRarity = 'common' | 'uncommon' | 'rare';
 
@@ -35,6 +41,8 @@ export interface PotionDef {
   effects: PotionEffect[];
   rarity?: CardRarity;
 }
+
+export type CardType = 'attack' | 'skill' | 'power';
 
 export interface CardDef {
   id: CardId;
@@ -51,6 +59,10 @@ export interface CardDef {
   ethereal?: boolean;
   // Pulled into the opening hand on turn 1 regardless of draw order.
   innate?: boolean;
+  // Power cards apply persistent in-combat buffs that fire on turn-start
+  // or turn-end. They exhaust on play. Currently only used for UI labeling;
+  // exhaust behavior comes from the existing `exhaust` flag.
+  type?: CardType;
 }
 
 export interface CardInstance {
@@ -116,6 +128,11 @@ export interface PlayerState extends Combatant {
   firstAttackBonus: number;
   firstCardFree: boolean;
   cardsPlayedThisTurn: number;
+  // Power-card persistent buffs. Default 0 / false. Reset every combat.
+  demonForm: number; // Strength gained at the start of each turn.
+  barricade: boolean; // Plating no longer resets at turn start.
+  metallicize: number; // Plating gained at the end of each turn.
+  combust: number; // Hull paid + damage dealt to all enemies at end of each turn.
 }
 
 export interface PersistentPlayer {

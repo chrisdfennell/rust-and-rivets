@@ -56,7 +56,11 @@ export function createCombatState(
     exhaust: [],
     firstAttackBonus: 0,
     firstCardFree: false,
-    cardsPlayedThisTurn: 0
+    cardsPlayedThisTurn: 0,
+    demonForm: 0,
+    barricade: false,
+    metallicize: 0,
+    combust: 0
   };
 
   // Multi-enemy fights scale each enemy's hull down so a 2v1 doesn't drag.
@@ -165,7 +169,17 @@ export function drawCards(state: CombatState, n: number) {
 function startPlayerTurn(state: CombatState) {
   const p = state.player;
   p.steam = p.maxSteam;
-  p.plating = 0;
+  // Barricade (power) suppresses the normal plating reset, so plating
+  // accumulates across turns. Stacks well with Metallicize / per-turn
+  // plating cards.
+  if (!p.barricade) p.plating = 0;
+  // Demon Form (power) grants Strength at every subsequent turn start.
+  // It can't fire on the turn it was played because that turn's
+  // startPlayerTurn already ran; the bump kicks in next turn.
+  if (p.demonForm > 0) {
+    p.strength += p.demonForm;
+    logTo(state, `Demon Form: +${p.demonForm} Strength.`);
+  }
   p.firstAttackBonus = 0;
   p.firstCardFree = false;
   p.cardsPlayedThisTurn = 0;
@@ -425,6 +439,27 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       logTo(state, `All foes Burning (+${eff.amount}).`);
       break;
     }
+    // ----- Power-card activations -----
+    case 'addDemonForm': {
+      state.player.demonForm += eff.amount;
+      logTo(state, `Demon Form active (+${eff.amount}/turn Strength).`);
+      break;
+    }
+    case 'setBarricade': {
+      state.player.barricade = true;
+      logTo(state, 'Barricade: plating no longer wears off.');
+      break;
+    }
+    case 'addMetallicize': {
+      state.player.metallicize += eff.amount;
+      logTo(state, `Metallicize active (+${eff.amount} Plating end of turn).`);
+      break;
+    }
+    case 'addCombust': {
+      state.player.combust += eff.amount;
+      logTo(state, `Combust active (${eff.amount} AoE end of turn).`);
+      break;
+    }
   }
 }
 
@@ -554,8 +589,40 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
   if (p.vulnerable > 0) p.vulnerable--;
   if (p.weak > 0) p.weak--;
 
-  state.phase = 'enemyTurn';
+  // Build ctx up front so power triggers below can call dealDamageToEnemy.
   const c = ctx(state);
+
+  // Metallicize (power): passive end-of-turn plating. Stacks well with
+  // Barricade — without it the plating is wiped at the next player turn.
+  if (p.metallicize > 0) {
+    p.plating += p.metallicize;
+    logTo(state, `Metallicize: +${p.metallicize} Plating.`);
+  }
+  // Combust (power): pay 1 hull (bypasses plating), then deal damage to
+  // every alive enemy. Player Strength applies to the damage. Bails if
+  // the self-damage or thorns retaliation drops the player.
+  if (p.combust > 0) {
+    p.hull = Math.max(0, p.hull - 1);
+    logTo(state, `Combust burns you for 1.`);
+    if (p.hull <= 0) {
+      state.phase = 'defeat';
+      logTo(state, 'Your mech goes dark.');
+      return;
+    }
+    for (let i = 0; i < state.enemies.length; i++) {
+      if (!isAlive(state.enemies[i])) continue;
+      dealDamageToEnemy(c, p.combust, i);
+      const phaseNow: string = state.phase;
+      if (phaseNow === 'defeat' || phaseNow === 'victory') break;
+    }
+    const phaseAfterCombust: string = state.phase;
+    if (phaseAfterCombust === 'victory') {
+      hooks?.afterEnemyResolve?.();
+      return;
+    }
+  }
+
+  state.phase = 'enemyTurn';
 
   // Each alive enemy resolves its action in order. Capture indices up front so
   // mid-turn deaths don't reshuffle the iteration.
