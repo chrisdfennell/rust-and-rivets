@@ -34,6 +34,14 @@ export interface ShopState {
   removalUsed: boolean;
 }
 
+export interface RunStats {
+  biggestHit: number;       // largest single hull-damage hit dealt to an enemy
+  totalTurns: number;       // sum of player turns across every combat
+  potionsUsed: number;      // total potions consumed via the belt
+  combatsWon: number;       // non-boss combat victories (regular + elite)
+  elitesDefeated: number;
+}
+
 export interface PendingReward {
   cards: string[];
   relicId: string | null;
@@ -62,6 +70,9 @@ export interface RunState {
   result: RunResult;
   // Extra scrap added on boss kills, set by the Boss Bounty workshop upgrade.
   bossBonus?: number;
+  // Cumulative run stats surfaced on the post-run summary screen.
+  // All optional w/ 0 defaults so pre-stats saves hydrate cleanly.
+  stats?: RunStats;
   pendingEnemies: EnemyDef[] | null;
   pendingShop: ShopState | null;
   pendingReward: PendingReward | null;
@@ -96,6 +107,7 @@ export function startRun(characterId: string = 'pilot'): RunState {
     potions: Array(POTION_SLOT_COUNT).fill(null),
     result: 'inProgress',
     bossBonus: 0,
+    stats: { biggestHit: 0, totalTurns: 0, potionsUsed: 0, combatsWon: 0, elitesDefeated: 0 },
     pendingEnemies: null,
     pendingShop: null,
     pendingReward: null,
@@ -292,16 +304,49 @@ export function resolveEvent(message: string): void {
   persist();
 }
 
-export function completeCombat(survivingHull: number): number {
+// Returns the run's stats object, lazily creating one if a pre-stats
+// save was loaded. All call sites should go through this helper rather
+// than touching r.stats directly so the undefined case never bites us.
+function ensureStats(r: RunState): RunStats {
+  if (!r.stats) {
+    r.stats = { biggestHit: 0, totalTurns: 0, potionsUsed: 0, combatsWon: 0, elitesDefeated: 0 };
+  }
+  return r.stats;
+}
+
+export interface CombatStatsPayload {
+  turns: number;
+  biggestHit: number;
+  potionsUsed: number;
+}
+
+function mergeCombatStats(r: RunState, payload: CombatStatsPayload | undefined) {
+  if (!payload) return;
+  const s = ensureStats(r);
+  s.totalTurns += payload.turns;
+  s.potionsUsed += payload.potionsUsed;
+  if (payload.biggestHit > s.biggestHit) s.biggestHit = payload.biggestHit;
+}
+
+export function completeCombat(survivingHull: number, combatStats?: CombatStatsPayload): number {
   const r = getRun();
   r.player.hull = survivingHull;
   if (r.currentNodeId) r.visitedNodeIds.add(r.currentNodeId);
   r.pendingEnemies = null;
 
+  mergeCombatStats(r, combatStats);
+
   // Engine Oil and similar onCombatEnd hooks tick before reward calc
   for (const id of r.relics) RELICS[id]?.onCombatEnd?.(r);
 
   const node: MapNode | undefined = r.currentNodeId ? r.map.nodes.get(r.currentNodeId) : undefined;
+  // Count non-boss kills toward the run-summary "combats won" tally;
+  // bosses get their own treatment (meta points / final-act flag).
+  if (node && node.kind !== 'boss') {
+    const s = ensureStats(r);
+    s.combatsWon += 1;
+    if (node.kind === 'elite') s.elitesDefeated += 1;
+  }
   if (node?.kind === 'boss') {
     // Award meta points scaled to the act being cleared:
     // act 1 boss → 1 pt, act 2 → 2 pts, etc.
@@ -392,11 +437,12 @@ export function addRelic(relicId: string, doPersist = true): boolean {
   return true;
 }
 
-export function failCombat(survivingHull: number): void {
+export function failCombat(survivingHull: number, combatStats?: CombatStatsPayload): void {
   const r = getRun();
   r.player.hull = Math.max(0, survivingHull);
   r.result = 'defeat';
   r.pendingEnemies = null;
+  mergeCombatStats(r, combatStats);
   persist();
 }
 

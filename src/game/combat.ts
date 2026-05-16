@@ -79,7 +79,8 @@ export function createCombatState(
     player,
     enemies,
     log: [introLine],
-    relicIds: relicIds.slice()
+    relicIds: relicIds.slice(),
+    biggestPlayerHit: 0
   };
 
   startPlayerTurn(state);
@@ -230,6 +231,7 @@ export function dealDamageToEnemy(c: ResolveCtx, raw: number, targetIndex?: numb
   e.plating -= absorbed;
   const through = dmg - absorbed;
   e.hull = Math.max(0, e.hull - through);
+  if (through > state.biggestPlayerHit) state.biggestPlayerHit = through;
   if (through > 0) c.log(`Hit ${e.def.name} for ${through}.`);
   else c.log(`${e.def.name}'s plating absorbs ${absorbed}.`);
   if (e.hull <= 0) {

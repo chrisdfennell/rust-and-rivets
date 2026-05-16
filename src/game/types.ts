@@ -162,6 +162,9 @@ export interface CombatState {
   activeAttackerIndex?: number;
   log: string[];
   relicIds: string[];
+  // Largest single hull-damage hit the player has landed in this combat,
+  // bubbled to run.stats.biggestHit on victory/defeat.
+  biggestPlayerHit: number;
 }
 
 export interface ResolveCtx {

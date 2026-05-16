@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 29.
+Quick orientation for someone coming in cold. Numbers as of Slice 30.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -53,7 +53,63 @@ Quick orientation for someone coming in cold. Numbers as of Slice 29.
 
 ## Done
 
-### Slice 29 — Intent damage display fix + 6 new events *(current)*
+### Slice 30 — Run-end summary screen *(current)*
+The post-victory and post-defeat experience used to dump you back on
+the Map with a one-line overlay. Now the run ends on a dedicated
+**RunSummary** scene with a stats grid, your final deck, and the
+relics you collected.
+
+**Stats tracked** (new `RunStats` block on `RunState`)
+- `biggestHit` — largest single hull-damage hit dealt to an enemy.
+  Recorded in `dealDamageToEnemy` via a new
+  `CombatState.biggestPlayerHit` field, then bubbled up at combat end.
+- `totalTurns` — sum of player turns across every combat.
+- `potionsUsed` — counted in `CombatScene.consumePotion`.
+- `combatsWon` — non-boss combat victories. Auto-incremented in
+  `completeCombat` based on the visited node's kind.
+- `elitesDefeated` — subset of combatsWon, same path.
+
+Boss nodes don't count toward `combatsWon` (they have their own
+flow: meta points + the act-clear / run-end branch). Old saves
+hydrate cleanly via `normalizeStats` which zeros every field.
+
+**Combat → run plumbing**
+- `completeCombat(survivingHull, combatStats?)` and
+  `failCombat(survivingHull, combatStats?)` now accept an optional
+  `CombatStatsPayload = { turns, biggestHit, potionsUsed }`.
+- `mergeCombatStats` adds `turns` and `potionsUsed`, takes the max
+  for `biggestHit`. `ensureStats` lazily creates the stats block on
+  pre-stats saves so call sites can ignore the undefined case.
+- `CombatScene.collectCombatStats()` builds the payload from
+  `state.turn`, `state.biggestPlayerHit`, and a new
+  `potionsUsedThisCombat` counter (reset per combat).
+
+**RunSummaryScene** ([src/scenes/RunSummaryScene.ts](src/scenes/RunSummaryScene.ts))
+- VICTORY / DEFEAT title with a one-line flavor blurb.
+- Two-column stats grid (left half): result, act reached, floors
+  reached, combats won, elites defeated, biggest hit, turns played,
+  potions used, hull, scrap, deck size, cards drafted.
+- Final-deck panel (right half): cards grouped by id with `× count`
+  suffix, sorted alphabetically. Two-column flow.
+- Relics strip (bottom): names in a row centered on the screen.
+- `RETURN TO TITLE` button (or SPACE / ENTER) calls
+  `clearSavedRun()` then routes to Title, so the player can't
+  Continue back into an already-finished run.
+
+**Routing**
+- CombatScene's victory branch now sends final-act wins to
+  `RunSummary` instead of `Map`. Mid-act boss wins still route to
+  `InterAct`. Defeat goes to `RunSummary` directly.
+- TitleScene's `routeForCurrentRun` is unchanged — by the time the
+  player leaves the summary, the save is cleared, so the
+  `result !== 'inProgress'` branch never fires anyway.
+
+**Save schema** (still v4)
+- Additive — `stats?: RunStats` and `bossBonus?: number` join the
+  saved shape. `normalizeStats` and the existing `?? defaults` keep
+  pre-stats v4 saves working.
+
+### Slice 29 — Intent damage display fix + 6 new events
 Two unrelated wins bundled because they ship together.
 
 **Intent damage display** ([src/ui/IntentView.ts](src/ui/IntentView.ts))
@@ -1043,8 +1099,6 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
 - **More relics with bespoke hooks** — 18 is solid but several
   niches are missing (cards-cost-modifiers, deck-search, retain-
   trigger relics).
-- **Run-end statistics screen** — cards drafted, scrap earned,
-  damage dealt, biggest hit, etc. Useful for the post-win moment.
 - **Daily seed / shareable runs** — same seed for everyone on a
   given date; share button copies a permalink that imports the
   exact run state. Would require seeded RNG threaded through map

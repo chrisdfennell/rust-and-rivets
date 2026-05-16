@@ -1,6 +1,6 @@
 import type { MapData, MapNode } from './map';
 import { ENEMY_DEFS } from './enemies';
-import type { RunState, ShopState, RunResult, PendingReward } from './run';
+import type { RunState, ShopState, RunResult, PendingReward, RunStats } from './run';
 import type { PersistentPlayer } from './types';
 import { POTION_SLOT_COUNT } from './potions';
 
@@ -32,6 +32,8 @@ interface SavedRun {
   awaitingInterAct: boolean;
   pendingEventId: string | null;
   pendingEventResult: string | null;
+  stats?: RunStats;
+  bossBonus?: number;
 }
 
 function snapshot(state: RunState): SavedRun {
@@ -57,7 +59,9 @@ function snapshot(state: RunState): SavedRun {
     pendingReward: state.pendingReward ? structuredClone(state.pendingReward) : null,
     awaitingInterAct: state.awaitingInterAct,
     pendingEventId: state.pendingEventId,
-    pendingEventResult: state.pendingEventResult
+    pendingEventResult: state.pendingEventResult,
+    stats: state.stats,
+    bossBonus: state.bossBonus
   };
 }
 
@@ -121,7 +125,21 @@ function hydrate(saved: SavedRun): RunState {
     pendingReward: normalizeReward(saved.pendingReward),
     awaitingInterAct: saved.awaitingInterAct ?? false,
     pendingEventId: saved.pendingEventId ?? null,
-    pendingEventResult: saved.pendingEventResult ?? null
+    pendingEventResult: saved.pendingEventResult ?? null,
+    stats: normalizeStats(saved.stats),
+    bossBonus: saved.bossBonus ?? 0
+  };
+}
+
+// Pre-stats saves lack the field; fill in zeros so the summary screen
+// always has something to render.
+function normalizeStats(raw: RunStats | null | undefined): RunStats {
+  return {
+    biggestHit: raw?.biggestHit ?? 0,
+    totalTurns: raw?.totalTurns ?? 0,
+    potionsUsed: raw?.potionsUsed ?? 0,
+    combatsWon: raw?.combatsWon ?? 0,
+    elitesDefeated: raw?.elitesDefeated ?? 0
   };
 }
 

@@ -65,6 +65,8 @@ export class CombatScene extends Phaser.Scene {
   private debugHitAreas = false;
   private potionSlots: PotionSlotUI[] = [];
   private potionTooltip!: Phaser.GameObjects.Text;
+  // Combat-local stats. Bubbled to run.stats via completeCombat/failCombat.
+  private potionsUsedThisCombat = 0;
   // When set, the player has clicked an enemy-target potion and is choosing
   // which enemy to use it on. Next click on an enemy consumes it; clicking
   // anywhere else cancels.
@@ -90,6 +92,7 @@ export class CombatScene extends Phaser.Scene {
     this.drag = null;
     this.potionSlots = [];
     this.aimingPotionSlot = null;
+    this.potionsUsedThisCombat = 0;
 
     setupPause(this);
     // Right-click on potion slots discards the potion; we don't want the
@@ -523,6 +526,7 @@ export class CombatScene extends Phaser.Scene {
     sfx.cardPlay();
     const ok = usePotion(this.state, def, targetIndex);
     if (!ok) return;
+    this.potionsUsedThisCombat += 1;
     clearPotionSlot(slot);
     this.exitPotionAim();
     this.emitDeltas(pre);
@@ -947,13 +951,15 @@ export class CombatScene extends Phaser.Scene {
 
     if (s.phase === 'victory' && !this.endHandled) {
       this.endHandled = true;
-      const reward = completeCombat(s.player.hull);
+      const stats = this.collectCombatStats();
+      const reward = completeCombat(s.player.hull, stats);
       const run = getRun();
       let nextScene: string;
       let continueLine: string;
       if (run.result === 'victory') {
-        nextScene = 'Map';
-        continueLine = 'Press SPACE to return.';
+        // Final-act boss down — show the run-summary screen instead of routing back to the map.
+        nextScene = 'RunSummary';
+        continueLine = 'Press SPACE for the run summary.';
       } else if (run.awaitingInterAct) {
         nextScene = 'InterAct';
         continueLine = 'Press SPACE to march on.';
@@ -969,11 +975,21 @@ export class CombatScene extends Phaser.Scene {
       this.bindContinue(nextScene);
     } else if (s.phase === 'defeat' && !this.endHandled) {
       this.endHandled = true;
-      failCombat(s.player.hull);
-      this.showOverlay('DEFEAT', 'Your mech is scrap. Press SPACE to view the map.', COLORS.danger);
+      failCombat(s.player.hull, this.collectCombatStats());
+      this.showOverlay('DEFEAT', 'Your mech is scrap. Press SPACE for the run summary.', COLORS.danger);
       sfx.defeat();
-      this.bindContinue('Map');
+      this.bindContinue('RunSummary');
     }
+  }
+
+  private collectCombatStats(): { turns: number; biggestHit: number; potionsUsed: number } {
+    return {
+      // state.turn is 1-indexed; victory/defeat can happen mid-turn so the
+      // current turn counts as a played turn.
+      turns: this.state.turn,
+      biggestHit: this.state.biggestPlayerHit,
+      potionsUsed: this.potionsUsedThisCombat
+    };
   }
 
   private bindContinue(nextScene: string) {
