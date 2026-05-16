@@ -9,7 +9,7 @@ import {
 } from './enemies';
 import { RELICS, pickRelicFor } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
-import { applyMetaToRun, grantMetaPoints } from './meta';
+import { applyMetaToRun, grantMetaPoints, loadMeta } from './meta';
 import { getCharacter } from './characters';
 import { pickEventId } from './events';
 import {
@@ -79,6 +79,11 @@ export interface RunState {
   awaitingInterAct: boolean;
   pendingEventId: string | null;
   pendingEventResult: string | null;
+  // Ascension tier this run was started at (snapshotted from meta at
+  // startRun time). Combat init, rest heal, and startRun's own modifiers
+  // read this rather than re-reading meta so mid-run changes to
+  // meta.currentAscension don't apply retroactively.
+  ascension?: number;
 }
 
 let state: RunState | null = null;
@@ -89,14 +94,21 @@ function persist() {
 
 export function startRun(characterId: string = 'pilot'): RunState {
   const character = getCharacter(characterId);
+  // Snapshot the player's chosen ascension tier so mid-run changes to
+  // meta don't retroactively apply.
+  const ascension = loadMeta().currentAscension;
+  // A5 (Cracked Frame): -5 max Hull at run start.
+  const startingHull = ascension >= 5
+    ? Math.max(1, character.startingHull - 5)
+    : character.startingHull;
   const fresh: RunState = {
     map: generateMap(),
     act: 1,
     currentNodeId: null,
     visitedNodeIds: new Set(),
     player: {
-      hull: character.startingHull,
-      maxHull: character.startingHull,
+      hull: startingHull,
+      maxHull: startingHull,
       deck: character.startingDeck.slice(),
       characterId: character.id,
       maxSteam: 3,
@@ -113,7 +125,8 @@ export function startRun(characterId: string = 'pilot'): RunState {
     pendingReward: null,
     awaitingInterAct: false,
     pendingEventId: null,
-    pendingEventResult: null
+    pendingEventResult: null,
+    ascension
   };
   // Apply the character's signature relics (with their onPickup hooks)
   for (const id of character.startingRelics) {
@@ -266,16 +279,21 @@ export function removeCardFromDeck(deckIndex: number): boolean {
   return true;
 }
 
+// A2 (Reduced Recovery): rest sites heal 20% instead of 30% of max Hull.
+function restHealFraction(r: RunState): number {
+  return (r.ascension ?? 0) >= 2 ? 0.20 : 0.30;
+}
+
 export function restHeal(): void {
   const r = getRun();
-  const amount = Math.floor(r.player.maxHull * 0.3);
+  const amount = Math.floor(r.player.maxHull * restHealFraction(r));
   r.player.hull = Math.min(r.player.maxHull, r.player.hull + amount);
   persist();
 }
 
 export function restHealAmount(): number {
   const r = getRun();
-  return Math.floor(r.player.maxHull * 0.3);
+  return Math.floor(r.player.maxHull * restHealFraction(r));
 }
 
 export function upgradeDeckCard(deckIndex: number): boolean {

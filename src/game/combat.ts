@@ -34,10 +34,25 @@ function instance(cardId: string): CardInstance {
   return { uid: nextUid++, def };
 }
 
+export type CombatKind = 'regular' | 'elite' | 'boss';
+
+// Ascension HP multiplier for the given combat kind. Stacks ON TOP of the
+// existing multi-enemy hullScale, so a 2-enemy elite fight at A3 ends up
+// with each enemy at 0.7 × 1.30 ≈ 0.91 of base HP per enemy.
+function ascensionHullMult(kind: CombatKind, ascension: number): number {
+  let mult = 1;
+  if (kind === 'regular' && ascension >= 1) mult *= 1.25;
+  if (kind === 'elite' && ascension >= 3) mult *= 1.30;
+  if (kind === 'boss' && ascension >= 4) mult *= 1.30;
+  return mult;
+}
+
 export function createCombatState(
   enemyDefs: EnemyDef[],
   persistent: PersistentPlayer,
-  relicIds: string[] = []
+  relicIds: string[] = [],
+  combatKind: CombatKind = 'regular',
+  ascension: number = 0
 ): CombatState {
   const player: PlayerState = {
     hull: persistent.hull,
@@ -66,7 +81,10 @@ export function createCombatState(
 
   // Multi-enemy fights scale each enemy's hull down so a 2v1 doesn't drag.
   // 1 enemy → 1.0x (unchanged), 2 → 0.7x each, 3+ → 0.6x each.
-  const hullScale = enemyDefs.length <= 1 ? 1 : enemyDefs.length === 2 ? 0.7 : 0.6;
+  // Ascension layers a per-kind multiplier on top: A1 +25% regular HP,
+  // A3 +30% elite, A4 +30% boss.
+  const groupScale = enemyDefs.length <= 1 ? 1 : enemyDefs.length === 2 ? 0.7 : 0.6;
+  const hullScale = groupScale * ascensionHullMult(combatKind, ascension);
   const enemies = enemyDefs.map((def) => makeEnemy(def, 1, hullScale));
 
   const introLine =

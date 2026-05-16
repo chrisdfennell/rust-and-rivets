@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getRun, clearSavedRun } from '../game/run';
 import { CARDS } from '../game/cards';
 import { RELICS } from '../game/relics';
+import { unlockNextAscensionIfApplicable, ASCENSION_TIERS, MAX_ASCENSION } from '../game/meta';
 import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
@@ -16,6 +17,14 @@ export class RunSummaryScene extends Phaser.Scene {
 
     const run = getRun();
     const won = run.result === 'victory';
+    const clearedAscension = run.ascension ?? 0;
+    // On victory, bump the unlocked-ascension cap if applicable. Captured
+    // BEFORE clearSavedRun() is called by the button (we want to know if
+    // this clear was a new top-tier unlock so we can show the banner).
+    const newHighest = won
+      ? unlockNextAscensionIfApplicable(clearedAscension)
+      : null;
+    const newlyUnlocked = won && newHighest !== null && newHighest > clearedAscension;
 
     // Quiet backdrop. Slightly warmer for victory, dimmer for defeat.
     const bg = this.add.graphics();
@@ -44,6 +53,23 @@ export class RunSummaryScene extends Phaser.Scene {
             color: hex(COLORS.boneDim)
           })
       .setOrigin(0.5);
+
+    // Ascension banner — only shown if the player was running a tier or
+    // just unlocked the next one. Renders between the flavor line and the
+    // stats grid.
+    if (clearedAscension > 0 || newlyUnlocked) {
+      const lineText = newlyUnlocked && newHighest !== null && newHighest <= MAX_ASCENSION
+        ? `CLEARED ASCENSION ${clearedAscension} — UNLOCKED ASCENSION ${newHighest}: ${ASCENSION_TIERS[newHighest - 1]?.name ?? '?'}`
+        : `CLEARED ASCENSION ${clearedAscension}`;
+      this.add
+        .text(width / 2, 130, lineText, {
+          fontFamily: FONTS.display,
+          fontSize: '13px',
+          color: hex(newlyUnlocked ? COLORS.steam : COLORS.danger),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5);
+    }
 
     // Derived stats
     const stats = run.stats ?? {

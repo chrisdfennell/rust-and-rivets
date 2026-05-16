@@ -14,7 +14,7 @@ and strip the tag from the previous one.
 
 ## Current state (snapshot)
 
-Quick orientation for someone coming in cold. Numbers as of Slice 35.
+Quick orientation for someone coming in cold. Numbers as of Slice 36.
 
 - **Run length:** 3 acts, ~20 nodes each. Each act picks one of 2
   bosses at boss-node entry (Foundry Tyrant / Salvage Colossus,
@@ -55,7 +55,72 @@ Quick orientation for someone coming in cold. Numbers as of Slice 35.
 
 ## Done
 
-### Slice 35 — Animated enemy turn playback *(current)*
+### Slice 36 — Ascension ladder *(current)*
+Five-tier escalating difficulty ladder unlocked by clearing the run
+at the previous tier. Each tier adds a stacking modifier so A5 is
+"all five modifiers active simultaneously". Real replay system.
+
+**Tiers** (in `ASCENSION_TIERS`, defined in `src/game/meta.ts`)
+- **A1 — Tough Mooks**: Regular enemies have +25% Hull.
+- **A2 — Reduced Recovery**: Rest sites heal 20% of max Hull (was 30%).
+- **A3 — Hard Elites**: Elite enemies have +30% Hull.
+- **A4 — Resilient Bosses**: Bosses have +30% Hull.
+- **A5 — Cracked Frame**: Start each run with -5 max Hull.
+
+**Meta state**
+- `MetaState` gains `currentAscension` (the tier the player picked for
+  their next NEW RUN) and `highestAscension` (the cap, unlocked by
+  clearing). Back-compat: missing fields hydrate to 0 / 0.
+- `setCurrentAscension(level)` clamps to highest and persists.
+- `unlockNextAscensionIfApplicable(cleared)` bumps `highestAscension`
+  if the player cleared at the current cap.
+- `MAX_ASCENSION` derived from `ASCENSION_TIERS.length`.
+
+**Run state**
+- `RunState` gains `ascension?: number`, snapshotted from
+  `meta.currentAscension` at `startRun`. Combat init, rest heal, and
+  startRun's own -5 maxHull mod all read this rather than re-reading
+  meta — mid-run meta changes can't apply retroactively.
+- A5 reduces `startingHull` by 5 at run start (min 1).
+- A2 swaps the rest-heal fraction 0.30 → 0.20 via a small
+  `restHealFraction(r)` helper used by both `restHeal` and
+  `restHealAmount`.
+
+**Combat**
+- `createCombatState(enemyDefs, persistent, relicIds, combatKind?,
+  ascension?)` — two new params. `combatKind` is one of
+  `'regular' | 'elite' | 'boss'`; `ascension` defaults to 0.
+- `ascensionHullMult(kind, ascension)` returns the HP multiplier
+  layered on top of the existing multi-enemy `groupScale`. A1 +25%
+  regular, A3 +30% elite, A4 +30% boss.
+- CombatScene reads `run.currentNodeId` to look up `node.kind` and
+  passes it (plus `run.ascension`) into `createCombatState`.
+
+**UI**
+- TitleScene gains an ascension selector under the WORKSHOP POINTS
+  banner, but only renders if `highestAscension > 0` so first-run
+  players never see it. `< / >` buttons cycle through
+  `0..highestAscension`; current label + tier description rendered
+  in danger-red.
+- Selecting a tier calls `setCurrentAscension` then
+  `this.scene.restart()` to repaint with the new value.
+- RunSummaryScene picks up the run's ascension and shows
+  `CLEARED ASCENSION N` (danger-red) on any cleared tier, or
+  `CLEARED ASCENSION N — UNLOCKED ASCENSION N+1: <name>`
+  (steam-cyan) when the clear pushed the cap up.
+
+**Save**
+- `RunState.ascension` round-trips through save/load with a default
+  of 0. Schema stays v4.
+- Meta save is unchanged structurally — `saveMeta` writes the full
+  object so the new fields persist automatically.
+
+Known follow-up: damage scaling isn't part of A1/A3 yet — only HP.
+HP-only is the simpler MVP; if the ladder feels lopsided we can add
+a `state.enemyDamageMult` field and thread it through
+`dealDamageToPlayer`. Same shape as the StS damage-up modifiers.
+
+### Slice 35 — Animated enemy turn playback
 The enemy turn used to resolve in a single tick: one aggregate
 `emitDeltas` showing a consolidated damage number per enemy/player.
 Now each hit, brace, status apply, and death animates as its own beat
@@ -1345,9 +1410,10 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   spark-pop on damage, blowing dust on the wasteland horizon.
 
 ### Tier 4 — long-term structural
-- **Ascension levels** — escalating difficulty modifiers unlocked
-  by clearing the run. StS uses a 20-tier ladder; we'd start with
-  ~5 tiers (smaller starting hull, tougher enemies, fewer rewards).
+- **Ascension damage scaling** — Slice 36 shipped HP-only ascension
+  modifiers. Adding `state.enemyDamageMult` and routing it through
+  `dealDamageToPlayer` would let A1/A3 also bump enemy damage, which
+  feels harder than just longer fights.
 - **More pilots** with distinct signature mechanics. Three is fine
   but each one only differs in starter relic + deck. A "stance-
   shifter" or "summoner" character would push the engine in

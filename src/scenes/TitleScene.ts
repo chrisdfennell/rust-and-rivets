@@ -4,7 +4,14 @@ import {
   hasSavedRun,
   loadSavedRun
 } from '../game/run';
-import { loadMeta, exportSaveString, importSaveString } from '../game/meta';
+import {
+  loadMeta,
+  exportSaveString,
+  importSaveString,
+  setCurrentAscension,
+  ASCENSION_TIERS,
+  MAX_ASCENSION
+} from '../game/meta';
 import { Button } from '../ui/Button';
 import { preloadMusic, startMusic, setMusicMuted, isMusicMuted } from '../audio/music';
 import { setSfxMuted, isSfxMuted } from '../audio/sfx';
@@ -99,13 +106,19 @@ export class TitleScene extends Phaser.Scene {
     // Meta-progression banner (workshop points)
     const meta = loadMeta();
     this.add
-      .text(width / 2, height * 0.66, `WORKSHOP POINTS  ${meta.points}`, {
+      .text(width / 2, height * 0.62, `WORKSHOP POINTS  ${meta.points}`, {
         fontFamily: FONTS.display,
         fontSize: '16px',
         color: hex(meta.points > 0 ? COLORS.steam : COLORS.boneDim),
         fontStyle: 'bold'
       })
       .setOrigin(0.5);
+
+    // Ascension selector — only shown once the player has at least one
+    // tier unlocked. Tap < / > to cycle through 0..highestAscension.
+    if (meta.highestAscension > 0) {
+      this.buildAscensionSelector(width / 2, height * 0.69, meta);
+    }
 
     // Primary buttons: CONTINUE / NEW RUN / WORKSHOP
     const primaryY = height * 0.75;
@@ -196,6 +209,62 @@ export class TitleScene extends Phaser.Scene {
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
+  }
+
+  // Renders the ASCENSION X selector at (x, y). Re-renders on click by
+  // restarting the scene — keeps the state plumbing local to TitleScene.
+  private buildAscensionSelector(x: number, y: number, meta: ReturnType<typeof loadMeta>) {
+    const level = meta.currentAscension;
+    const tier = level > 0 ? ASCENSION_TIERS[level - 1] : null;
+    const label = level === 0 ? 'ASCENSION  0  (base)' : `ASCENSION  ${level}  —  ${tier?.name}`;
+    this.add
+      .text(x, y - 8, label, {
+        fontFamily: FONTS.display,
+        fontSize: '15px',
+        color: hex(level > 0 ? COLORS.danger : COLORS.boneDim),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5);
+    if (tier) {
+      this.add
+        .text(x, y + 12, tier.description, {
+          fontFamily: FONTS.body,
+          fontSize: '11px',
+          color: hex(COLORS.boneDim),
+          align: 'center'
+        })
+        .setOrigin(0.5);
+    }
+    // < / > cycle buttons
+    const dec = new Button(
+      this,
+      x - 220,
+      y + 2,
+      '<',
+      () => this.cycleAscension(-1),
+      { width: 40, height: 32, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(dec);
+    dec.setEnabled(level > 0);
+
+    const inc = new Button(
+      this,
+      x + 220,
+      y + 2,
+      '>',
+      () => this.cycleAscension(1),
+      { width: 40, height: 32, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(inc);
+    inc.setEnabled(level < meta.highestAscension && level < MAX_ASCENSION);
+  }
+
+  private cycleAscension(delta: number) {
+    const m = loadMeta();
+    const next = Math.max(0, Math.min(m.highestAscension, m.currentAscension + delta));
+    if (next === m.currentAscension) return;
+    setCurrentAscension(next);
+    this.scene.restart();
   }
 
   private makeMuteToggle(

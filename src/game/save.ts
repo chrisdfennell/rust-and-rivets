@@ -34,6 +34,7 @@ interface SavedRun {
   pendingEventResult: string | null;
   stats?: RunStats;
   bossBonus?: number;
+  ascension?: number;
 }
 
 function snapshot(state: RunState): SavedRun {
@@ -61,7 +62,8 @@ function snapshot(state: RunState): SavedRun {
     pendingEventId: state.pendingEventId,
     pendingEventResult: state.pendingEventResult,
     stats: state.stats,
-    bossBonus: state.bossBonus
+    bossBonus: state.bossBonus,
+    ascension: state.ascension
   };
 }
 
@@ -127,7 +129,8 @@ function hydrate(saved: SavedRun): RunState {
     pendingEventId: saved.pendingEventId ?? null,
     pendingEventResult: saved.pendingEventResult ?? null,
     stats: normalizeStats(saved.stats),
-    bossBonus: saved.bossBonus ?? 0
+    bossBonus: saved.bossBonus ?? 0,
+    ascension: saved.ascension ?? 0
   };
 }
 

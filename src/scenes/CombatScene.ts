@@ -157,7 +157,20 @@ export class CombatScene extends Phaser.Scene {
       this.scene.start('Map');
       return;
     }
-    this.state = createCombatState(run.pendingEnemies, run.player, run.relics);
+    // Look up the current node's kind so combat init can apply ascension
+    // HP scaling per category (regular / elite / boss). Default to regular
+    // if the node lookup fails (shouldn't, but harmless fallback).
+    const currentNode = run.currentNodeId ? run.map.nodes.get(run.currentNodeId) : undefined;
+    const combatKind = currentNode?.kind === 'elite' ? 'elite' as const
+      : currentNode?.kind === 'boss' ? 'boss' as const
+      : 'regular' as const;
+    this.state = createCombatState(
+      run.pendingEnemies,
+      run.player,
+      run.relics,
+      combatKind,
+      run.ascension ?? 0
+    );
 
     // Top HUD strip: name + HP bar for the player; enemies arrange across the right.
     const hudY = 78;

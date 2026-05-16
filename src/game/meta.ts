@@ -18,7 +18,31 @@ export interface MetaState {
   version: number;
   points: number;
   levels: Record<string, number>;
+  // Ascension ladder — escalating run-difficulty tiers unlocked by clearing
+  // the run at the previous tier. `currentAscension` is the tier the player
+  // has selected for the next NEW RUN; `highestAscension` is the highest
+  // they've unlocked (always >= currentAscension).
+  currentAscension: number;
+  highestAscension: number;
 }
+
+export interface AscensionTier {
+  level: number;
+  name: string;
+  description: string;
+}
+
+// Each tier ADDS to the previous tiers — they stack. A5 has all five
+// modifiers active. Game logic reads `ascension >= N` to gate each effect.
+export const ASCENSION_TIERS: AscensionTier[] = [
+  { level: 1, name: 'Tough Mooks',       description: 'Regular enemies have +25% Hull.' },
+  { level: 2, name: 'Reduced Recovery',  description: 'Rest sites heal 20% of max Hull (down from 30%).' },
+  { level: 3, name: 'Hard Elites',       description: 'Elite enemies have +30% Hull.' },
+  { level: 4, name: 'Resilient Bosses',  description: 'Bosses have +30% Hull.' },
+  { level: 5, name: 'Cracked Frame',     description: 'Start each run with -5 max Hull.' }
+];
+
+export const MAX_ASCENSION = ASCENSION_TIERS.length;
 
 const REINFORCED_HULL: UpgradeDef = {
   id: 'reinforcedHull',
@@ -147,7 +171,7 @@ const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(
 );
 
 function emptyMeta(): MetaState {
-  return { version: META_SCHEMA, points: 0, levels: {} };
+  return { version: META_SCHEMA, points: 0, levels: {}, currentAscension: 0, highestAscension: 0 };
 }
 
 let cache: MetaState | null = null;
@@ -165,7 +189,13 @@ export function loadMeta(): MetaState {
       cache = emptyMeta();
       return cache;
     }
-    cache = { version: data.version, points: data.points ?? 0, levels: data.levels ?? {} };
+    cache = {
+      version: data.version,
+      points: data.points ?? 0,
+      levels: data.levels ?? {},
+      currentAscension: clampAscension(data.currentAscension ?? 0, data.highestAscension ?? 0),
+      highestAscension: Math.max(0, Math.min(MAX_ASCENSION, data.highestAscension ?? 0))
+    };
     return cache;
   } catch {
     cache = emptyMeta();
@@ -187,6 +217,29 @@ export function grantMetaPoints(amount: number): MetaState {
   m.points += amount;
   saveMeta(m);
   return m;
+}
+
+function clampAscension(value: number, highestUnlocked: number): number {
+  return Math.max(0, Math.min(value, highestUnlocked, MAX_ASCENSION));
+}
+
+export function setCurrentAscension(level: number): MetaState {
+  const m = loadMeta();
+  m.currentAscension = clampAscension(level, m.highestAscension);
+  saveMeta(m);
+  return m;
+}
+
+// Called from RunSummaryScene when the player clears the run. If they
+// cleared at their highest unlocked tier, bump the cap by one (capped at
+// MAX_ASCENSION). Returns the new highest so the UI can show "X unlocked".
+export function unlockNextAscensionIfApplicable(clearedAscension: number): number {
+  const m = loadMeta();
+  if (clearedAscension >= m.highestAscension && m.highestAscension < MAX_ASCENSION) {
+    m.highestAscension = clearedAscension + 1;
+    saveMeta(m);
+  }
+  return m.highestAscension;
 }
 
 export function buyUpgrade(id: string): boolean {
