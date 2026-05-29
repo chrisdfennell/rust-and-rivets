@@ -3,6 +3,7 @@ import { getRun, advanceAct, type InterActBoon } from '../game/run';
 import { RELICS } from '../game/relics';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 // `run.act` is the act just CLEARED — the boon then advances to act+1.
@@ -30,7 +31,10 @@ export class InterActScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
+    applyDesignFit(this);
+    bindDesignFitResize(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — quiet, post-victory glow
@@ -139,7 +143,7 @@ export class InterActScene extends Phaser.Scene {
 
   /** Renders the character status panel: hull bar, scrap, deck, relics. */
   private drawStatusPanel(x: number, y: number) {
-    const { width } = this.scale;
+    const width = DESIGN_W;
     const panelW = width - x * 2;
     const panelH = 220;
 

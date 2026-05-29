@@ -5,6 +5,7 @@ import { RELICS } from '../game/relics';
 import { getActName } from '../game/enemies';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
@@ -45,7 +46,12 @@ export class MapScene extends Phaser.Scene {
     this.dragging = false;
     setupPause(this);
 
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
+    // Slice 58 — fit the 1280×720 design canvas into the actual viewport
+    // with letterboxing, so the map layout reads cleanly on any window.
+    applyDesignFit(this);
+    bindDesignFitResize(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Wasteland horizon (same vibe as combat). Drawn in screen space, not
@@ -260,7 +266,8 @@ export class MapScene extends Phaser.Scene {
   // top. Vertical scrolling translates the whole mapLayer by `scrollY`,
   // so children stay at these coords in layer-local space.
   private nodeXY(node: MapNode): { x: number; y: number } {
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
     const y = height - MARGIN_BOTTOM - node.floor * FLOOR_H;
     const run = getRun();
     const colW = width / (run.map.width + 1);
@@ -487,7 +494,8 @@ export class MapScene extends Phaser.Scene {
   }
 
   private showRunEnd(title: string, sub: string, color: number) {
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1000);
     this.add
       .text(width / 2, height / 2 - 70, title, {
