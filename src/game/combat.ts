@@ -469,7 +469,7 @@ function applyEffect(state: CombatState, eff: CardEffect) {
         // applyBurn effect (not per stack) so it's a pinch not a bonk.
         if (state.relicIds.includes('hotCoil')) {
           const idx = state.enemies.indexOf(target);
-          if (idx >= 0) dealDamageToEnemy(c, 1, idx);
+          if (idx >= 0) dealDamageToEnemy(c, 2, idx);
         }
       }
       break;
@@ -520,7 +520,7 @@ function applyEffect(state: CombatState, eff: CardEffect) {
         // Hot Coil chips each enemy once per AoE burn. Bail if defeat
         // mid-sweep (Thorns retaliation could in theory take us down).
         if (hotCoil) {
-          dealDamageToEnemy(c, 1, i);
+          dealDamageToEnemy(c, 2, i);
           const phaseNow: string = state.phase;
           if (phaseNow === 'defeat') break;
         }

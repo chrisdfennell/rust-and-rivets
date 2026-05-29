@@ -446,11 +446,11 @@ export const CARDS: Record<string, CardDef> = {
     ], false, 'uncommon'),
 
   coalScoop: card('coalScoop', 'Coal Scoop', 1, 'self',
-    'Gain 2 Steam. Lose 2 Hull. Exhaust.',
-    [{ kind: 'gainSteam', amount: 2 }, { kind: 'loseHull', amount: 2 }], true, 'uncommon'),
+    'Gain 2 Steam. Lose 1 Hull. Exhaust.',
+    [{ kind: 'gainSteam', amount: 2 }, { kind: 'loseHull', amount: 1 }], true, 'uncommon'),
   'coalScoop+': card('coalScoop+', 'Coal Scoop+', 1, 'self',
-    'Gain 3 Steam. Lose 2 Hull. Exhaust.',
-    [{ kind: 'gainSteam', amount: 3 }, { kind: 'loseHull', amount: 2 }], true, 'uncommon'),
+    'Gain 3 Steam. Lose 1 Hull. Exhaust.',
+    [{ kind: 'gainSteam', amount: 3 }, { kind: 'loseHull', amount: 1 }], true, 'uncommon'),
 
   ironFist: card('ironFist', 'Iron Fist', 1, 'enemy',
     'Deal 8 damage. Gain 2 Strength. Exhaust.',

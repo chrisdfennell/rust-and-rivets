@@ -65,7 +65,7 @@ const STOKER: CharacterDef = {
   tagline: 'Set them alight. Reap the smoke.',
   description:
     'Feeds a furnace heart with the smoke of burning foes. Every enemy left smoldering at end of turn cranks the Stoker\'s damage higher.',
-  startingHull: 55,
+  startingHull: 58,
   startingDeck: [
     'autocannon', 'autocannon', 'autocannon',
     'brace', 'brace', 'brace',

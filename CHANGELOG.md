@@ -7,6 +7,49 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 ## Unreleased
 
+### Balance
+
+A holistic pass tuning the whole game to the longer run length.
+Runs grew from ~12 combats across 3 acts to ~37 combats across 5
+acts, so the survival economy needed adjustment and the late-act
+bosses needed bigger HP pools to match the player's accumulated
+relics / cards.
+
+#### Survival economy (player buffs)
+
+- **Rest sites** heal **35%** of max Hull (was 30%). Ascension 2
+  override stays at 20%.
+- **Map** generates rests on ~**17%** of mid floors (was 14%).
+- **Engine Oil** relic heals **5** per non-boss combat (was 4).
+- **Field Medic** workshop heals **5** per non-boss combat (was 4).
+- **Battle Cap** relic pays **+12 Scrap** on full-Hull wins (was +8)
+  — full Hull is harder to maintain over a 37-combat run.
+- **Salvager's Eye** workshop now costs **1 pt** (was 2). Random-
+  relic floor should be reachable on a first run.
+- **Hot Coil** relic chips for **2 damage** per Burn applied (was
+  1). Burn-builds need to scale with longer fights.
+
+#### Pilot parity
+
+- **THE STOKER** starting Hull bumped to **58** (was 55) — matches
+  the Conductor and gives the Burn archetype the buffer it needs
+  for the longer climb.
+
+#### Card adjustments
+
+- **Coal Scoop** loses **1 Hull** per cast (was 2). The hull cost
+  was too punishing to repeat-cycle across many combats.
+
+#### Late-act boss HP (enemy buffs)
+
+By Act 4-5 the player carries roughly twice the relics they used
+to. Boss pools bumped to match:
+
+- **The Choirmaster**: 155 → **165**
+- **Iron Saint**: 150 → **160**
+- **World-Forge Heart**: 180 → **195**
+- **The First Engine**: 195 → **210**
+
 ### Added
 
 #### Acts & enemies

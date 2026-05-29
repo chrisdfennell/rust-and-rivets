@@ -289,9 +289,12 @@ export function removeCardFromDeck(deckIndex: number): boolean {
   return true;
 }
 
-// A2 (Reduced Recovery): rest sites heal 20% instead of 30% of max Hull.
+// A2 (Reduced Recovery): rest sites heal 20% instead of 35% of max Hull.
+// Base rate was bumped 30% → 35% when runs grew from 3 acts to 5 (and
+// from ~12 combats per run to ~37) — the old number wasn't enough to
+// keep players alive through the longer climb.
 function restHealFraction(r: RunState): number {
-  return (r.ascension ?? 0) >= 2 ? 0.20 : 0.30;
+  return (r.ascension ?? 0) >= 2 ? 0.20 : 0.35;
 }
 
 export function restHeal(): void {

@@ -88,7 +88,7 @@ const SALVAGERS_EYE: UpgradeDef = {
   id: 'salvagersEye',
   name: "Salvager's Eye",
   description: 'Start each run with a random Relic already installed.',
-  costPerLevel: 2,
+  costPerLevel: 1,
   maxLevel: 1,
   apply: (run, level) => {
     if (level <= 0) return;
@@ -166,12 +166,12 @@ const BOSS_BOUNTY: UpgradeDef = {
 const FIELD_MEDIC: UpgradeDef = {
   id: 'fieldMedic',
   name: 'Field Medic',
-  description: 'Heal 4 Hull after each non-boss combat win.',
+  description: 'Heal 5 Hull after each non-boss combat win.',
   costPerLevel: 2,
   maxLevel: 1,
   apply: (run, level) => {
     if (level <= 0) return;
-    run.postCombatHeal = (run.postCombatHeal ?? 0) + 4;
+    run.postCombatHeal = (run.postCombatHeal ?? 0) + 5;
   }
 };
 

@@ -2102,7 +2102,7 @@ export const IRON_HYMN: EnemyDef = {
 export const THE_CHOIRMASTER: EnemyDef = {
   id: 'choirmaster',
   name: 'The Choirmaster',
-  maxHull: 155,
+  maxHull: 165,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
@@ -2158,7 +2158,7 @@ export const THE_CHOIRMASTER: EnemyDef = {
 export const IRON_SAINT: EnemyDef = {
   id: 'ironSaint',
   name: 'Iron Saint',
-  maxHull: 150,
+  maxHull: 160,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
@@ -2554,7 +2554,7 @@ export const CRUCIBLE_KNIGHT: EnemyDef = {
 export const WORLD_FORGE_HEART: EnemyDef = {
   id: 'worldForgeHeart',
   name: 'World-Forge Heart',
-  maxHull: 180,
+  maxHull: 195,
   pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
     if (turn === 1) {
       return {
@@ -2611,7 +2611,7 @@ export const WORLD_FORGE_HEART: EnemyDef = {
 export const THE_FIRST_ENGINE: EnemyDef = {
   id: 'firstEngine',
   name: 'The First Engine',
-  maxHull: 195,
+  maxHull: 210,
   pickAction: ({ turn, memory }): EnemyAction => {
     if (turn === 1) {
       return {

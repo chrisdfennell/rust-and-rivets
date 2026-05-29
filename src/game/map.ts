@@ -84,10 +84,14 @@ export function generateMap(rng: () => number = Math.random): MapData {
       else if (roll < 0.34) node.kind = 'event';
       else node.kind = 'combat';
     } else {
+      // Mid-floor weights: 14% elite / 14% shop / 17% rest / 14% event /
+      // 41% combat. Rest got a small bump (14% → 17%) when the map grew
+      // to 15 floors so players see slightly more healing opportunities
+      // across the longer climb.
       if (roll < 0.14) node.kind = 'elite';
       else if (roll < 0.28) node.kind = 'shop';
-      else if (roll < 0.42) node.kind = 'rest';
-      else if (roll < 0.56) node.kind = 'event';
+      else if (roll < 0.45) node.kind = 'rest';
+      else if (roll < 0.59) node.kind = 'event';
       else node.kind = 'combat';
     }
   }

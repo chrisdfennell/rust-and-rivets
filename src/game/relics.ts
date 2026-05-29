@@ -45,9 +45,9 @@ const IRON_PLATING: Relic = {
 const ENGINE_OIL: Relic = {
   id: 'engineOil',
   name: 'Engine Oil',
-  description: 'Heal 4 Hull after each non-boss combat.',
+  description: 'Heal 5 Hull after each non-boss combat.',
   onCombatEnd: (run) => {
-    run.player.hull = Math.min(run.player.maxHull, run.player.hull + 4);
+    run.player.hull = Math.min(run.player.maxHull, run.player.hull + 5);
   }
 };
 
@@ -250,10 +250,10 @@ const COAL_COIL: Relic = {
 const BATTLE_CAP: Relic = {
   id: 'battleCap',
   name: 'Battle Cap',
-  description: 'Gain 8 Scrap after any combat you end at full Hull.',
+  description: 'Gain 12 Scrap after any combat you end at full Hull.',
   onCombatEnd: (run) => {
     if (run.player.hull >= run.player.maxHull) {
-      run.scrap += 8;
+      run.scrap += 12;
     }
   }
 };
@@ -336,7 +336,7 @@ const STEAM_WHISTLE: Relic = {
 const HOT_COIL: Relic = {
   id: 'hotCoil',
   name: 'Hot Coil',
-  description: 'Whenever you apply Burn to an enemy, deal 1 damage to it.'
+  description: 'Whenever you apply Burn to an enemy, deal 2 damage to it.'
 };
 
 // Reactor Lens — power-deck enabler. Demon Form 3 → 2, Barricade 3 → 2,
