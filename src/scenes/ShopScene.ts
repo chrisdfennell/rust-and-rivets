@@ -27,6 +27,16 @@ export class ShopScene extends Phaser.Scene {
     this.mode = 'main';
     setupPause(this);
 
+    // Slice 56 — defensive bailout. enterNode() + completeNode() both
+    // sanitize pendingShop, but if scene routing ever lands here without
+    // one (broken save, exploit, future bug), the LEAVE button below
+    // wouldn't render and the player would be stuck. Bounce to the map
+    // before rendering anything.
+    if (!getRun().pendingShop) {
+      this.scene.start('Map');
+      return;
+    }
+
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createCombatState, endTurn, playCard, canPlay, usePotion, canUsePotion } from '../game/combat';
+import { createCombatState, endTurn, playCard, canPlay, usePotion, canUsePotion, costLabel } from '../game/combat';
 import { getRun, completeCombat, failCombat, clearPotionSlot, discardPotion } from '../game/run';
 import { POTIONS } from '../game/potions';
 import type { CombatState, CardInstance, EnemyState, TurnEvent } from '../game/types';
@@ -1392,14 +1392,20 @@ export class CombatScene extends Phaser.Scene {
     const n = next.length;
     if (n === 0) return;
 
-    // Simple horizontal row: cards evenly spaced, no overlap, no rotation,
-    // no arc. Each card's hit area is the full CARD_W centered on the card.
-    // This is the most reliable layout — Phaser routes pointer events
-    // cleanly because hit areas don't overlap and each card's visual
-    // matches its hit area exactly.
-    const maxSpread = width - 360;
+    // Simple horizontal row: cards evenly spaced. At small hand sizes
+    // they don't overlap; at large hand sizes (8+) they pack together
+    // with the rightmost card drawn last so hover/click favors the most
+    // recently drawn card (which is usually what the player wants).
+    //
+    // Slice 56 — widened maxSpread (360 → 240 margin) so hands up to ~10
+    // cards lay out without crushing each other, and bumped the minimum
+    // spacing to 60% of CARD_W so even at 12+ cards each card's tappable
+    // area remains a clear vertical strip.
+    const maxSpread = width - 240;
     const idealSpacing = CARD_W + 10; // 10px gap between cards
-    const spacing = n > 1 ? Math.min(idealSpacing, maxSpread / (n - 1)) : 0;
+    const minSpacing = CARD_W * 0.6;  // ~84 px — hardest crowding allowed
+    const rawSpacing = n > 1 ? maxSpread / (n - 1) : 0;
+    const spacing = n > 1 ? Math.max(minSpacing, Math.min(idealSpacing, rawSpacing)) : 0;
     const startX = width / 2 - (spacing * (n - 1)) / 2;
 
     // Stagger draw-in animations by the order new cards appear in the row.
@@ -1408,6 +1414,11 @@ export class CombatScene extends Phaser.Scene {
       const x = startX + i * spacing;
       const view = next[i];
       view.setPlayable(canPlay(this.state, view.card.uid));
+      // Slice 56 — keep the cost badge in sync with runtime modifiers
+      // (firstCardFree / Reactor Lens). Cheap to call per layout since
+      // costLabel is a pure read off PlayerState + relicIds.
+      const { label, discounted } = costLabel(this.state, view.card.def);
+      view.setCostLabel(label, discounted);
       if (newlyCreated.has(view)) {
         // New card: snap to home, then animateDrawIn moves it to the draw
         // pile and tweens back. The "snap" half is wasted work but keeps

@@ -230,6 +230,20 @@ export class CardView extends Phaser.GameObjects.Container {
     this.costBadge.setFillStyle(p ? COLORS.steam : COLORS.brassDim);
   }
 
+  // Slice 56 — runtime cost label. Lets the combat scene reflect
+  // firstCardFree (Boiler Vent) / Reactor Lens discounts on the badge
+  // instead of leaving the printed cost on it. `discounted: true` tints
+  // the badge green to telegraph the savings; false uses the steam tint.
+  setCostLabel(label: string, discounted: boolean) {
+    if (this.costText.text === label) return;
+    this.costText.setText(label);
+    // Only override the badge fill when the card is currently playable —
+    // the unplayable steel-grey takes priority over discount tinting.
+    if (this.playable) {
+      this.costBadge.setFillStyle(discounted ? COLORS.ok : COLORS.steam);
+    }
+  }
+
   isPlayable(): boolean {
     return this.playable;
   }

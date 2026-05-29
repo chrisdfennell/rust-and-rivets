@@ -15,7 +15,8 @@ import {
   loadMeta,
   recordRunStart,
   recordActReached,
-  recordBossDefeated
+  recordBossDefeated,
+  unlockCharactersForAct
 } from './meta';
 import { getCharacter } from './characters';
 import { pickEventId } from './events';
@@ -410,6 +411,11 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
     // the next act). For the final boss it's r.act itself.
     recordBossDefeated();
     recordActReached(isFinalAct(r.act) ? r.act : r.act + 1);
+    // Slice 56 — character unlocks. Pass the act the player just CLEARED
+    // (r.act, regardless of final/non-final) so the unlock ladder reads
+    // intuitively as "you beat Act 3 → Stoker unlocks." The function is
+    // idempotent — repeat clears at the same rung are no-ops.
+    unlockCharactersForAct(r.act);
     // Boss Bounty workshop upgrade adds a flat scrap bonus to boss kills.
     const bonus = r.bossBonus ?? 0;
     if (bonus > 0) r.scrap += bonus;

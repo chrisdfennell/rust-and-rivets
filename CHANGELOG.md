@@ -7,6 +7,73 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 ## Unreleased
 
+### Pilot unlocks + save migration
+
+**The non-base pilots are now gated behind boss kills.** All five
+pilots used to be available from the title; now players start with
+just the Pilot and earn the rest through play:
+
+| Pilot | Unlock |
+|---|---|
+| Pilot | Start |
+| Engineer | Beat Act 1 |
+| Saboteur | Beat Act 2 |
+| Stoker | Beat Act 3 |
+| Conductor | Win a full run |
+
+Locked pilots still render on the character-select screen with a
+dimmed silhouette and a red "Beat Act N" hint above a disabled
+LOCKED button, so players can see what's possible while they grind.
+
+**Save schema bumped 1 → 2 with proper migration.**
+`migrateMeta(data)` is the new central upgrade entry point in
+[src/game/meta.ts](src/game/meta.ts). It accepts any version
+between `MIN_READABLE_SCHEMA` (1) and `META_SCHEMA` (2), forwards
+it to the current shape, and writes the migrated blob back to
+localStorage so subsequent loads skip the upgrade path. Future
+schema versions (`> META_SCHEMA`) fall back to `emptyMeta()`
+instead of being silently downgraded into a broken intermediate
+state.
+
+**Migration is strict — existing saves don't get pilots
+grandfathered in.** v1 saves migrating to v2 reset
+`unlockedCharacters` to `['pilot']` regardless of past usage.
+History counters (`runsStarted`, `runsWon`, `bestAct`,
+`perCharacter`) survive intact, so the title-screen records panel
+still reflects past play — but the pilot ladder must be re-earned.
+
+**Unlock helpers** ([src/game/meta.ts](src/game/meta.ts)):
+
+- `isCharacterUnlocked(id)` / `unlockRequirementFor(id)` —
+  CharacterSelectScene reads both to decide whether to render the
+  locked overlay.
+- `unlockCharacter(id)` — idempotent unlock.
+- `unlockCharactersForAct(actCleared)` — iterates the ladder and
+  grants every rung at or below `actCleared`. Called from
+  `completeCombat` after every boss kill alongside the existing
+  `recordBossDefeated` / `recordActReached` history bumps.
+
+### UX fixes
+
+- **`firstCardFree` cost badge** ([src/game/combat.ts](src/game/combat.ts)
+  + [src/ui/CardView.ts](src/ui/CardView.ts)). When Boiler Vent makes
+  the first card of a turn free, every card in hand now visibly shows
+  `0` on its cost badge tinted green (the discount color). Reactor
+  Lens's `-1 Steam on Powers` also reflects on the badge. Implemented
+  via new `costLabel(state, def)` helper that returns both the label
+  string and a `discounted` flag; `CardView.setCostLabel(label, discounted)`
+  applies it on every hand-layout refresh.
+- **Hand layout at 8+ cards** ([src/scenes/CombatScene.ts](src/scenes/CombatScene.ts)).
+  `maxSpread` widened from `width − 360` → `width − 240` (more lateral
+  room), and a `minSpacing = CARD_W × 0.6` floor prevents extreme
+  crowding at 12+ cards. Hands up to ~10 cards lay out without
+  crushing each other; beyond that the rightmost cards still draw
+  last so pointer focus favors the freshly-drawn card.
+- **ShopScene defensive bailout.** If somehow `pendingShop` is null
+  when ShopScene's `create()` runs, the scene now bounces to the map
+  immediately. Previously the LEAVE button was inside the early-return
+  path so the player would have been stranded with no exit.
+
 ### Run history & Library
 
 A title-screen overhaul: lifetime stat tracking + a browsable
@@ -97,7 +164,14 @@ so the scroll state resets cleanly.
   round-trip works without a full DOM env. Wired via
   `vitest.config.ts`.
 
-**Total test count: 74.**
+- **`tests/meta.test.ts`** grew by 8 — character-unlock ladder,
+  fresh-save default of `['pilot']` only, `unlockCharacter`
+  idempotence, a high-act run unlocking everything below it,
+  `unlockRequirementFor` labels, v1 → v2 migration preserving
+  history while stripping unlocks back to base, v2 round-trip
+  preservation, and future-version saves falling back cleanly.
+
+**Total test count: 82.**
 
 ### Visuals
 

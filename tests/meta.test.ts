@@ -5,7 +5,11 @@ import {
   recordRunStart,
   recordRunWin,
   recordActReached,
-  recordBossDefeated
+  recordBossDefeated,
+  isCharacterUnlocked,
+  unlockCharacter,
+  unlockCharactersForAct,
+  unlockRequirementFor
 } from '../src/game/meta';
 
 // Vitest runs Node without a `window`/`localStorage` global. The meta
@@ -128,6 +132,130 @@ describe('history schema migration', () => {
     expect(loaded.history?.bestAct).toBe(0); // defaulted
     expect(loaded.history?.bossesDefeated).toBe(0); // defaulted
     expect(loaded.history?.perCharacter).toEqual({}); // defaulted
+  });
+});
+
+describe('character unlocks', () => {
+  it('only the base Pilot is unlocked in a fresh save', () => {
+    expect(isCharacterUnlocked('pilot')).toBe(true);
+    expect(isCharacterUnlocked('engineer')).toBe(false);
+    expect(isCharacterUnlocked('saboteur')).toBe(false);
+    expect(isCharacterUnlocked('stoker')).toBe(false);
+    expect(isCharacterUnlocked('conductor')).toBe(false);
+  });
+
+  it('unlockCharacter is idempotent', () => {
+    expect(unlockCharacter('engineer')).toBe(true);
+    expect(unlockCharacter('engineer')).toBe(false); // already unlocked
+    expect(isCharacterUnlocked('engineer')).toBe(true);
+  });
+
+  it('the unlock ladder grants pilots at the right acts', () => {
+    // Beat Act 1 → Engineer
+    expect(unlockCharactersForAct(1)).toEqual(['engineer']);
+    expect(isCharacterUnlocked('engineer')).toBe(true);
+    expect(isCharacterUnlocked('saboteur')).toBe(false);
+    // Beat Act 2 → Saboteur (Engineer already unlocked, not re-listed)
+    expect(unlockCharactersForAct(2)).toEqual(['saboteur']);
+    // Beat Act 3 → Stoker
+    expect(unlockCharactersForAct(3)).toEqual(['stoker']);
+    // Beat Act 4 → nothing new (Conductor needs Act 5)
+    expect(unlockCharactersForAct(4)).toEqual([]);
+    // Beat Act 5 (full run win) → Conductor
+    expect(unlockCharactersForAct(5)).toEqual(['conductor']);
+  });
+
+  it('a high-act run unlocks everything below it in one shot', () => {
+    // Brand new save, skipped straight to clearing Act 5 (impossible in
+    // game but the helper should be additive — every rung at or below
+    // the clear unlocks).
+    const granted = unlockCharactersForAct(5);
+    expect(granted.sort()).toEqual(['conductor', 'engineer', 'saboteur', 'stoker']);
+  });
+
+  it('unlockRequirementFor returns the ladder label for locked pilots', () => {
+    expect(unlockRequirementFor('engineer')).toBe('Beat Act 1');
+    expect(unlockRequirementFor('saboteur')).toBe('Beat Act 2');
+    expect(unlockRequirementFor('stoker')).toBe('Beat Act 3');
+    expect(unlockRequirementFor('conductor')).toBe('Win a full run');
+    expect(unlockRequirementFor('pilot')).toBeNull();
+  });
+});
+
+describe('v1 → v2 migration', () => {
+  const META_KEY = 'rust-and-rivets/meta/v1';
+
+  it('strips an old v1 save back to only the Pilot unlocked', () => {
+    // Player had a Slice-51 save with workshop progress and ascension
+    // unlocks but no unlock list at all.
+    const legacyV1 = {
+      version: 1,
+      points: 12,
+      levels: { reinforcedHull: 3, foundryStipend: 1 },
+      currentAscension: 2,
+      highestAscension: 4,
+      history: {
+        runsStarted: 7,
+        runsWon: 2,
+        bestAct: 5,
+        bossesDefeated: 9,
+        bestAscensionCleared: 2,
+        perCharacter: { pilot: { runs: 4, wins: 1 }, stoker: { runs: 3, wins: 1 } }
+      }
+    };
+    localStorage.setItem(META_KEY, JSON.stringify(legacyV1));
+
+    const loaded = loadMeta();
+    expect(loaded.version).toBe(2);
+    expect(loaded.unlockedCharacters).toEqual(['pilot']);
+    // History counters MUST survive — they're the proof of past play.
+    expect(loaded.history?.runsStarted).toBe(7);
+    expect(loaded.history?.bestAct).toBe(5);
+    expect(loaded.history?.perCharacter.stoker).toEqual({ runs: 3, wins: 1 });
+    // Workshop progress also preserved
+    expect(loaded.points).toBe(12);
+    expect(loaded.levels.reinforcedHull).toBe(3);
+  });
+
+  it('preserves an explicit v2 unlock list on subsequent loads', () => {
+    const v2Save = {
+      version: 2,
+      points: 0,
+      levels: {},
+      currentAscension: 0,
+      highestAscension: 0,
+      history: {
+        runsStarted: 1,
+        runsWon: 0,
+        bestAct: 2,
+        bossesDefeated: 1,
+        bestAscensionCleared: 0,
+        perCharacter: { pilot: { runs: 1, wins: 0 } }
+      },
+      unlockedCharacters: ['pilot', 'engineer']
+    };
+    localStorage.setItem(META_KEY, JSON.stringify(v2Save));
+
+    const loaded = loadMeta();
+    expect(loaded.unlockedCharacters).toEqual(['pilot', 'engineer']);
+  });
+
+  it('falls back to emptyMeta when the version is higher than we can read', () => {
+    const future = {
+      version: 99,
+      points: 1000,
+      levels: {},
+      currentAscension: 0,
+      highestAscension: 0
+    };
+    localStorage.setItem(META_KEY, JSON.stringify(future));
+
+    const loaded = loadMeta();
+    // Future-version saves drop to a fresh empty meta instead of being
+    // silently downgraded into a broken intermediate state.
+    expect(loaded.version).toBe(2);
+    expect(loaded.points).toBe(0);
+    expect(loaded.unlockedCharacters).toEqual(['pilot']);
   });
 });
 

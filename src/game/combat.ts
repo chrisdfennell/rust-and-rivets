@@ -652,6 +652,33 @@ function effectiveCost(state: CombatState, def: CardDef): number {
   return cost;
 }
 
+// What the cost-badge text should read RIGHT NOW for the given card.
+// Differs from effectiveCost in two ways: returns the visible label
+// ('0' / 'X' / '—' / numeric), and handles the unplayable case the badge
+// renders specially.
+//
+// `discounted` flags whether the runtime cost is BELOW the card's printed
+// cost (firstCardFree consumed, Reactor Lens applied to a power). The
+// CardView uses this to tint the badge so the player sees the discount
+// rather than having to do mental math.
+export interface CostDisplay {
+  label: string;
+  discounted: boolean;
+}
+
+export function costLabel(state: CombatState, def: CardDef): CostDisplay {
+  const p = state.player;
+  if (def.unplayable) return { label: '—', discounted: false };
+  if (p.firstCardFree && p.cardsPlayedThisTurn === 0) {
+    return { label: '0', discounted: def.cost > 0 || !!def.xCost };
+  }
+  if (def.xCost) return { label: 'X', discounted: false };
+  if (def.type === 'power' && state.relicIds.includes('reactorLens') && def.cost > 0) {
+    return { label: String(Math.max(0, def.cost - 1)), discounted: true };
+  }
+  return { label: String(def.cost), discounted: false };
+}
+
 export function canPlay(state: CombatState, uid: number): boolean {
   if (state.phase !== 'playerTurn') return false;
   const card = state.player.hand.find((c) => c.uid === uid);

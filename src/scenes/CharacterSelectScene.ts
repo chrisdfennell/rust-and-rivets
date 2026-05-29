@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { startRun, clearSavedRun } from '../game/run';
 import { CHARACTERS, type CharacterDef } from '../game/characters';
 import { RELICS } from '../game/relics';
+import { isCharacterUnlocked, unlockRequirementFor } from '../game/meta';
 import { CHARACTER_SPRITES } from '../ui/MechSprite';
 import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -120,17 +121,25 @@ export class CharacterSelectScene extends Phaser.Scene {
     const card = this.add.container(localX, localY);
     const h = 560;
     const leftX = -w / 2 + 24;
+    // Slice 56 — character lock state. Locked pilots still render so
+    // players can see what's possible, but their sprite + text dim and
+    // the SELECT button swaps to a LOCKED indicator with the requirement.
+    const unlocked = isCharacterUnlocked(c.id);
+    const lockHint = unlocked ? null : unlockRequirementFor(c.id);
 
     // Panel
     const panel = this.add
       .rectangle(0, 0, w, h, COLORS.bgPanel)
-      .setStrokeStyle(2, COLORS.brassDim);
+      .setStrokeStyle(2, unlocked ? COLORS.brassDim : COLORS.steelDark);
     card.add(panel);
 
-    // Sprite (scaled down so it fits in the card)
+    // Sprite (scaled down so it fits in the card). Locked pilots silhouette
+    // out to a uniform steelDark tint via the container's alpha; the lock
+    // glyph below tells the player why they can't pick them yet.
     const drawFn = CHARACTER_SPRITES[c.id] ?? CHARACTER_SPRITES.pilot;
     const sprite = drawFn(this, 0, -180);
     sprite.setScale(0.6);
+    if (!unlocked) sprite.setAlpha(0.25);
     card.add(sprite);
 
     // Name
@@ -241,16 +250,51 @@ export class CharacterSelectScene extends Phaser.Scene {
       }
     }
 
-    // SELECT button anchored at the bottom of the panel
-    const btn = new Button(
-      this,
-      0,
-      h / 2 - 38,
-      'SELECT',
-      () => this.pick(c.id),
-      { width: w - 40, height: 50, fontSize: 17 }
-    );
-    card.add(btn);
+    // Dim overlay for locked cards — sits ABOVE the panel/sprite/text
+    // we already added, but BELOW the LOCKED button + unlock hint added
+    // after it. That makes the lock UI the bright focal point against
+    // a faded backdrop of "what you're missing."
+    if (!unlocked) {
+      const dim = this.add.rectangle(0, 0, w - 4, h - 4, 0x000000, 0.45);
+      card.add(dim);
+    }
+
+    // SELECT button anchored at the bottom of the panel. Locked pilots
+    // show a disabled LOCKED button with the unlock requirement above.
+    if (unlocked) {
+      const btn = new Button(
+        this,
+        0,
+        h / 2 - 38,
+        'SELECT',
+        () => this.pick(c.id),
+        { width: w - 40, height: 50, fontSize: 17 }
+      );
+      card.add(btn);
+    } else {
+      // Lock hint sits above the disabled button.
+      card.add(
+        this.add
+          .text(0, h / 2 - 84, lockHint ?? 'Keep playing to unlock.', {
+            fontFamily: FONTS.display,
+            fontSize: '13px',
+            color: hex(COLORS.danger),
+            fontStyle: 'bold',
+            align: 'center'
+          })
+          .setOrigin(0.5)
+      );
+      const btn = new Button(
+        this,
+        0,
+        h / 2 - 38,
+        'LOCKED',
+        () => { /* no-op — disabled below */ },
+        { width: w - 40, height: 50, fontSize: 17, fill: COLORS.steelDark, hoverFill: COLORS.steelDark }
+      );
+      btn.setEnabled(false);
+      card.add(btn);
+    }
 
     return card;
   }

@@ -3,8 +3,12 @@ import { RELICS, pickRelicFor } from './relics';
 import { pickRandomPotionId } from './potions';
 import { SAVE_KEY } from './save';
 
+// Slice 56 — schema bumped 1 → 2 to introduce `unlockedCharacters`.
+// `migrateMeta()` carries v1 saves forward without losing player progress;
+// version > MAX_SCHEMA is rejected (future schema we can't safely read).
 const META_KEY = 'rust-and-rivets/meta/v1';
-const META_SCHEMA = 1;
+const META_SCHEMA = 2;
+const MIN_READABLE_SCHEMA = 1;
 
 export interface UpgradeDef {
   id: string;
@@ -29,6 +33,10 @@ export interface MetaState {
   // "Runs / Wins / Best Act / per-character stats." Optional so old saves
   // (META_SCHEMA = 1) hydrate cleanly via emptyHistory().
   history?: RunHistory;
+  // Slice 56 — character unlock list. Players start with just the Pilot;
+  // beating each act unlocks the next pilot in the ladder. Optional for
+  // v1 hydration (all characters get back-compat-unlocked there).
+  unlockedCharacters?: string[];
 }
 
 // Persistent record of every run the player has ever started. Updated by
@@ -309,6 +317,12 @@ const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(
   META_UPGRADES.map((u) => [u.id, u])
 );
 
+// Pilots a fresh save starts with. Other pilots are gated behind boss
+// kills (see UNLOCK_LADDER below). Same default applies to v1 saves
+// migrating forward — existing players have to earn the pilots through
+// play even if they've been using them in past runs.
+const DEFAULT_UNLOCKED_CHARACTERS = ['pilot'];
+
 function emptyMeta(): MetaState {
   return {
     version: META_SCHEMA,
@@ -316,7 +330,8 @@ function emptyMeta(): MetaState {
     levels: {},
     currentAscension: 0,
     highestAscension: 0,
-    history: emptyHistory()
+    history: emptyHistory(),
+    unlockedCharacters: DEFAULT_UNLOCKED_CHARACTERS.slice()
   };
 }
 
@@ -337,6 +352,39 @@ function hydrateHistory(raw: Partial<RunHistory> | undefined): RunHistory {
   };
 }
 
+// Slice 56 — central migration entry point. Takes a parsed-from-disk
+// MetaState (which may be from any historical schema between
+// MIN_READABLE_SCHEMA and META_SCHEMA) and forwards it to the current
+// shape. Each version bump adds a new branch below.
+//
+// Returns null if the save is from a FUTURE schema we don't recognize
+// (`version > META_SCHEMA`) — the caller falls back to emptyMeta() in
+// that case so the player isn't silently downgraded to a broken save.
+function migrateMeta(data: Partial<MetaState> & { version?: number }): MetaState | null {
+  const version = data.version ?? 0;
+  if (version < MIN_READABLE_SCHEMA || version > META_SCHEMA) return null;
+
+  // v1 → v2: introduce unlockedCharacters. Strict policy — even saves
+  // that predate the unlock system start with just the base Pilot.
+  // Existing players have to re-earn the other pilots through play.
+  // History counters (runsStarted / runsWon / bestAct) survive the
+  // migration intact so the records panel still reflects past play.
+  let unlockedCharacters = data.unlockedCharacters;
+  if (version < 2 || !unlockedCharacters) {
+    unlockedCharacters = DEFAULT_UNLOCKED_CHARACTERS.slice();
+  }
+
+  return {
+    version: META_SCHEMA,
+    points: data.points ?? 0,
+    levels: data.levels ?? {},
+    currentAscension: clampAscension(data.currentAscension ?? 0, data.highestAscension ?? 0),
+    highestAscension: Math.max(0, Math.min(MAX_ASCENSION, data.highestAscension ?? 0)),
+    history: hydrateHistory(data.history),
+    unlockedCharacters
+  };
+}
+
 let cache: MetaState | null = null;
 
 export function loadMeta(): MetaState {
@@ -347,19 +395,11 @@ export function loadMeta(): MetaState {
       cache = emptyMeta();
       return cache;
     }
-    const data = JSON.parse(raw) as MetaState;
-    if (data.version !== META_SCHEMA) {
-      cache = emptyMeta();
-      return cache;
-    }
-    cache = {
-      version: data.version,
-      points: data.points ?? 0,
-      levels: data.levels ?? {},
-      currentAscension: clampAscension(data.currentAscension ?? 0, data.highestAscension ?? 0),
-      highestAscension: Math.max(0, Math.min(MAX_ASCENSION, data.highestAscension ?? 0)),
-      history: hydrateHistory(data.history)
-    };
+    const data = JSON.parse(raw) as Partial<MetaState> & { version?: number };
+    const migrated = migrateMeta(data);
+    cache = migrated ?? emptyMeta();
+    // Persist the migrated shape so subsequent reads skip the upgrade path.
+    if (migrated && migrated.version !== data.version) saveMeta(cache);
     return cache;
   } catch {
     cache = emptyMeta();
@@ -440,6 +480,61 @@ export function recordRunWin(characterId: string, clearedAscension: number): Met
   }
   saveMeta(m);
   return m;
+}
+
+// ===== Slice 56 — Character unlocks =====
+//
+// Each entry says "when the player CLEARS the listed act, unlock this
+// pilot." The Conductor is gated behind the special "won the whole run"
+// flag (clearedAct === MAX_ACT_REWARD) which is what isFinalAct returns
+// against, so they're the trophy for finishing a run for the first time.
+const UNLOCK_LADDER: { actCleared: number; characterId: string; label: string }[] = [
+  { actCleared: 1, characterId: 'engineer',  label: 'Beat Act 1' },
+  { actCleared: 2, characterId: 'saboteur',  label: 'Beat Act 2' },
+  { actCleared: 3, characterId: 'stoker',    label: 'Beat Act 3' },
+  { actCleared: 5, characterId: 'conductor', label: 'Win a full run' }
+];
+
+export function getUnlockLadder() {
+  return UNLOCK_LADDER.slice();
+}
+
+export function isCharacterUnlocked(characterId: string): boolean {
+  const m = loadMeta();
+  return (m.unlockedCharacters ?? DEFAULT_UNLOCKED_CHARACTERS).includes(characterId);
+}
+
+// Returns the rung that gates a given character, or null if they're
+// unlocked from the start. Powers the "Beat Act N" hint in
+// CharacterSelectScene.
+export function unlockRequirementFor(characterId: string): string | null {
+  const rung = UNLOCK_LADDER.find((r) => r.characterId === characterId);
+  return rung?.label ?? null;
+}
+
+// Idempotent unlock — adds the id to the list if missing. Returns true
+// only when it actually unlocked something (useful for "NEW PILOT UNLOCKED"
+// notifications down the line).
+export function unlockCharacter(characterId: string): boolean {
+  const m = loadMeta();
+  if (!m.unlockedCharacters) m.unlockedCharacters = DEFAULT_UNLOCKED_CHARACTERS.slice();
+  if (m.unlockedCharacters.includes(characterId)) return false;
+  m.unlockedCharacters.push(characterId);
+  saveMeta(m);
+  return true;
+}
+
+// Called from completeCombat after every boss kill. Iterates the ladder
+// for any rung that the player just cleared and grants the linked pilot.
+// Returns the list of newly-unlocked character ids (often empty).
+export function unlockCharactersForAct(actCleared: number): string[] {
+  const newlyUnlocked: string[] = [];
+  for (const rung of UNLOCK_LADDER) {
+    if (actCleared >= rung.actCleared && unlockCharacter(rung.characterId)) {
+      newlyUnlocked.push(rung.characterId);
+    }
+  }
+  return newlyUnlocked;
 }
 
 function clampAscension(value: number, highestUnlocked: number): number {
