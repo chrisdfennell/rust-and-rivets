@@ -354,9 +354,11 @@ export class CombatScene extends Phaser.Scene {
 
     // End turn button. Landscape: bottom-right of the player area.
     // Portrait: centered horizontally just above the hand strip — the
-    // primary action gets the prime real estate.
+    // primary action gets the prime real estate. The button is 64px
+    // tall, so center at height - 175 leaves the counter row at
+    // height - 222 readable above it (top edge at height - 207).
     if (portrait) {
-      this.makeEndTurnButton(width / 2, height - 195);
+      this.makeEndTurnButton(width / 2, height - 175);
     } else {
       this.makeEndTurnButton(width - 130, height - 130);
     }
