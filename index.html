@@ -47,11 +47,54 @@
       }
       #game canvas {
         display: block;
-        /* iPhone notch: pad the canvas area so play space avoids the
-           cutout. Safe-area insets are 0 on devices without notches. */
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        box-sizing: border-box;
         touch-action: none;
+      }
+
+      /*
+        Portrait-mode rotation. The 1280×720 game is designed for
+        landscape; on a portrait viewport, FIT mode would shrink it
+        into a tiny letterboxed strip in the middle. Instead, we
+        present the game ROTATED 90° so it fills the portrait screen
+        as a landscape image — the user holds their phone normally
+        and sees the full game without having to physically tilt it.
+
+        - The #game div is sized to (viewport-H × viewport-W) — i.e.
+          swapped dimensions — so once rotated it covers the viewport.
+        - The rotation origin is the top-left; the translate then
+          shifts it back onto the visible area.
+        - Phaser inside sees a wide canvas, so its scenes lay out
+          normally in landscape.
+        - Modern browsers correctly route pointer events through the
+          CSS transform, so touch input lands on the right pixel.
+
+        Gated on max-width: 900px so desktop browsers narrowed for
+        testing stay in normal orientation.
+      */
+      @media (orientation: portrait) and (max-width: 900px) {
+        #game {
+          width: 100vh;
+          height: 100vw;
+          transform-origin: 0 0;
+          transform: rotate(90deg) translateY(-100%);
+        }
+        /* Hint pinned to a corner (no transform) so the player learns
+           they can rotate their phone for a "native" landscape view if
+           they prefer. Position is in the BROWSER viewport, not the
+           transformed canvas, so it stays readable. */
+        body::after {
+          content: 'Rotate your phone for a landscape view';
+          position: fixed;
+          left: 8px;
+          bottom: 8px;
+          font-size: 10px;
+          font-family: 'Courier New', monospace;
+          color: #8a7d5e;
+          background: rgba(20, 17, 15, 0.7);
+          padding: 4px 8px;
+          border-radius: 3px;
+          pointer-events: none;
+          z-index: 999;
+        }
       }
     </style>
   </head>
