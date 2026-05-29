@@ -50,71 +50,14 @@
         touch-action: none;
       }
 
-      /*
-        Portrait mode. The 1280×720 design is fundamentally landscape,
-        so portrait phones letterbox heavily. Rather than auto-rotate
-        the canvas (touch events get messy and "sideways game" reads
-        wrong), surface a CLEAR full-screen hint asking the player to
-        rotate their phone. The PWA manifest already declares
-        orientation: landscape; this is the in-browser fallback.
-
-        Gated on max-width: 900px so desktop browsers narrowed for
-        testing don't get the overlay.
-      */
-      @media (orientation: portrait) and (max-width: 900px) {
-        #portrait-overlay {
-          display: flex;
-        }
-      }
-      #portrait-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: rgba(20, 17, 15, 0.92);
-        color: #d9c9a3;
-        font-family: 'Courier New', monospace;
-        text-align: center;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-        box-sizing: border-box;
-      }
-      #portrait-overlay .glyph {
-        font-size: 64px;
-        color: #b88a3e;
-        margin-bottom: 16px;
-        display: inline-block;
-        animation: spin-hint 3s ease-in-out infinite;
-      }
-      #portrait-overlay .title {
-        font-size: 22px;
-        font-weight: bold;
-        color: #b88a3e;
-        margin-bottom: 12px;
-        letter-spacing: 1px;
-      }
-      #portrait-overlay .sub {
-        font-size: 13px;
-        line-height: 1.5;
-        color: #8a7d5e;
-        max-width: 320px;
-      }
-      @keyframes spin-hint {
-        0%, 100% { transform: rotate(0deg); }
-        50%      { transform: rotate(90deg); }
-      }
+      /* Slice 59 — the portrait-rotate overlay was removed when the
+         responsive scenes (Title, CharacterSelect, Combat) gained
+         their own portrait layouts. Other scenes still letterbox via
+         applyDesignFit but the game is playable in portrait. */
     </style>
   </head>
   <body>
     <div id="game"></div>
-    <div id="portrait-overlay" aria-hidden="true">
-      <div class="glyph">↻</div>
-      <div class="title">ROTATE YOUR PHONE</div>
-      <div class="sub">Rust &amp; Rivets is laid out for landscape.
-        Turn your phone sideways and you're set.</div>
-    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

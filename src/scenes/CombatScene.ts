@@ -10,7 +10,6 @@ import { setupPause } from '../ui/setupPause';
 import { sfx, playCardLayer } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 interface EnemyUI {
@@ -65,6 +64,14 @@ const DRAG_THRESHOLD = 12; // pixels of pointer movement before we treat it as a
 
 export class CombatScene extends Phaser.Scene {
   private state!: CombatState;
+  // Slice 59 — orientation flag computed in create() and used by every
+  // layout method to branch between landscape (enemies right / player
+  // left) and portrait (enemies top / player middle / hand bottom in a
+  // narrower row).
+  private portrait = false;
+  // Debounce for resize-triggered scene restart. Rotation re-fires
+  // create() so all positions re-compute in the new orientation.
+  private comboResizeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private mech!: Phaser.GameObjects.Container;
   private enemyUIs: EnemyUI[] = [];
@@ -137,28 +144,54 @@ export class CombatScene extends Phaser.Scene {
     // browser's context menu intercepting that click anywhere on the canvas.
     this.input.mouse?.disableContextMenu();
 
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    // Slice 59 — read REAL viewport (we're in Phaser.Scale.RESIZE mode).
+    // Portrait phones get a vertical layout: enemies at top, player and
+    // potions in the middle band, hand at the bottom. Landscape keeps the
+    // original wide arrangement.
+    const { width, height } = this.scale;
+    this.portrait = height > width;
+    const portrait = this.portrait;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
-    // Wasteland horizon
+    // Wasteland horizon. In portrait the horizon line lives higher so the
+    // enemies + player share the upper half of the screen.
+    const horizonY = portrait ? height * 0.42 : height * 0.55;
     const horizon = this.add.graphics();
     horizon.fillStyle(0x1a1612);
-    horizon.fillRect(0, 0, width, height * 0.55);
+    horizon.fillRect(0, 0, width, horizonY);
     horizon.fillStyle(0x2a2018);
-    horizon.fillRect(0, height * 0.4, width, height * 0.2);
+    horizon.fillRect(0, horizonY - height * 0.05, width, height * 0.08);
     horizon.fillStyle(COLORS.steelDark);
-    horizon.fillRect(0, height * 0.55, width, height * 0.05);
+    horizon.fillRect(0, horizonY, width, height * 0.03);
 
-    // Distant smokestacks
+    // Distant smokestacks — spacing adapts to viewport width so portrait
+    // doesn't crowd them off the left edge.
     horizon.fillStyle(0x2a2724);
-    for (let i = 0; i < 6; i++) {
-      const x = 80 + i * 180;
+    const stackCount = Math.max(4, Math.floor(width / 180));
+    for (let i = 0; i < stackCount; i++) {
+      const x = 40 + i * (width / stackCount);
       const h = 40 + (i % 3) * 20;
-      horizon.fillRect(x, height * 0.4 - h, 18, h);
+      horizon.fillRect(x, horizonY - h * 0.6, 18, h);
     }
+
+    // Slice 59 — restart scene on viewport resize / orientation change so
+    // every position re-computes for the new dims. Debounced so a drag-
+    // resize doesn't thrash the scene 60×/second.
+    const onResize = () => {
+      if (this.comboResizeTimer) clearTimeout(this.comboResizeTimer);
+      this.comboResizeTimer = setTimeout(() => {
+        this.comboResizeTimer = null;
+        this.scene.restart();
+      }, 160);
+    };
+    this.scale.on('resize', onResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', onResize);
+      if (this.comboResizeTimer) {
+        clearTimeout(this.comboResizeTimer);
+        this.comboResizeTimer = null;
+      }
+    });
 
     const run = getRun();
     if (!run.pendingEnemies || run.pendingEnemies.length === 0) {
@@ -181,45 +214,57 @@ export class CombatScene extends Phaser.Scene {
       run.ascension ?? 0
     );
 
-    // Top HUD strip: name + HP bar for the player; enemies arrange across the right.
-    const hudY = 78;
+    // Top HUD strip. Portrait packs the player's HP bar tight against
+    // the top edge so the play area below has maximum vertical room.
+    const hudY = portrait ? 36 : 78;
 
-    this.playerBar = new StatBar(this, width * 0.24, hudY, 280);
+    const playerBarW = portrait ? Math.min(width - 120, 320) : 280;
+    const playerBarX = portrait ? 64 + playerBarW / 2 : width * 0.24;
+    this.playerBar = new StatBar(this, playerBarX, hudY, playerBarW);
     this.add.existing(this.playerBar);
 
     this.add
-      .text(24, hudY, 'PILOT', {
+      .text(portrait ? 16 : 24, hudY, 'PILOT', {
         fontFamily: FONTS.display,
-        fontSize: '14px',
+        fontSize: portrait ? '12px' : '14px',
         color: hex(COLORS.bone),
         fontStyle: 'bold'
       })
       .setOrigin(0, 0.5);
 
-    // Player sprite
+    // Player sprite. Landscape: left of center, mid-height. Portrait:
+    // centered horizontally, sitting in the player band below the
+    // enemies.
     const characterId = run.player.characterId ?? 'pilot';
     const drawCharacter = CHARACTER_SPRITES[characterId] ?? CHARACTER_SPRITES.pilot;
-    this.mech = drawCharacter(this, width * 0.22, height * 0.48);
+    const mechX = portrait ? width * 0.5 : width * 0.22;
+    const mechY = portrait ? height * 0.55 : height * 0.48;
+    this.mech = drawCharacter(this, mechX, mechY);
+    if (portrait) this.mech.setScale(0.7);
 
     // Enemy lineup
     this.layoutEnemies();
 
-    // Steam gauge
+    // Steam gauge. Landscape: bottom-left of the player area. Portrait:
+    // compact, sitting along the right edge above the hand row.
+    const steamSize = portrait ? 70 : 100;
+    const steamX = portrait ? width - 50 : 80;
+    const steamY = portrait ? height - 230 : height - 130;
     this.add
-      .rectangle(80, height - 130, 100, 100, COLORS.bgPanel)
+      .rectangle(steamX, steamY, steamSize, steamSize, COLORS.bgPanel)
       .setStrokeStyle(3, COLORS.brass)
       .setOrigin(0.5);
     this.add
-      .text(80, height - 175, 'STEAM', {
+      .text(steamX, steamY - steamSize * 0.6, 'STEAM', {
         fontFamily: FONTS.display,
-        fontSize: '12px',
+        fontSize: portrait ? '10px' : '12px',
         color: hex(COLORS.brass)
       })
       .setOrigin(0.5);
     this.steamText = this.add
-      .text(80, height - 130, '3/3', {
+      .text(steamX, steamY, '3/3', {
         fontFamily: FONTS.display,
-        fontSize: '32px',
+        fontSize: portrait ? '22px' : '32px',
         color: hex(COLORS.steam),
         fontStyle: 'bold'
       })
@@ -228,62 +273,80 @@ export class CombatScene extends Phaser.Scene {
 
     // Scrap badge (run currency)
     this.add
-      .text(20, 24, `SCRAP  ${getRun().scrap}`, {
+      .text(portrait ? 16 : 20, portrait ? 8 : 24, `SCRAP  ${getRun().scrap}`, {
         fontFamily: FONTS.display,
-        fontSize: '14px',
+        fontSize: portrait ? '12px' : '14px',
         color: hex(COLORS.steam),
         fontStyle: 'bold'
       })
       .setOrigin(0, 0);
 
-    // Turn indicator
-    this.turnText = this.add.text(width / 2, 20, '', {
+    // Turn indicator. Landscape: top-center. Portrait: top-right corner
+    // so it doesn't crash the PILOT HP bar.
+    this.turnText = this.add.text(portrait ? width - 16 : width / 2, portrait ? 8 : 20, '', {
       fontFamily: FONTS.display,
-      fontSize: '14px',
+      fontSize: portrait ? '11px' : '14px',
       color: hex(COLORS.boneDim)
-    }).setOrigin(0.5, 0);
+    }).setOrigin(portrait ? 1 : 0.5, 0);
 
-    // Deck/discard pile anchors. Cards animate from drawPile on draw and
-    // toward discardPile on play / end-of-turn discard. Tucked into the
-    // narrow band between the steam panel / end-turn button (which end at
-    // height-80 / height-98) and the counter text at height-40, so they
-    // never overlap the HUD above them.
-    this.drawPile = { x: 70, y: height - 62 };
-    this.discardPile = { x: width - 100, y: height - 62 };
+    // Deck / discard pile anchors. Landscape: pinned to the bottom
+    // corners below the hand band. Portrait: anchored to the steam area
+    // since the bottom corners are reserved for the wide hand strip.
+    if (portrait) {
+      this.drawPile = { x: 40, y: height - 230 };
+      this.discardPile = { x: width - 50, y: height - 320 };
+    } else {
+      this.drawPile = { x: 70, y: height - 62 };
+      this.discardPile = { x: width - 100, y: height - 62 };
+    }
     this.drawPileStack(this.drawPile.x, this.drawPile.y);
     this.drawPileStack(this.discardPile.x, this.discardPile.y);
 
     // Deck/discard counters
+    const counterY = portrait ? height - 195 : height - 40;
     this.deckText = this.add
-      .text(40, height - 40, '', {
+      .text(portrait ? this.drawPile.x : 40, counterY, '', {
         fontFamily: FONTS.body,
-        fontSize: '12px',
+        fontSize: portrait ? '10px' : '12px',
         color: hex(COLORS.boneDim)
       })
-      .setOrigin(0, 0.5);
+      .setOrigin(portrait ? 0.5 : 0, 0.5);
     this.discardText = this.add
-      .text(width - 40, height - 40, '', {
+      .text(portrait ? this.discardPile.x : width - 40, portrait ? this.discardPile.y + 35 : counterY, '', {
         fontFamily: FONTS.body,
-        fontSize: '12px',
+        fontSize: portrait ? '10px' : '12px',
         color: hex(COLORS.boneDim)
       })
-      .setOrigin(1, 0.5);
+      .setOrigin(portrait ? 0.5 : 1, 0.5);
 
-    // Combat log
-    this.logText = this.add.text(width - 20, 20, '', {
-      fontFamily: FONTS.body,
-      fontSize: '11px',
-      color: hex(COLORS.boneDim),
-      align: 'right'
-    }).setOrigin(1, 0);
+    // Combat log. Hidden in portrait — no room. The log is informational
+    // (recent state changes), not gameplay-critical.
+    if (portrait) {
+      this.logText = this.add.text(0, 0, '', { fontFamily: FONTS.body }).setVisible(false);
+    } else {
+      this.logText = this.add.text(width - 20, 20, '', {
+        fontFamily: FONTS.body,
+        fontSize: '11px',
+        color: hex(COLORS.boneDim),
+        align: 'right'
+      }).setOrigin(1, 0);
+    }
 
-    // Potion belt — row of slots above the hand. Card tops sit at
-    // ~height - 186; placing the belt at height - 240 leaves a ~30 px
-    // gap below it so cards never overlap the slots.
-    this.makePotionBelt(80, height - 240);
+    // Potion belt. Landscape: above the hand row at the bottom. Portrait:
+    // compact strip just above the hand strip, centered horizontally.
+    if (portrait) {
+      this.makePotionBelt(width / 2 - 110, height - 280);
+    } else {
+      this.makePotionBelt(80, height - 240);
+    }
 
-    // End turn button
-    this.makeEndTurnButton(width - 130, height - 130);
+    // End turn button. Landscape: bottom-right of the player area.
+    // Portrait: above the hand row, opposite the steam gauge.
+    if (portrait) {
+      this.makeEndTurnButton(80, height - 230);
+    } else {
+      this.makeEndTurnButton(width - 130, height - 130);
+    }
 
     // Hand layer
     this.handLayer = this.add.container(0, 0);
@@ -313,15 +376,25 @@ export class CombatScene extends Phaser.Scene {
   // ===== Enemy layout =====
 
   private enemyPositionFor(i: number, count: number): { x: number; y: number; scale: number } {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
+    // Slice 59 — portrait packs enemies in a horizontal row near the top
+    // of the play area (above the player mech and HUD). Scales down
+    // further so 3-enemy fights fit on a narrow phone screen.
+    if (this.portrait) {
+      const baseY = height * 0.26;
+      const scale = count <= 1 ? 0.75 : count === 2 ? 0.6 : 0.5;
+      if (count <= 1) return { x: width * 0.5, y: baseY, scale };
+      const span = width * 0.7;
+      const startX = (width - span) / 2;
+      return { x: startX + (i * span) / (count - 1), y: baseY, scale };
+    }
+    // Landscape (original layout): enemies clustered on the right side.
     const baseY = height * 0.5;
     if (count <= 1) return { x: width * 0.72, y: baseY, scale: 1 };
     if (count === 2) {
       const xs = [width * 0.6, width * 0.86];
       return { x: xs[i], y: baseY, scale: 0.85 };
     }
-    // 3+ — squeeze across the right two-thirds
     const span = width * 0.42;
     const startX = width * 0.55;
     return { x: startX + (i * span) / (count - 1), y: baseY, scale: 0.72 };
@@ -486,7 +559,7 @@ export class CombatScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(900);
     // Aim banner — only visible while choosing a potion target.
-    const width = DESIGN_W;
+    const { width } = this.scale;
     this.potionAimBanner = this.add
       .text(width / 2, 56, 'CHOOSE A TARGET — CLICK ELSEWHERE TO CANCEL', {
         fontFamily: FONTS.display,
@@ -1406,24 +1479,24 @@ export class CombatScene extends Phaser.Scene {
     staleViews.forEach((stale, i) => this.animateDiscardOut(stale, i));
     this.cardViews = next;
 
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    const baseY = height - CARD_H * 0.5 - 16;
+    const { width, height } = this.scale;
+    // Slice 59 — portrait scales cards down so 4-5 fit on a narrow phone
+    // screen. Landscape uses natural card size with the same overlap
+    // packing rules as before.
+    const cardScale = this.portrait
+      ? Math.min(0.75, Math.max(0.45, (width - 40) / (CARD_W * 5)))
+      : 1;
+    const effectiveCardW = CARD_W * cardScale;
+    const effectiveCardH = CARD_H * cardScale;
+    const baseY = height - effectiveCardH * 0.5 - 16;
     const n = next.length;
     if (n === 0) return;
 
-    // Simple horizontal row: cards evenly spaced. At small hand sizes
-    // they don't overlap; at large hand sizes (8+) they pack together
-    // with the rightmost card drawn last so hover/click favors the most
-    // recently drawn card (which is usually what the player wants).
-    //
-    // Slice 56 — widened maxSpread (360 → 240 margin) so hands up to ~10
-    // cards lay out without crushing each other, and bumped the minimum
-    // spacing to 60% of CARD_W so even at 12+ cards each card's tappable
-    // area remains a clear vertical strip.
-    const maxSpread = width - 240;
-    const idealSpacing = CARD_W + 10; // 10px gap between cards
-    const minSpacing = CARD_W * 0.6;  // ~84 px — hardest crowding allowed
+    // Layout. Portrait gives tighter spacing because cards are smaller.
+    // Landscape keeps the existing maxSpread / minSpacing rules.
+    const maxSpread = width - (this.portrait ? 24 : 240);
+    const idealSpacing = effectiveCardW + 10;
+    const minSpacing = effectiveCardW * 0.6;
     const rawSpacing = n > 1 ? maxSpread / (n - 1) : 0;
     const spacing = n > 1 ? Math.max(minSpacing, Math.min(idealSpacing, rawSpacing)) : 0;
     const startX = width / 2 - (spacing * (n - 1)) / 2;
@@ -1435,21 +1508,18 @@ export class CombatScene extends Phaser.Scene {
       const view = next[i];
       view.setPlayable(canPlay(this.state, view.card.uid));
       // Slice 56 — keep the cost badge in sync with runtime modifiers
-      // (firstCardFree / Reactor Lens). Cheap to call per layout since
-      // costLabel is a pure read off PlayerState + relicIds.
+      // (firstCardFree / Reactor Lens).
       const { label, discounted } = costLabel(this.state, view.card.def);
       view.setCostLabel(label, discounted);
+      // Slice 59 — apply portrait scale to every card. CardView is a
+      // Phaser.GameObjects.Container so setScale uniformly shrinks the
+      // whole rendered card, including the inner hit zones.
+      if (cardScale !== 1) view.setScale(cardScale);
       if (newlyCreated.has(view)) {
-        // New card: snap to home, then animateDrawIn moves it to the draw
-        // pile and tweens back. The "snap" half is wasted work but keeps
-        // home values authoritative if animateDrawIn ever short-circuits.
         view.setHome(x, baseY, 0);
         this.animateDrawIn(view, x, baseY, drawStagger);
         drawStagger += 1;
       } else {
-        // Existing card: update home values without snapping, then tween
-        // the container to the new x/y so hand reflow looks like a slide
-        // instead of a teleport.
         view.setHome(x, baseY, 0, false);
         this.tweenHandTo(view, x, baseY);
       }
@@ -1557,8 +1627,7 @@ export class CombatScene extends Phaser.Scene {
 
   private showOverlay(title: string, sub: string, color: number) {
     this.overlay.removeAll(true);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.65);
     const t = this.add.text(width / 2, height / 2 - 20, title, {
       fontFamily: FONTS.display,
