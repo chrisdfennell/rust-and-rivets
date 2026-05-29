@@ -16,15 +16,18 @@ and strip the tag from the previous one.
 
 Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
-- **Run length:** 3 acts, ~20 nodes each. Each act picks one of 3
-  bosses at boss-node entry (Foundry Tyrant / Salvage Colossus /
+- **Run length:** 5 acts, ~20 nodes each. Acts 1-3 each pick from a
+  3-boss pool at boss-node entry (Foundry Tyrant / Salvage Colossus /
   Reclaimer Prime, Iron Sovereign / Pyroclast Engine / Vault Warden,
-  Stormheart / The Wraith / Cyclone King). Win = defeat the act-3
-  boss. InterActScene between each act lets the player pick a boon
-  (Repair / Refit / Salvage).
-- **Characters:** 4 pilots (Pilot / Engineer / Saboteur / Stoker) with
-  unique starter decks, hull pools, and signature relics. The Stoker
-  ramps Strength every turn an enemy is Burning (Furnace Heart relic).
+  Stormheart / The Wraith / Cyclone King). Acts 4-5 each pick from a
+  2-boss pool (The Choirmaster / Iron Saint, World-Forge Heart / The
+  First Engine). Win = defeat the act-5 boss. InterActScene between
+  each act lets the player pick a boon (Repair / Refit / Salvage).
+- **Characters:** 5 pilots (Pilot / Engineer / Saboteur / Stoker /
+  Conductor) with unique starter decks, hull pools, and signature
+  relics. The Stoker ramps Strength every turn an enemy is Burning
+  (Furnace Heart). The Conductor gains +1 Strength every 3rd card
+  played each turn (Steam Whistle).
 - **Cards:** ~61 base + `+` upgraded variants. Types: attack / skill /
   power. Keywords: exhaust, retain, ethereal, innate, AoE
   (`target: 'allEnemies'`), X-cost, unplayable. Rarities: common /
@@ -64,7 +67,80 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 49 — Burn-card pack (Stoker depth) *(current)*
+### Slice 50 — Two new acts, the Conductor, A6/A7 *(current)*
+Major content drop. The run now goes 5 acts deep instead of 3; a fifth
+playable pilot enters the roster; the Ascension ladder extends to A7.
+
+**New acts** ([src/game/enemies.ts](src/game/enemies.ts)):
+
+| Act | Name | Regulars | Elites | Bosses |
+|---|---|---|---|---|
+| 4 | THE BRASS CATHEDRAL | Brass Acolyte / Censer Sentry / Hymn Chorister / Litany Crawler | Cathedral Verger / Iron Hymn | The Choirmaster / Iron Saint |
+| 5 | THE WORLD-FORGE | Slag Wraith / Anvil Striker / Hammer Spirit / Forge Imp | Furnace Maw / Crucible Knight | World-Forge Heart / The First Engine |
+
+`isFinalAct` now reads `act >= 5`, `getActName` covers the new names,
+and `regularPoolFor / elitePoolFor / bossPoolFor / regularGroupFor /
+eliteGroupFor` were all extended. Act-4/5 pair-encounters seed the
+group-fight pickers so multi-enemy maps stay flavorful late.
+
+**New character — THE CONDUCTOR**
+([src/game/characters.ts](src/game/characters.ts)). Hull 58, starter
+deck stacked with cheap cycle: 4× Auto-Cannon, 3× Brace, Pressure Drum,
+Tempo Shift, Crescendo. Signature relic **Steam Whistle**: every 3rd
+card played each turn grants +1 Strength this combat. Pairs with the
+new momentum cards:
+
+| Card | Rarity | Cost | Effect |
+|---|---|---|---|
+| Pressure Drum | common | 0 | Deal 4. Exhaust. |
+| Tempo Shift | common | 1 | Draw 2. (+ upgrades to 0-cost.) |
+| Crescendo | uncommon | 1 | Deal 5; deal +8 if you've already played 2 cards this turn |
+| Counterpoint | rare | 2 | Deal 12; deal +16 if you've already played 3 cards this turn |
+
+New effect kind `bonusDamageIfCardsAtLeast { amount, threshold }`
+([src/game/types.ts](src/game/types.ts) + handler in
+[src/game/combat.ts](src/game/combat.ts)) reads
+`player.cardsPlayedThisTurn` BEFORE the post-effect increment, so
+threshold=2 reads as "this is your 3rd card or later." Generic enough
+that future combo-payoff cards can reuse it without new effect kinds.
+
+**New ascension tiers** ([src/game/meta.ts](src/game/meta.ts)):
+
+- **A6 — Compounded Wear**: stacks another -5 max Hull on top of A5
+  (so -10 total). Implemented in [src/game/run.ts](src/game/run.ts)
+  by branching the startingHull penalty on `ascension >= 6`.
+- **A7 — Persistent Foes**: universal +10% Hull / +10% damage on
+  every enemy (regular / elite / boss). `ascensionHullMult` and
+  `ascensionDamageMult` in [src/game/combat.ts](src/game/combat.ts)
+  multiply by 1.10 when `ascension >= 7`, on TOP of the kind-specific
+  scalars from earlier tiers.
+
+**Boss signature relics** ([src/game/relics.ts](src/game/relics.ts))
+extended to cover the four new bosses (still `signature: true`, still
+gated through `BOSS_SIGNATURE_RELICS`):
+
+- **Resonance Coil** (Choirmaster) — every 3rd turn, +5 Plating.
+- **Saint's Halo** (Iron Saint) — start each combat with +1 Strength /
+  +1 Dexterity.
+- **Forge Core** (World-Forge Heart) — start each combat with +6
+  Plating and apply 3 Burn to all enemies.
+- **Engine Shard** (First Engine) — first attack each turn deals +6
+  damage. Stacks additively with Brass Knuckles via
+  `firstAttackBonus`.
+
+**InterAct flavor** ([src/scenes/InterActScene.ts](src/scenes/InterActScene.ts))
+is now act-aware — "The Foundry yawns open" was act-1-specific; the
+new `interActFlavor(clearedAct)` returns the right doorway text for
+1→2, 2→3, 3→4, 4→5. MapScene's victory text moved from "The Sovereign
+is undone" to "The First Engine falls silent. The World-Forge cools."
+
+**Sprite art TODO.** [src/ui/MechSprite.ts](src/ui/MechSprite.ts) has
+no entries yet for the 16 new enemies (4 + 2 + 2 per act × 2 new acts)
+or the Conductor mech. `ENEMY_SPRITES` / `CHARACTER_SPRITES` already
+fall back to scrapRaider / pilot, so the gameplay slice ships intact
+— art is a follow-up.
+
+### Slice 49 — Burn-card pack (Stoker depth)
 The Stoker pilot landed in Slice 44 but the Burn card pool stayed
 thin — Pyro Charge, Acid Mist, Cinder Round, Ember Round. Furnace
 Heart (the Stoker's signature relic) carried the whole gimmick

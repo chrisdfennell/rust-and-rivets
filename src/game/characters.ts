@@ -76,7 +76,26 @@ const STOKER: CharacterDef = {
   startingRelics: ['furnaceHeart']
 };
 
-export const CHARACTERS: CharacterDef[] = [PILOT, ENGINEER, SABOTEUR, STOKER];
+// Slice 50 — momentum/combo pilot. Lots of cheap cards, a starter draw
+// engine, and the Steam Whistle relic that pays out +1 Strength every
+// third card played each turn. Plays a wide hand fast and ramps with it.
+const CONDUCTOR: CharacterDef = {
+  id: 'conductor',
+  name: 'THE CONDUCTOR',
+  tagline: 'Keep the beat. Build the pressure.',
+  description:
+    'Cycles cards faster than anyone in the rig pool. Every third card played each turn pays a Strength dividend — the longer the fight, the harder the swing.',
+  startingHull: 58,
+  startingDeck: [
+    'autocannon', 'autocannon', 'autocannon', 'autocannon',
+    'brace', 'brace', 'brace',
+    'pressureDrum', 'tempoShift',
+    'crescendo'
+  ],
+  startingRelics: ['steamWhistle']
+};
+
+export const CHARACTERS: CharacterDef[] = [PILOT, ENGINEER, SABOTEUR, STOKER, CONDUCTOR];
 
 export const CHARACTER_BY_ID: Record<string, CharacterDef> = Object.fromEntries(
   CHARACTERS.map((c) => [c.id, c])

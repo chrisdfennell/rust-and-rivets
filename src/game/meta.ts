@@ -40,7 +40,9 @@ export const ASCENSION_TIERS: AscensionTier[] = [
   { level: 2, name: 'Reduced Recovery',  description: 'Rest sites heal 20% of max Hull (down from 30%).' },
   { level: 3, name: 'Hard Elites',       description: 'Elite enemies have +30% Hull and +20% damage.' },
   { level: 4, name: 'Resilient Bosses',  description: 'Bosses have +30% Hull and +20% damage.' },
-  { level: 5, name: 'Cracked Frame',     description: 'Start each run with -5 max Hull.' }
+  { level: 5, name: 'Cracked Frame',     description: 'Start each run with -5 max Hull.' },
+  { level: 6, name: 'Compounded Wear',   description: 'Start each run with an additional -5 max Hull (-10 total).' },
+  { level: 7, name: 'Persistent Foes',   description: 'ALL enemies (regular / elite / boss) gain +10% Hull and +10% damage.' }
 ];
 
 export const MAX_ASCENSION = ASCENSION_TIERS.length;

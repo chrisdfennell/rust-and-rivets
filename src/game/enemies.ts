@@ -1630,6 +1630,774 @@ export const CYCLONE_KING: EnemyDef = {
   }
 };
 
+// ===== Slice 50 — Act 4 (Brass Cathedral) regulars =====
+// Theme: clockwork cult — chanting acolytes, censer-swinging bruisers,
+// thorny choristers, burn-dropping crawlers. Hull tier between Act 3
+// regulars (~38-50) and Act 5 (~55-65).
+
+export const BRASS_ACOLYTE: EnemyDef = {
+  id: 'brassAcolyte',
+  name: 'Brass Acolyte',
+  maxHull: 52,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'debuff', label: `Chant: ${dmg} + Weak`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Chant') && roll < 0.4) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'debuff', label: `Chant: ${dmg} + Weak`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (roll < 0.75) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Brass Smite: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Vespers: +10' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 10)
+    };
+  }
+};
+
+export const CENSER_SENTRY: EnemyDef = {
+  id: 'censerSentry',
+  name: 'Censer Sentry',
+  maxHull: 58,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Brace: +12' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 12)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Censer Swing') && roll < 0.45) {
+      const dmg = 14;
+      return {
+        intent: { kind: 'attack', label: `Censer Swing: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Slag Lob') && roll < 0.7) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Slag Lob: ${dmg} + Slag Glob`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'slagGlob');
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Reinforce: +9 + Weak 1' },
+      resolve: (ctx) => {
+        gainEnemyPlating(ctx, 9);
+        applyWeakToPlayer(ctx, 1);
+      }
+    };
+  }
+};
+
+export const HYMN_CHORISTER: EnemyDef = {
+  id: 'hymnChorister',
+  name: 'Hymn Chorister',
+  maxHull: 46,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Hymnal: +6 + 3 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 6);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 3;
+          ctx.log('The chorister sharpens its hymn (+3 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Verse') && roll < 0.45) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Verse: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Refrain') && roll < 0.7) {
+      return {
+        intent: { kind: 'buff', label: 'Refrain: refresh Thorns' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 5);
+          ctx.log('The chorister rises in pitch (+Thorns).');
+        }
+      };
+    }
+    const dmg = 11;
+    return {
+      intent: { kind: 'attack', label: `Bell Strike: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+export const LITANY_CRAWLER: EnemyDef = {
+  id: 'litanyCrawler',
+  name: 'Litany Crawler',
+  maxHull: 44,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Ember Litany: ${dmg} + Burn 4`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Ember Litany') && roll < 0.4) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Ember Litany: ${dmg} + Burn 4`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    if (!last.startsWith('Scorch') && roll < 0.7) {
+      const dmg = 10;
+      return {
+        intent: { kind: 'attack', label: `Scorch: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Pious Plating: +8' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 8)
+    };
+  }
+};
+
+// ===== Slice 50 — Act 4 elites =====
+
+export const CATHEDRAL_VERGER: EnemyDef = {
+  id: 'cathedralVerger',
+  name: 'Cathedral Verger',
+  maxHull: 105,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    // Telegraphed huge swing every 3 turns.
+    if (turn % 3 === 0) {
+      const dmg = 24;
+      return {
+        intent: { kind: 'attack', label: `Pulpit Smash: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Brass Wall: +14 + Weak' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 14);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Swing') && roll < 0.55) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'attack', label: `Swing: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Bulwark: +16' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 16)
+    };
+  }
+};
+
+export const IRON_HYMN: EnemyDef = {
+  id: 'ironHymn',
+  name: 'Iron Hymn',
+  maxHull: 92,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'debuff', label: 'Invocation: Vuln 2 + Weak 2' },
+        resolve: (ctx) => {
+          applyVulnerableToPlayer(ctx, 2);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Brass Chord') && roll < 0.55) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'attack', label: `Brass Chord: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Dirge') && roll < 0.8) {
+      return {
+        intent: { kind: 'debuff', label: 'Dirge: Vuln 2 + Weak 1' },
+        resolve: (ctx) => {
+          applyVulnerableToPlayer(ctx, 2);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const dmg = 18;
+    return {
+      intent: { kind: 'attack', label: `Cantata: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+// ===== Slice 50 — Act 4 bosses =====
+
+// The Choirmaster — every 3rd turn unleashes Resonance Crescendo, a huge
+// telegraphed combined hit. Between resonances, alternates between heavy
+// chord swings and choir refresh that reapplies Weak/Vuln to maintain
+// debuff pressure.
+export const THE_CHOIRMASTER: EnemyDef = {
+  id: 'choirmaster',
+  name: 'The Choirmaster',
+  maxHull: 155,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Hymnal Prep: +16 + Weak 2' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 16);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    // Every 3rd turn fires the big resonance. Predictable so the player
+    // can save plating / draw a power for it.
+    if (turn % 3 === 0) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'attack', label: `Resonance Crescendo: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Chord') && roll < 0.5) {
+      const dmg = 16;
+      return {
+        intent: { kind: 'attack', label: `Chord: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Refrain') && roll < 0.8) {
+      return {
+        intent: { kind: 'debuff', label: 'Refrain: Vuln 2 + Weak 2' },
+        resolve: (ctx) => {
+          applyVulnerableToPlayer(ctx, 2);
+          applyWeakToPlayer(ctx, 2);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Brass Mantle: +14' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 14)
+    };
+  }
+};
+
+// Iron Saint — gains +1 Strength permanently every turn (no telegraph
+// can stop it). Pressures the player to race rather than turtle: drag
+// the fight out and the Saint's hits compound past anything plating can
+// absorb. Turn-1 telegraph telegraphs the ramp explicitly.
+export const IRON_SAINT: EnemyDef = {
+  id: 'ironSaint',
+  name: 'Iron Saint',
+  maxHull: 150,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'buff', label: 'Sanctify: ramp begins' },
+        resolve: (ctx) => {
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 2;
+          ctx.log('The Saint sanctifies its frame (+2 Strength).');
+        }
+      };
+    }
+    // Permanent Strength tick every turn after turn 1 — resolves on top
+    // of the chosen action so the threat genuinely escalates.
+    const tickStrength = (ctx: ResolveCtx) => {
+      const idx = ctx.state.activeAttackerIndex ?? 0;
+      ctx.state.enemies[idx].strength += 1;
+      ctx.log('The Saint grows stronger (+1 Strength).');
+    };
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Halo Strike') && roll < 0.55) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Halo Strike: ${dmg}+ramp`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          tickStrength(ctx);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Censer Sweep') && roll < 0.85) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Censer Sweep: ${dmg}x2+ramp`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          tickStrength(ctx);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Iron Pew: +14+ramp' },
+      resolve: (ctx) => {
+        tickStrength(ctx);
+        gainEnemyPlating(ctx, 14);
+      }
+    };
+  }
+};
+
+// ===== Slice 50 — Act 5 (World-Forge) regulars =====
+// Final-act mooks. Bigger HP, harder hits. Theme: molten core depths.
+
+export const SLAG_WRAITH: EnemyDef = {
+  id: 'slagWraith',
+  name: 'Slag Wraith',
+  maxHull: 58,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'debuff', label: `Drain: ${dmg} → heal 5`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          const me = ctx.state.enemies[idx];
+          const healed = Math.min(5, me.maxHull - me.hull);
+          if (healed > 0) {
+            me.hull += healed;
+            ctx.log(`The Wraith siphons ${healed} hull.`);
+          }
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Drain') && roll < 0.4) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'debuff', label: `Drain: ${dmg} → heal 5`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          const me = ctx.state.enemies[idx];
+          const healed = Math.min(5, me.maxHull - me.hull);
+          if (healed > 0) {
+            me.hull += healed;
+            ctx.log(`The Wraith siphons ${healed} hull.`);
+          }
+        }
+      };
+    }
+    if (roll < 0.8) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Soul Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Phase: +9 + Vuln 1' },
+      resolve: (ctx) => {
+        gainEnemyPlating(ctx, 9);
+        applyVulnerableToPlayer(ctx, 1);
+      }
+    };
+  }
+};
+
+export const ANVIL_STRIKER: EnemyDef = {
+  id: 'anvilStriker',
+  name: 'Anvil Striker',
+  maxHull: 62,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Plant Feet: +8' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 8)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Anvil Drop') && roll < 0.4) {
+      const dmg = 18;
+      return {
+        intent: { kind: 'attack', label: `Anvil Drop: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (roll < 0.75) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'attack', label: `Hammer Combo: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Brace: +12' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 12)
+    };
+  }
+};
+
+export const HAMMER_SPIRIT: EnemyDef = {
+  id: 'hammerSpirit',
+  name: 'Hammer Spirit',
+  maxHull: 56,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Ember Shroud: +6 + 4 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 6);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 4;
+          ctx.log('The Spirit wreaths itself in cinders (+4 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Ember Volley') && roll < 0.4) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Ember Volley: ${dmg} + Burn 5`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 5);
+        }
+      };
+    }
+    if (roll < 0.75) {
+      const dmg = 13;
+      return {
+        intent: { kind: 'attack', label: `Forge Strike: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'buff', label: 'Refresh: +Thorns' },
+      resolve: (ctx) => {
+        const idx = ctx.state.activeAttackerIndex ?? 0;
+        ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 5);
+        ctx.log('The Spirit re-stokes its embers.');
+      }
+    };
+  }
+};
+
+export const FORGE_IMP: EnemyDef = {
+  id: 'forgeImp',
+  name: 'Forge Imp',
+  maxHull: 38,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Heat Toss: ${dmg} + Heat Damage`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'heatDamage');
+        }
+      };
+    }
+    // Drop another Heat Damage on a delay so the player has to cycle it.
+    if (turn % 3 === 0) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Heat Toss: ${dmg} + Heat Damage`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'heatDamage');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Cackle') && roll < 0.3) {
+      return {
+        intent: { kind: 'debuff', label: 'Cackle: Burn 4 + Weak' },
+        resolve: (ctx) => {
+          applyBurnToPlayer(ctx, 4);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    const dmg = 9;
+    return {
+      intent: { kind: 'attack', label: `Cinder Stab: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+// ===== Slice 50 — Act 5 elites =====
+
+export const FURNACE_MAW: EnemyDef = {
+  id: 'furnaceMaw',
+  name: 'Furnace Maw',
+  maxHull: 120,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'debuff', label: 'Stoke: +12 + Burn 4' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 12);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Magma Spit') && roll < 0.5) {
+      const dmg = 9;
+      return {
+        intent: { kind: 'debuff', label: `Magma Spit: ${dmg} + Burn 5`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 5);
+        }
+      };
+    }
+    if (!last.startsWith('Devour') && roll < 0.8) {
+      const dmg = 22;
+      return {
+        intent: { kind: 'attack', label: `Devour: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Iron Maw: +18 + Burn 3' },
+      resolve: (ctx) => {
+        gainEnemyPlating(ctx, 18);
+        applyBurnToPlayer(ctx, 3);
+      }
+    };
+  }
+};
+
+export const CRUCIBLE_KNIGHT: EnemyDef = {
+  id: 'crucibleKnight',
+  name: 'Crucible Knight',
+  maxHull: 110,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Iron Vow: +16 + 5 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 16);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 5;
+          ctx.log('The Knight raises its iron vow (+5 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Greatsword') && roll < 0.5) {
+      const dmg = 19;
+      return {
+        intent: { kind: 'attack', label: `Greatsword: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Riposte') && roll < 0.8) {
+      return {
+        intent: { kind: 'buff', label: 'Riposte: refresh Thorns + 12 Plating' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 12);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 6);
+        }
+      };
+    }
+    const dmg = 8;
+    return {
+      intent: { kind: 'attack', label: `Cleave: ${dmg}x2`, damage: dmg, hits: 2 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+      }
+    };
+  }
+};
+
+// ===== Slice 50 — Act 5 bosses =====
+
+// World-Forge Heart — stationary but ramps Plating and Burn pressure each
+// turn. The longer you let it sit, the harder it is to break through.
+// Turn-1 telegraph reads as a clear "the Heart wakes."
+export const WORLD_FORGE_HEART: EnemyDef = {
+  id: 'worldForgeHeart',
+  name: 'World-Forge Heart',
+  maxHull: 180,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Awaken: +20 + Burn 5' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 20);
+          applyBurnToPlayer(ctx, 5);
+        }
+      };
+    }
+    // Every 3rd turn dumps a massive forge-pulse: Burn + multi-hit.
+    if (turn % 3 === 0) {
+      const dmg = 8;
+      return {
+        intent: { kind: 'debuff', label: `Forge Pulse: ${dmg}x3 + Burn 6`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 6);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Magma Wave') && roll < 0.5) {
+      const dmg = 16;
+      return {
+        intent: { kind: 'debuff', label: `Magma Wave: ${dmg} + Burn 4`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    if (!last.startsWith('Reinforce') && roll < 0.8) {
+      return {
+        intent: { kind: 'defend', label: 'Reinforce: +18' },
+        resolve: (ctx) => gainEnemyPlating(ctx, 18)
+      };
+    }
+    const dmg = 22;
+    return {
+      intent: { kind: 'attack', label: `Core Slam: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+// The First Engine — final boss. Three-phase telegraph cycle: Charge
+// (gains big plating + buff), Vent (massive hit), then a "Smash" filler.
+// The pattern is deterministic so the player can plan around it; the
+// damage numbers are tuned so a clean Vent absorption is necessary.
+export const THE_FIRST_ENGINE: EnemyDef = {
+  id: 'firstEngine',
+  name: 'The First Engine',
+  maxHull: 195,
+  pickAction: ({ turn, memory }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Ignition: +18 + Burn 4' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 18);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    // 3-phase loop: charge → vent → smash.
+    const phase = (turn - 2) % 3;
+    if (phase === 0) {
+      memory.charged = true;
+      return {
+        intent: { kind: 'buff', label: 'Overcharge: +14 Plating' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 14);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].strength += 2;
+          ctx.log('The Engine winds up (+2 Strength).');
+        }
+      };
+    }
+    if (phase === 1) {
+      const charged = !!memory.charged;
+      memory.charged = false;
+      const dmg = charged ? 30 : 22;
+      return {
+        intent: { kind: 'attack', label: `Vent Blast: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const dmg = 10;
+    return {
+      intent: { kind: 'attack', label: `Piston Smash: ${dmg}x2`, damage: dmg, hits: 2 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+      }
+    };
+  }
+};
+
 export const ACT1_POOL: EnemyDef[] = [
   SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
   RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
@@ -1648,21 +2416,37 @@ export const ACT3_POOL: EnemyDef[] = [
 ];
 export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
 
+export const ACT4_POOL: EnemyDef[] = [
+  BRASS_ACOLYTE, CENSER_SENTRY, HYMN_CHORISTER, LITANY_CRAWLER
+];
+export const ACT4_ELITE_POOL: EnemyDef[] = [CATHEDRAL_VERGER, IRON_HYMN];
+
+export const ACT5_POOL: EnemyDef[] = [
+  SLAG_WRAITH, ANVIL_STRIKER, HAMMER_SPIRIT, FORGE_IMP
+];
+export const ACT5_ELITE_POOL: EnemyDef[] = [FURNACE_MAW, CRUCIBLE_KNIGHT];
+
 // Boss pools — each act picks one random boss at boss-node entry. The
 // selection is persisted via run.pendingEnemyIds so refresh resumes the
 // same boss, but a new run rolls a fresh choice.
 export const ACT1_BOSS_POOL: EnemyDef[] = [FOUNDRY_TYRANT, SALVAGE_COLOSSUS, RECLAIMER_PRIME];
 export const ACT2_BOSS_POOL: EnemyDef[] = [IRON_SOVEREIGN, PYROCLAST_ENGINE, VAULT_WARDEN];
 export const ACT3_BOSS_POOL: EnemyDef[] = [STORMHEART, THE_WRAITH, CYCLONE_KING];
+export const ACT4_BOSS_POOL: EnemyDef[] = [THE_CHOIRMASTER, IRON_SAINT];
+export const ACT5_BOSS_POOL: EnemyDef[] = [WORLD_FORGE_HEART, THE_FIRST_ENGINE];
 
 function regularPoolFor(act: number): EnemyDef[] {
-  if (act >= 3) return ACT3_POOL;
+  if (act >= 5) return ACT5_POOL;
+  if (act === 4) return ACT4_POOL;
+  if (act === 3) return ACT3_POOL;
   if (act === 2) return ACT2_POOL;
   return ACT1_POOL;
 }
 
 function elitePoolFor(act: number): EnemyDef[] {
-  if (act >= 3) return ACT3_ELITE_POOL;
+  if (act >= 5) return ACT5_ELITE_POOL;
+  if (act === 4) return ACT4_ELITE_POOL;
+  if (act === 3) return ACT3_ELITE_POOL;
   if (act === 2) return ACT2_ELITE_POOL;
   return ACT1_ELITE_POOL;
 }
@@ -1678,7 +2462,9 @@ export function pickEliteEnemy(act: number, rng: () => number): EnemyDef {
 }
 
 function bossPoolFor(act: number): EnemyDef[] {
-  if (act >= 3) return ACT3_BOSS_POOL;
+  if (act >= 5) return ACT5_BOSS_POOL;
+  if (act === 4) return ACT4_BOSS_POOL;
+  if (act === 3) return ACT3_BOSS_POOL;
   if (act === 2) return ACT2_BOSS_POOL;
   return ACT1_BOSS_POOL;
 }
@@ -1709,17 +2495,29 @@ function regularGroupFor(act: number, rng: () => number): EnemyDef[] | null {
       ? [CINDER_HOUND, CINDER_HOUND]
       : [SLAG_DRONE, FORGE_REAVER];
   }
-  // Act 3+
+  if (act === 3) {
+    return rng() < 0.5
+      ? [LIGHTNING_SPRITE, LIGHTNING_SPRITE]
+      : [SKY_PIRATE, LIGHTNING_SPRITE];
+  }
+  if (act === 4) {
+    return rng() < 0.5
+      ? [LITANY_CRAWLER, LITANY_CRAWLER]
+      : [BRASS_ACOLYTE, HYMN_CHORISTER];
+  }
+  // Act 5+
   return rng() < 0.5
-    ? [LIGHTNING_SPRITE, LIGHTNING_SPRITE]
-    : [SKY_PIRATE, LIGHTNING_SPRITE];
+    ? [FORGE_IMP, FORGE_IMP]
+    : [HAMMER_SPIRIT, SLAG_WRAITH];
 }
 
 function eliteGroupFor(act: number, rng: () => number): EnemyDef[] | null {
   if (rng() >= ELITE_GROUP_CHANCE) return null;
   if (act === 1) return [IRON_RECLAIMER, SCRAP_RAIDER];
   if (act === 2) return [RECLAIMER_MK2, CINDER_HOUND];
-  return [SKY_MARSHAL, LIGHTNING_SPRITE];
+  if (act === 3) return [SKY_MARSHAL, LIGHTNING_SPRITE];
+  if (act === 4) return [CATHEDRAL_VERGER, BRASS_ACOLYTE];
+  return [CRUCIBLE_KNIGHT, FORGE_IMP];
 }
 
 export function pickRegularEncounter(act: number, rng: () => number = Math.random): EnemyDef[] {
@@ -1741,13 +2539,15 @@ export function getBossEncounter(act: number, rng: () => number = Math.random): 
 }
 
 export function getActName(act: number): string {
-  if (act >= 3) return 'ABOVE THE CLOUDLINE';
+  if (act >= 5) return 'THE WORLD-FORGE';
+  if (act === 4) return 'THE BRASS CATHEDRAL';
+  if (act === 3) return 'ABOVE THE CLOUDLINE';
   if (act === 2) return 'THE FOUNDRY DEPTHS';
   return 'ROAD TO THE FOUNDRY';
 }
 
 export function isFinalAct(act: number): boolean {
-  return act >= 3;
+  return act >= 5;
 }
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
@@ -1781,5 +2581,22 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [EMBER_SPITTER.id]: EMBER_SPITTER,
   [PIG_IRON_BRUTE.id]: PIG_IRON_BRUTE,
   [MIST_SPECTER.id]: MIST_SPECTER,
-  [CLOUD_CORSAIR.id]: CLOUD_CORSAIR
+  [CLOUD_CORSAIR.id]: CLOUD_CORSAIR,
+  // Slice 50 — Acts 4 & 5
+  [BRASS_ACOLYTE.id]: BRASS_ACOLYTE,
+  [CENSER_SENTRY.id]: CENSER_SENTRY,
+  [HYMN_CHORISTER.id]: HYMN_CHORISTER,
+  [LITANY_CRAWLER.id]: LITANY_CRAWLER,
+  [CATHEDRAL_VERGER.id]: CATHEDRAL_VERGER,
+  [IRON_HYMN.id]: IRON_HYMN,
+  [THE_CHOIRMASTER.id]: THE_CHOIRMASTER,
+  [IRON_SAINT.id]: IRON_SAINT,
+  [SLAG_WRAITH.id]: SLAG_WRAITH,
+  [ANVIL_STRIKER.id]: ANVIL_STRIKER,
+  [HAMMER_SPIRIT.id]: HAMMER_SPIRIT,
+  [FORGE_IMP.id]: FORGE_IMP,
+  [FURNACE_MAW.id]: FURNACE_MAW,
+  [CRUCIBLE_KNIGHT.id]: CRUCIBLE_KNIGHT,
+  [WORLD_FORGE_HEART.id]: WORLD_FORGE_HEART,
+  [THE_FIRST_ENGINE.id]: THE_FIRST_ENGINE
 };

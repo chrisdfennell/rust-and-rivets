@@ -44,6 +44,8 @@ function ascensionHullMult(kind: CombatKind, ascension: number): number {
   if (kind === 'regular' && ascension >= 1) mult *= 1.25;
   if (kind === 'elite' && ascension >= 3) mult *= 1.30;
   if (kind === 'boss' && ascension >= 4) mult *= 1.30;
+  // A7 (Persistent Foes) adds a universal +10% Hull on every combat kind.
+  if (ascension >= 7) mult *= 1.10;
   return mult;
 }
 
@@ -55,6 +57,8 @@ export function ascensionDamageMult(kind: CombatKind, ascension: number): number
   if (kind === 'regular' && ascension >= 1) mult *= 1.15;
   if (kind === 'elite' && ascension >= 3) mult *= 1.20;
   if (kind === 'boss' && ascension >= 4) mult *= 1.20;
+  // A7 (Persistent Foes) adds a universal +10% outgoing damage on top.
+  if (ascension >= 7) mult *= 1.10;
   return mult;
 }
 
@@ -413,6 +417,12 @@ function applyEffect(state: CombatState, eff: CardEffect) {
     }
     case 'damageIfEnemyPlated': {
       if (target && target.plating > 0) {
+        dealDamageToEnemy(c, eff.amount);
+      }
+      break;
+    }
+    case 'bonusDamageIfCardsAtLeast': {
+      if (target && state.player.cardsPlayedThisTurn >= eff.threshold) {
         dealDamageToEnemy(c, eff.amount);
       }
       break;

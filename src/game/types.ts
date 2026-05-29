@@ -22,6 +22,11 @@ export type CardEffect =
   // base + (perBurn × target.burn) so cards like Ignite reward setting
   // the enemy on fire before unloading. Applies on a single target.
   | { kind: 'damageScaledByBurn'; base: number; perBurn: number }
+  // Bonus damage to the active target if the player has already played at
+  // least `threshold` cards this turn. cardsPlayedThisTurn is incremented
+  // AFTER effects resolve, so threshold=2 reads as "this is the 3rd card
+  // or later." Used by the Conductor's momentum-payoff cards.
+  | { kind: 'bonusDamageIfCardsAtLeast'; amount: number; threshold: number }
   | { kind: 'damageAll'; amount: number }
   | { kind: 'applyVulnerableAll'; amount: number }
   | { kind: 'applyWeakAll'; amount: number }

@@ -97,10 +97,10 @@ export function startRun(characterId: string = 'pilot'): RunState {
   // Snapshot the player's chosen ascension tier so mid-run changes to
   // meta don't retroactively apply.
   const ascension = loadMeta().currentAscension;
-  // A5 (Cracked Frame): -5 max Hull at run start.
-  const startingHull = ascension >= 5
-    ? Math.max(1, character.startingHull - 5)
-    : character.startingHull;
+  // A5 (Cracked Frame): -5 max Hull at run start. A6 (Compounded Wear)
+  // stacks another -5 on top, for -10 total at A6+.
+  const hullPenalty = ascension >= 6 ? 10 : ascension >= 5 ? 5 : 0;
+  const startingHull = Math.max(1, character.startingHull - hullPenalty);
   const fresh: RunState = {
     map: generateMap(),
     act: 1,

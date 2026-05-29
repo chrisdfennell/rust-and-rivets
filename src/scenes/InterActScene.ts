@@ -5,6 +5,16 @@ import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
+// `run.act` is the act just CLEARED — the boon then advances to act+1.
+// Text frames the doorway you're about to walk through.
+function interActFlavor(clearedAct: number): string {
+  if (clearedAct === 1) return 'The Foundry yawns open. Take stock, pilot.';
+  if (clearedAct === 2) return 'The Cloudline is above. Bolt down for the climb.';
+  if (clearedAct === 3) return 'A brass spire pierces the sky. The Cathedral waits.';
+  if (clearedAct === 4) return 'The earth shudders. The World-Forge lies below.';
+  return 'Catch your breath, pilot.';
+}
+
 interface BoonOption {
   id: InterActBoon;
   title: string;
@@ -45,7 +55,7 @@ export class InterActScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, 86, 'The Foundry yawns open. Take stock, pilot.', {
+      .text(width / 2, 86, interActFlavor(run.act), {
         fontFamily: FONTS.body,
         fontSize: '13px',
         color: hex(COLORS.boneDim)

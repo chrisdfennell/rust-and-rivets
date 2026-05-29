@@ -90,7 +90,7 @@ export class MapScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
 
     // Game-end overlays
-    if (run.result === 'victory') this.showRunEnd('RUN COMPLETE', 'The Sovereign is undone. The Foundry burns.', COLORS.ok);
+    if (run.result === 'victory') this.showRunEnd('RUN COMPLETE', 'The First Engine falls silent. The World-Forge cools.', COLORS.ok);
     else if (run.result === 'defeat') this.showRunEnd('RUN OVER', 'The wasteland claims your mech.', COLORS.danger);
 
     if (this.input.keyboard) {
@@ -131,25 +131,38 @@ export class MapScene extends Phaser.Scene {
           fontStyle: 'bold'
         })
         .setOrigin(0.5);
-      // Hover tooltip
+      // Hover tooltip. Body wraps at 280 px, so longer descriptions span
+      // multiple lines — size the panel off the measured text height instead
+      // of a fixed 50 px so the description never spills over the border.
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerover', () => {
         const tip = this.add.container(cx + slotSize, cy);
-        const tipBg = this.add.rectangle(150, 0, 300, 50, COLORS.bgPanel).setStrokeStyle(2, COLORS.brassDim);
+        const padX = 8;
+        const padY = 8;
+        const gapNameDesc = 4;
+        const tipW = 300;
         const name = this.add
-          .text(8, -12, def?.name ?? id, {
+          .text(padX, 0, def?.name ?? id, {
             fontFamily: FONTS.display,
             fontSize: '13px',
             color: hex(COLORS.bone),
             fontStyle: 'bold'
           });
         const desc = this.add
-          .text(8, 6, def?.description ?? '', {
+          .text(padX, 0, def?.description ?? '', {
             fontFamily: FONTS.body,
             fontSize: '11px',
             color: hex(COLORS.boneDim),
-            wordWrap: { width: 280 }
+            wordWrap: { width: tipW - padX * 2 }
           });
+        const nameH = name.height;
+        const descH = desc.height;
+        const tipH = padY * 2 + nameH + gapNameDesc + descH;
+        name.y = -tipH / 2 + padY;
+        desc.y = name.y + nameH + gapNameDesc;
+        const tipBg = this.add
+          .rectangle(tipW / 2, 0, tipW, tipH, COLORS.bgPanel)
+          .setStrokeStyle(2, COLORS.brassDim);
         tip.add([tipBg, name, desc]);
         tip.setDepth(500);
         bg.once('pointerout', () => tip.destroy());

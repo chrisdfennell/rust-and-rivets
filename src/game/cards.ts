@@ -333,7 +333,53 @@ export const CARDS: Record<string, CardDef> = {
     [{ kind: 'xDamage', amount: 12 }], true, 'legendary', { xCost: true }),
   'finalLance+': card('finalLance+', 'Final Lance+', 0, 'enemy',
     'Deal 15 damage X times. Exhaust.',
-    [{ kind: 'xDamage', amount: 15 }], true, 'legendary', { xCost: true })
+    [{ kind: 'xDamage', amount: 15 }], true, 'legendary', { xCost: true }),
+
+  // ===== Slice 50 — Conductor momentum pack =====
+  // Cards that reward playing many cards in a turn. Pair with Steam
+  // Whistle (every 3rd card → +1 Str) for a snowballing combo deck.
+
+  pressureDrum: card('pressureDrum', 'Pressure Drum', 0, 'enemy',
+    'Deal 4 damage. Exhaust.',
+    [{ kind: 'damage', amount: 4 }], true, 'common'),
+  'pressureDrum+': card('pressureDrum+', 'Pressure Drum+', 0, 'enemy',
+    'Deal 6 damage. Exhaust.',
+    [{ kind: 'damage', amount: 6 }], true, 'common'),
+
+  tempoShift: card('tempoShift', 'Tempo Shift', 1, 'none',
+    'Draw 2 cards.',
+    [{ kind: 'draw', amount: 2 }], false, 'common'),
+  'tempoShift+': card('tempoShift+', 'Tempo Shift+', 0, 'none',
+    'Draw 2 cards.',
+    [{ kind: 'draw', amount: 2 }], false, 'common'),
+
+  crescendo: card('crescendo', 'Crescendo', 1, 'enemy',
+    'Deal 5 damage. Deal 8 more if you have already played 2 cards this turn.',
+    [
+      { kind: 'damage', amount: 5 },
+      { kind: 'bonusDamageIfCardsAtLeast', amount: 8, threshold: 2 }
+    ], false, 'uncommon'),
+  'crescendo+': card('crescendo+', 'Crescendo+', 1, 'enemy',
+    'Deal 7 damage. Deal 11 more if you have already played 2 cards this turn.',
+    [
+      { kind: 'damage', amount: 7 },
+      { kind: 'bonusDamageIfCardsAtLeast', amount: 11, threshold: 2 }
+    ], false, 'uncommon'),
+
+  // Counterpoint — high-burst payoff. Rewards stacking momentum into a
+  // single big swing late in the turn. Threshold 3 = 4th card or later.
+  counterpoint: card('counterpoint', 'Counterpoint', 2, 'enemy',
+    'Deal 12 damage. Deal 16 more if you have already played 3 cards this turn.',
+    [
+      { kind: 'damage', amount: 12 },
+      { kind: 'bonusDamageIfCardsAtLeast', amount: 16, threshold: 3 }
+    ], false, 'rare'),
+  'counterpoint+': card('counterpoint+', 'Counterpoint+', 2, 'enemy',
+    'Deal 16 damage. Deal 20 more if you have already played 3 cards this turn.',
+    [
+      { kind: 'damage', amount: 16 },
+      { kind: 'bonusDamageIfCardsAtLeast', amount: 20, threshold: 3 }
+    ], false, 'rare')
 };
 
 export const STARTER_DECK: string[] = [
@@ -358,7 +404,9 @@ export const SHOP_POOL: string[] = [
   'furnaceStrike', 'reactorSurge',
   'overdriveCore', 'finalLance',
   // Slice 49 — Burn pack
-  'cinderWave', 'emberToss', 'ignite', 'sear', 'brimstone'
+  'cinderWave', 'emberToss', 'ignite', 'sear', 'brimstone',
+  // Slice 50 — Conductor momentum pack
+  'pressureDrum', 'tempoShift', 'crescendo', 'counterpoint'
 ];
 
 export function isUpgradable(cardId: string): boolean {

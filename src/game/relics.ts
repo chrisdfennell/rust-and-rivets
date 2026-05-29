@@ -307,6 +307,23 @@ const FURNACE_HEART: Relic = {
   }
 };
 
+// Steam Whistle — The Conductor's signature relic. Rewards rapid card
+// cycling: every third card played in a turn grants +1 Strength for the
+// rest of combat. Stacks turn over turn — the longer a fight runs, the
+// harder the Conductor hits. indexInTurn is 0-based, so the 3rd card has
+// indexInTurn === 2, hence `(indexInTurn + 1) % 3 === 0`.
+const STEAM_WHISTLE: Relic = {
+  id: 'steamWhistle',
+  name: 'Steam Whistle',
+  description: 'Every 3rd card played each turn grants +1 Strength this combat.',
+  onCardPlayed: (state, _card, indexInTurn) => {
+    if ((indexInTurn + 1) % 3 === 0) {
+      state.player.strength += 1;
+      state.log.push('Steam Whistle: +1 Strength.');
+    }
+  }
+};
+
 // ===== Boss-signature relics (Slice 48) =====
 //
 // Each of the 9 bosses drops a unique relic on kill. They're tagged
@@ -429,6 +446,74 @@ const CYCLONE_CROWN: Relic = {
   }
 };
 
+// ===== Slice 50 — Act 4 & 5 boss signatures =====
+
+// Choirmaster — echoes the boss's resonance cycle: every 3rd turn gain
+// 5 plating. Deterministic, pairs well with defensive decks.
+const RESONANCE_COIL: Relic = {
+  id: 'resonanceCoil',
+  name: 'Resonance Coil',
+  description: 'Every 3rd turn, gain 5 Plating.',
+  signature: true,
+  onTurnStart: (state) => {
+    if (state.turn % 3 === 0) {
+      state.player.plating += 5;
+      state.log.push('Resonance Coil: +5 Plating.');
+    }
+  }
+};
+
+// Iron Saint — the trophy mirrors the boss's relentless ramp: combat
+// starts with a small Strength + Dexterity boost.
+const SAINTS_HALO: Relic = {
+  id: 'saintsHalo',
+  name: "Saint's Halo",
+  description: 'Start each combat with +1 Strength and +1 Dexterity.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.strength += 1;
+    state.player.dexterity += 1;
+    state.log.push("Saint's Halo: +1 Strength / +1 Dexterity.");
+  }
+};
+
+// World-Forge Heart — the boss radiates burn + plating; the relic does
+// both at combat start.
+const FORGE_CORE: Relic = {
+  id: 'forgeCore',
+  name: 'Forge Core',
+  description: 'Start each combat with 6 Plating and apply 3 Burn to all enemies.',
+  signature: true,
+  onCombatStart: (state) => {
+    state.player.plating += 6;
+    let burned = false;
+    for (const e of state.enemies) {
+      if (e.hull > 0) { e.burn += 3; burned = true; }
+    }
+    state.log.push(
+      burned
+        ? 'Forge Core: +6 Plating, foes are Burning.'
+        : 'Forge Core: +6 Plating.'
+    );
+  }
+};
+
+// First Engine — the boss is all about charged-up first strikes. The
+// trophy turns the player's first damaging hit each turn into a heavier
+// blow. Uses indexInTurn to fire only on the first card played that
+// actually deals damage.
+const ENGINE_SHARD: Relic = {
+  id: 'engineShard',
+  name: 'Engine Shard',
+  description: 'First attack each turn deals +6 damage.',
+  signature: true,
+  onTurnStart: (state) => {
+    // Stacks with Brass Knuckles' +3 — both bonuses live on
+    // firstAttackBonus and consume on the first damaging hit.
+    state.player.firstAttackBonus += 6;
+  }
+};
+
 // Maps boss enemy ID → signature relic ID. Used by completeCombat to
 // stage the right drop when that specific boss is killed. Adding a
 // new boss means adding an entry here too.
@@ -441,7 +526,11 @@ export const BOSS_SIGNATURE_RELICS: Record<string, string> = {
   vaultWarden:     WARDENS_LOCK.id,
   stormheart:      STORMHEART_CORE.id,
   theWraith:       WRAITH_VEIL.id,
-  cycloneKing:     CYCLONE_CROWN.id
+  cycloneKing:     CYCLONE_CROWN.id,
+  choirmaster:     RESONANCE_COIL.id,
+  ironSaint:       SAINTS_HALO.id,
+  worldForgeHeart: FORGE_CORE.id,
+  firstEngine:     ENGINE_SHARD.id
 };
 
 export const RELICS: Record<string, Relic> = {
@@ -470,6 +559,7 @@ export const RELICS: Record<string, Relic> = {
   [AUTO_MORTAR.id]: AUTO_MORTAR,
   [BRISTLE_PLATE.id]: BRISTLE_PLATE,
   [FURNACE_HEART.id]: FURNACE_HEART,
+  [STEAM_WHISTLE.id]: STEAM_WHISTLE,
   [TYRANTS_BELLOWS.id]:   TYRANTS_BELLOWS,
   [COLOSSUS_ARM.id]:      COLOSSUS_ARM,
   [RECLAIMER_SPIKE.id]:   RECLAIMER_SPIKE,
@@ -478,7 +568,11 @@ export const RELICS: Record<string, Relic> = {
   [WARDENS_LOCK.id]:      WARDENS_LOCK,
   [STORMHEART_CORE.id]:   STORMHEART_CORE,
   [WRAITH_VEIL.id]:       WRAITH_VEIL,
-  [CYCLONE_CROWN.id]:     CYCLONE_CROWN
+  [CYCLONE_CROWN.id]:     CYCLONE_CROWN,
+  [RESONANCE_COIL.id]:    RESONANCE_COIL,
+  [SAINTS_HALO.id]:       SAINTS_HALO,
+  [FORGE_CORE.id]:        FORGE_CORE,
+  [ENGINE_SHARD.id]:      ENGINE_SHARD
 };
 
 export const ALL_RELIC_IDS: string[] = Object.keys(RELICS);
