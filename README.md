@@ -107,6 +107,10 @@ any modern browser.
   <br><sub>13 are boss-signature drops — beat that boss, own the trophy.</sub>
 - **12 potions** in a 3-slot belt (expandable)
 - **Workshop meta-progression** — 14 upgrades, 28-point cap
+- **Pilot ladder** — unlock Engineer / Saboteur / Stoker by beating
+  acts 1–3; clear a full run for the Conductor
+- **Run history** &amp; **Library** — lifetime stats panel on the title,
+  plus a browsable encyclopedia of every card &amp; relic
 - **Save / load** to `localStorage` after every mutation
 - **Export / Import** as `.json` file (drag-and-drop)
 
@@ -116,10 +120,41 @@ any modern browser.
 ### Pure-Code Aesthetics
 
 - **All sprites drawn in code** — no PNGs, no atlas
-- **Procedural Web Audio** ambient + SFX — no asset files
+- **Procedural Web Audio** ambient + SFX, per-card &amp; per-relic
+  flavor layers — no asset files
 - **Drag-to-target** combat &nbsp;·&nbsp; **aim mode** for potions
 - **Animated idle tweens** on every enemy
 - Stack: **Phaser 3** &nbsp;·&nbsp; **TypeScript 5** &nbsp;·&nbsp; **Vite**
+  &nbsp;·&nbsp; **Vitest** (82 tests)
+
+</td>
+</tr>
+<tr>
+<td valign="top" width="50%">
+
+### Plays Anywhere
+
+- **Responsive scenes** — portrait &amp; landscape, phone to 4K
+- **Installable as a PWA** — Add to Home Screen on iOS, install
+  card on Chrome / Edge
+- **Touch-first inputs** — 44 px tap targets, tap-to-pin tooltips,
+  pinch / pull-to-refresh suppressed inside the game
+- **Offline-capable** — service worker caches the app shell after
+  first load
+
+</td>
+<td valign="top" width="50%">
+
+### Built to Stay Honest
+
+- **82 Vitest unit tests** across combat, relics, events, meta —
+  every PR runs them
+- **Schema-migrated saves** — old `localStorage` blobs upgrade
+  forward; bad / future versions fall back to a clean slate
+- **CHANGELOG.md** records the unreleased polish between sliced
+  releases; **DEVLOG.md** walks the slice-by-slice history
+- **Pure procedural art** keeps the cost of a new enemy at one
+  `MechSprite` function and one `enemies.ts` entry
 
 </td>
 </tr>
@@ -147,13 +182,16 @@ means something.**
 
 ## The Pilots
 
-| Pilot | Hull | Signature Relic | Identity |
-|---|---|---|---|
-| **THE PILOT** | ![65](https://img.shields.io/badge/65_HP-c44a2a?style=flat-square&labelColor=14110f) | *none — clean slate* | Balanced operator. The standard rig — no surprises, no flaws. |
-| **THE ENGINEER** | ![60](https://img.shields.io/badge/60_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Iron Plating](https://img.shields.io/badge/Iron_Plating-4f7a9b?style=flat-square&labelColor=14110f) | Layered armor, careful hands. Trades raw hull for plating. |
-| **THE SABOTEUR** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Calibration Spike](https://img.shields.io/badge/Calibration_Spike-6b9b4f?style=flat-square&labelColor=14110f) | Toxic. Fragile. Sharp. Begin every fight with the enemy already compromised. |
-| **THE STOKER** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Furnace Heart](https://img.shields.io/badge/Furnace_Heart-ff6b1f?style=flat-square&labelColor=14110f) | Set them alight. Reap the smoke. Burning enemies ramp Strength every turn. |
-| **THE CONDUCTOR** | ![58](https://img.shields.io/badge/58_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Steam Whistle](https://img.shields.io/badge/Steam_Whistle-d9ae4a?style=flat-square&labelColor=14110f) | Keep the beat. Every 3rd card played each turn pays a Strength dividend. |
+Only the Pilot is available on a fresh save. The rest are earned
+through play — beat an act and the next rung opens up.
+
+| Pilot | Hull | Signature Relic | Unlock | Identity |
+|---|---|---|---|---|
+| **THE PILOT** | ![65](https://img.shields.io/badge/65_HP-c44a2a?style=flat-square&labelColor=14110f) | *none — clean slate* | ![Start](https://img.shields.io/badge/start-6b9b4f?style=flat-square&labelColor=14110f) | Balanced operator. The standard rig — no surprises, no flaws. |
+| **THE ENGINEER** | ![60](https://img.shields.io/badge/60_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Iron Plating](https://img.shields.io/badge/Iron_Plating-4f7a9b?style=flat-square&labelColor=14110f) | ![Act 1](https://img.shields.io/badge/beat_act_1-8a3b1f?style=flat-square&labelColor=14110f) | Layered armor, careful hands. Trades raw hull for plating. |
+| **THE SABOTEUR** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Calibration Spike](https://img.shields.io/badge/Calibration_Spike-6b9b4f?style=flat-square&labelColor=14110f) | ![Act 2](https://img.shields.io/badge/beat_act_2-c44a2a?style=flat-square&labelColor=14110f) | Toxic. Fragile. Sharp. Begin every fight with the enemy already compromised. |
+| **THE STOKER** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Furnace Heart](https://img.shields.io/badge/Furnace_Heart-ff6b1f?style=flat-square&labelColor=14110f) | ![Act 3](https://img.shields.io/badge/beat_act_3-4f7a9b?style=flat-square&labelColor=14110f) | Set them alight. Reap the smoke. Burning enemies ramp Strength every turn. |
+| **THE CONDUCTOR** | ![58](https://img.shields.io/badge/58_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Steam Whistle](https://img.shields.io/badge/Steam_Whistle-d9ae4a?style=flat-square&labelColor=14110f) | ![Win](https://img.shields.io/badge/win_a_run-d97a2a?style=flat-square&labelColor=14110f) | Keep the beat. Every 3rd card played each turn pays a Strength dividend. |
 
 ---
 
@@ -227,15 +265,16 @@ flowchart LR
 ## Getting Started
 
 > [!NOTE]
-> Requires **Node 18+**. No native deps, no headless browser, no test
-> framework — `npm run build` is the gate.
+> Requires **Node 18+**. No native deps, no headless browser.
+> `npm run build` is the gate; `npm test` runs the 82-test Vitest
+> suite that locks down the combat / relic / event / meta logic.
 
 ```bash
 # Clone
 git clone https://github.com/chrisdfennell/rust-and-rivets.git
 cd rust-and-rivets
 
-# Install (Phaser 3, TypeScript, Vite — that's it)
+# Install (Phaser 3, TypeScript, Vite, Vitest — that's it)
 npm install
 
 # Dev server — hot reload at http://localhost:5173
@@ -243,6 +282,9 @@ npm run dev
 
 # Production build (type-checks first, then bundles to dist/)
 npm run build
+
+# Unit tests (runs once; use test:watch for re-run on save)
+npm test
 
 # Preview the prod build locally
 npm run preview
@@ -254,28 +296,37 @@ npm run preview
 
 ```text
 src/
-├── audio/         Procedural Web Audio — ambient music, SFX, mute persistence
+├── audio/         Procedural Web Audio — ambient music, per-card / per-relic
+│                  SFX layers, mute persistence
 ├── game/          Pure game logic, no Phaser imports
-│   ├── cards.ts        ~77 cards + `+` variants
+│   ├── cards.ts        ~73 base cards + `+` variants (~142 total)
 │   ├── characters.ts   5 pilots, signature relics, starter decks
 │   ├── enemies.ts      24 regulars + 10 elites + 13 bosses + encounter pickers
-│   ├── relics.ts       47 relics with lifecycle hooks (incl. boss-signature drops)
+│   ├── relics.ts       47 relics with lifecycle hooks (incl. 13 boss-signatures)
 │   ├── potions.ts      12 potions
 │   ├── events.ts       42 narrative events (12 act-themed)
 │   ├── combat.ts       Turn loop, damage pipeline, statuses, keywords
-│   ├── map.ts          Procedural node graph — 15 floors, ~40 nodes per act
-│   ├── meta.ts         Workshop upgrades + Ascension ladder (7 tiers)
-│   ├── save.ts         localStorage + JSON file export
+│   ├── map.ts          Procedural node graph — 15 floors, ~20 nodes per act
+│   ├── meta.ts         Workshop, Ascension (7 tiers), pilot unlocks, run history
+│   ├── save.ts         localStorage + JSON file export + drag-drop import
 │   ├── run.ts          RunState lifecycle (startRun, completeCombat, advanceAct)
 │   └── types.ts        EnemyDef, CardDef, ResolveCtx, ...
-├── scenes/        Phaser Scenes — Title, CharacterSelect, Map, Combat, ...
-├── ui/            CardView, IntentBubble, MechSprite (all sprites here)
-└── main.ts        Phaser bootstrap
+├── scenes/        Phaser Scenes — Title, CharacterSelect, Map, Combat,
+│                  Event, Shop, Rest, Reward, Workshop, Library, InterAct,
+│                  RunSummary
+├── ui/            CardView, IntentBubble, MechSprite, PotionIcon, sceneFit
+│                  (all sprites + procedural potion vector icons live here)
+├── types/         Vite env shim
+└── main.ts        Phaser bootstrap + service-worker registration
+
+tests/             Vitest suite — 82 tests across combat / relics / events / meta
+public/            PWA manifest, service worker, app icon
 ```
 
 The split between `src/game/` (pure logic) and `src/scenes/` + `src/ui/`
 (Phaser presentation) is the project's central discipline. The game
-logic is testable in isolation; the rendering layer is throwaway.
+logic is testable in isolation — and now actually is, via Vitest —
+while the rendering layer stays throwaway.
 
 ---
 
@@ -305,10 +356,18 @@ A few load-bearing rules:
 - ![Reliability](https://img.shields.io/badge/RELIABILITY-6b9b4f?style=flat-square&labelColor=14110f)
   &nbsp; **Save constantly.** Every game-state mutation persists to
   `localStorage`. Refresh mid-fight, resume mid-fight. A bug should
-  never cost a run.
+  never cost a run. Schema migrations upgrade old saves forward;
+  unreadable / future versions fall back cleanly.
 
-The full development history — slice by slice, why each decision was
-made — lives in **[DEVLOG.md](DEVLOG.md)**.
+- ![Accessibility](https://img.shields.io/badge/ACCESSIBILITY-d9ae4a?style=flat-square&labelColor=14110f)
+  &nbsp; **Plays on a phone.** Responsive layouts, 44 px tap
+  targets, tap-to-pin tooltips, drag-to-target combat tuned for
+  fingertips. Installable as a PWA so the home-screen icon launches
+  fullscreen with no browser chrome.
+
+The full slice-by-slice development history lives in
+**[DEVLOG.md](DEVLOG.md)**; the unreleased polish between slices is
+recorded in **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
@@ -316,11 +375,14 @@ made — lives in **[DEVLOG.md](DEVLOG.md)**.
 
 ![Version](https://img.shields.io/badge/version-v0.1.0-b88a3e?style=for-the-badge&labelColor=14110f)
 ![Slice](https://img.shields.io/badge/latest_slice-53-c44a2a?style=for-the-badge&labelColor=14110f)
+![Tests](https://img.shields.io/badge/tests-82_passing-6b9b4f?style=for-the-badge&labelColor=14110f)
 ![Status](https://img.shields.io/badge/status-playable_end--to--end-6b9b4f?style=for-the-badge&labelColor=14110f)
 
 Five pilots. Thirteen bosses. Forty-two events. Forty-seven relics.
-Seven ascension tiers. Balance is tuned in public; the
-[DEVLOG](DEVLOG.md) is the running record.
+Seven ascension tiers. Plays on a phone or a 4K monitor. Balance is
+tuned in public; the [DEVLOG](DEVLOG.md) records each sliced
+release and the [CHANGELOG](CHANGELOG.md) captures the polish
+between them.
 
 This is a solo personal project. Issues and PRs welcome but aren't
 the development driver — the project ships on its own cadence.
