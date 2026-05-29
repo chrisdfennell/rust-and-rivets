@@ -7,6 +7,50 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 ## Unreleased
 
+### Tests
+
+- **Vitest** added as a dev dependency. `npm test` runs the suite once;
+  `npm run test:watch` runs in watch mode.
+- **24 combat tests** in `tests/combat.test.ts` covering the damage
+  pipeline (plating absorption, Vuln/Weak/Strength/Dex), status
+  applications (Burn, Vuln, AoE), end-of-turn pipeline (burn ticks,
+  debuff decay, plating wipe), power cards (Metallicize, Demon Form),
+  the Echo and Volatile keywords, conditional damage (combo + Weak
+  payoffs), and ascension HP scaling stacks.
+
+### Visuals
+
+- **22 new sprite functions** for content shipped without art:
+  - 1 pilot (Conductor).
+  - 3 early-act regulars (Grit Jackal, Slag Viper, Storm Husk).
+  - 5 Act 4 regulars + 2 elites + 2 bosses (Brass Cathedral).
+  - 5 Act 5 regulars + 2 elites + 2 bosses (World-Forge).
+  - Each sprite is pure `Phaser.Graphics` primitives in the existing
+    palette, with a slow idle tween. Fallbacks (`scrapRaider` / `pilot`)
+    no longer kick in — every enemy now has its own silhouette.
+- **Punchier damage numbers.** `floatNumber` reads the numeric value out
+  of the text and scales font + stroke + travel distance for big hits
+  (≥15 dmg → 42px, ≥30 dmg → 52px) and adds a brief back-out pop on
+  arrival.
+- **Screen shake on big enemy hits** (≥20 dmg through Hull). Matches
+  the existing shake on big player hits and on enemy deaths.
+- **Mech impact pop.** The player mech briefly scales up when a card
+  resolves; intensity scales with card cost. Reads as recoil.
+
+### Audio
+
+- **Per-card flavor SFX layer.** New `playCardLayer(info)` dispatches a
+  context-appropriate sound on top of the base `cardPlay` click:
+  - Powers → mystical rising arpeggio.
+  - AoE → wide bandpass whoosh.
+  - Self-target skills → brass-shield clank.
+  - Enemy attacks → light or heavy thump based on raw damage.
+  - Burn-applying cards layer a sizzling cinder hiss.
+  - Echo cards add a rapid double-tap echo.
+- New atomic SFX: `attackLight`, `attackHeavy`, `defendCard`,
+  `burnApply`, `aoe`, `powerCast`, `echoTrigger`, `volatileFuse`,
+  `relicTrigger`, `drawCards`.
+
 ### Balance
 
 A holistic pass tuning the whole game to the longer run length.

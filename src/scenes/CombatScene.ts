@@ -6,7 +6,7 @@ import type { CombatState, CardInstance, EnemyState, TurnEvent } from '../game/t
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { setupPause } from '../ui/setupPause';
-import { sfx } from '../audio/sfx';
+import { sfx, playCardLayer } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -866,11 +866,33 @@ export class CombatScene extends Phaser.Scene {
   private applyCardPlay(card: CardInstance, targetIndex: number | undefined) {
     const pre = this.snapshot();
     sfx.cardPlay();
+    // Slice 54 — flavor SFX layer keyed off the card's type / target /
+    // effects so power cards sound mystical, AoE whooshes, Burn cards
+    // sizzle, etc. Composed BEFORE playCard so the SFX queues up with
+    // the base cardPlay click rather than after the effects resolve.
+    const rawDamage = card.def.effects.reduce((sum, e) => {
+      if (e.kind === 'damage' || e.kind === 'damageAll') return sum + e.amount;
+      if (e.kind === 'damageScaledByBurn') return sum + e.base;
+      return sum;
+    }, 0);
+    const appliesBurn = card.def.effects.some(
+      (e) => e.kind === 'applyBurn' || e.kind === 'applyBurnAll'
+    );
+    playCardLayer({
+      type: card.def.type,
+      target: card.def.target,
+      echo: card.def.echo,
+      appliesBurn,
+      rawDamage
+    });
     const ok = playCard(this.state, card.uid, targetIndex);
     if (!ok) {
       this.refresh();
       return;
     }
+    // Slice 54 — brief mech pop on card play. Reads as "the rig braced
+    // and fired." Tiny scale punch, faster on cheap cards.
+    this.mechImpact(card.def.cost);
     this.emitDeltas(pre);
     if (card.def.target === 'enemy' && targetIndex !== undefined && this.enemyUIs[targetIndex]) {
       this.shake(this.enemyUIs[targetIndex].sprite, 6);
@@ -959,19 +981,39 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private floatNumber(x: number, y: number, text: string, color: number) {
+    // Slice 54 — scale font + pop-tween for big damage numbers so heavy
+    // hits feel weightier than chip damage. Reads the numeric value out
+    // of the leading "-" / "+" so all callers stay unchanged.
+    const m = text.match(/-?\d+/);
+    const n = m ? Math.abs(parseInt(m[0], 10)) : 0;
+    const big = n >= 15;
+    const huge = n >= 30;
+    const fontSize = huge ? '52px' : big ? '42px' : '30px';
+    const strokeW = huge ? 6 : big ? 5 : 4;
     const t = this.add.text(x, y, text, {
       fontFamily: FONTS.display,
-      fontSize: '30px',
+      fontSize,
       color: hex(color),
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4
+      strokeThickness: strokeW
     }).setOrigin(0.5).setDepth(900);
+    if (big) {
+      // Brief pop-in: scale 0.5 → 1.0 over 80 ms, then drift up + fade.
+      t.setScale(0.5);
+      this.tweens.add({
+        targets: t,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 90,
+        ease: 'Back.Out'
+      });
+    }
     this.tweens.add({
       targets: t,
-      y: y - 70,
+      y: y - (big ? 90 : 70),
       alpha: 0,
-      duration: 850,
+      duration: big ? 1000 : 850,
       ease: 'Cubic.Out',
       onComplete: () => t.destroy()
     });
@@ -1007,6 +1049,23 @@ export class CombatScene extends Phaser.Scene {
       duration: 380,
       ease: 'Cubic.Out',
       onComplete: () => ring.destroy()
+    });
+  }
+
+  // Slice 54 — brief scale pop on the player mech when a card resolves.
+  // Reads as recoil. Heavier cards (cost >= 2) pop harder.
+  private mechImpact(cost: number) {
+    if (!this.mech) return;
+    const intensity = cost >= 2 ? 1.05 : 1.025;
+    this.tweens.killTweensOf(this.mech);
+    this.mech.setScale(1);
+    this.tweens.add({
+      targets: this.mech,
+      scaleX: intensity,
+      scaleY: intensity,
+      duration: 70,
+      yoyo: true,
+      ease: 'Sine.InOut'
     });
   }
 
@@ -1110,7 +1169,11 @@ export class CombatScene extends Phaser.Scene {
           if (event.through > 0) {
             this.floatNumber(ui.baseX, ui.baseY - 60, `-${event.through}`, COLORS.danger);
             this.hitRing(ui.baseX, ui.baseY, COLORS.danger);
-            this.burst(ui.baseX, ui.baseY, COLORS.rust, 8);
+            this.burst(ui.baseX, ui.baseY, COLORS.rust, event.through >= 20 ? 16 : 8);
+            // Slice 54 — heavy single hits shake the camera so the player
+            // sees the impact. Player damage already shook at >=10; the
+            // enemy threshold is 20 because player damage spikes higher.
+            if (event.through >= 20) this.cameras.main.shake(160, 0.005);
             sfx.hit();
           } else if (event.absorbed > 0) {
             this.floatNumber(ui.baseX - 30, ui.baseY - 40, `-${event.absorbed}`, COLORS.shield);

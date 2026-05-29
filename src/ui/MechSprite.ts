@@ -312,7 +312,8 @@ export const CHARACTER_SPRITES: Record<string, (scene: Phaser.Scene, x: number, 
   pilot: drawMech,
   engineer: drawEngineerMech,
   saboteur: drawSaboteurMech,
-  stoker: drawStokerMech
+  stoker: drawStokerMech,
+  conductor: drawConductorMech
 };
 
 export type EnemyDraw = (scene: Phaser.Scene, x: number, y: number) => Phaser.GameObjects.Container;
@@ -2657,6 +2658,1091 @@ export function drawCycloneKing(scene: Phaser.Scene, x: number, y: number): Phas
   return c;
 }
 
+// ===== Slice 54 — Sprite art for Slice 50+ content =====
+// One drawX per new enemy / pilot, mirroring the existing pattern:
+// container + graphics + simple geometric primitives + a slow idle tween.
+// Palette stays inside the established COLORS theme so silhouettes read
+// at a glance against the wasteland backdrops.
+
+// ----- The Conductor (pilot) -----
+// Lean rig built for cycling cards: tall thin frame, two side-mounted
+// steam whistles, brass dial on the chest, conductor's baton on the
+// right arm. Reads as "operator of the engine" instead of brawler.
+export function drawConductorMech(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Slim legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, 56, 18, 76);
+  g.fillRect(8, 56, 18, 76);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-30, 124, 26, 14);
+  g.fillRect(4, 124, 26, 14);
+
+  // Narrow torso
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-38, -28, 76, 90);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-34, -22, 68, 8);
+  g.fillRect(-34, 50, 68, 8);
+
+  // Brass chest dial (the metronome)
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, 14, 18);
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(0, 14, 14);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-1, 4, 2, 12); // pendulum
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, 14, 3);
+
+  // Two steam whistles, asymmetric heights
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, -56, 10, 30);
+  g.fillRect(34, -68, 10, 42);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-46, -58, 14, 5);
+  g.fillRect(32, -70, 14, 5);
+  g.fillStyle(COLORS.steam, 0.7);
+  g.fillCircle(-38, -68, 6);
+  g.fillCircle(40, -78, 7);
+
+  // Visored helm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-20, -42, 40, 20);
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-14, -36, 28, 4);
+
+  // Baton arm (right) — long thin pole tipped with brass
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(40, -10, 14, 50);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(42, 38, 10, 36);
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(47, 78, 5);
+
+  // Score-holder arm (left) — folded
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-54, -10, 14, 38);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-58, 24, 20, 10);
+
+  c.add(g);
+  // Tick-tock idle — slight horizontal sway like a metronome pendulum.
+  scene.tweens.add({
+    targets: c,
+    x: c.x + 1.5,
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.InOut'
+  });
+  return c;
+}
+
+// ----- Grit Jackal (Act 1) -----
+// Low rust-quadruped with narrow snout and a hooked tail. Reads as
+// "scrappy hyena" against the Junk Hound (which is a long lean dog).
+export function drawGritJackal(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Four short legs
+  g.fillStyle(COLORS.steelDark);
+  for (const lx of [-40, -22, 18, 36]) g.fillRect(lx, 38, 10, 42);
+  g.fillStyle(COLORS.steel);
+  for (const lx of [-42, -24, 16, 34]) g.fillRect(lx, 76, 14, 8);
+
+  // Body — low rust slab with cocked rear
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-48, 0, 96, 40);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-40, 4, 80, 6);
+
+  // Narrow snout (head pokes forward)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-78, 4, 32, 22);
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-86, 8, -68, 8, -78, 22);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-68, 12, 3);
+
+  // Bristled spine
+  g.fillStyle(COLORS.boneDim);
+  for (let i = 0; i < 6; i++) g.fillTriangle(-30 + i * 12, -2, -24 + i * 12, -2, -27 + i * 12, -12);
+
+  // Hooked tail
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(44, 8, 16, 8);
+  g.fillTriangle(56, 12, 70, 0, 64, 18);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 2, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Slag Viper (Act 2) -----
+// Segmented snake body with a lash-arm whip. Low and threatening.
+export function drawSlagViper(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // 4 body segments curving rightward
+  g.fillStyle(COLORS.rust);
+  g.fillCircle(-50, 30, 18);
+  g.fillCircle(-22, 18, 20);
+  g.fillCircle( 12, 20, 22);
+  g.fillCircle( 46, 32, 18);
+
+  // Plating bands
+  g.fillStyle(COLORS.brassDim);
+  for (const px of [-50, -22, 12, 46]) g.fillRect(px - 18, 18, 36, 4);
+
+  // Head (left end)
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-86, 20, -60, 14, -60, 46);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-74, 24, 3);
+  g.fillCircle(-72, 36, 3);
+  // Fangs
+  g.fillStyle(COLORS.bone);
+  g.fillTriangle(-78, 36, -72, 36, -76, 46);
+
+  // Lash whip arm — long thin curving line
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(46, -32, 8, 28);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(40, -42, 20, 10);
+  g.fillStyle(COLORS.boneDim);
+  g.fillRect(60, -40, 28, 4);
+  g.fillRect(80, -36, 16, 4);
+
+  c.add(g);
+  // S-curve sway
+  scene.tweens.add({ targets: c, x: c.x + 3, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Storm Husk (Act 3) -----
+// Tall aerial humanoid wrapped in static-mist, no legs, crackling hands.
+export function drawStormHusk(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Mist tail (replaces legs)
+  g.fillStyle(COLORS.shield, 0.45);
+  g.fillCircle(0, 90, 22);
+  g.fillCircle(-12, 76, 18);
+  g.fillCircle(14, 78, 16);
+
+  // Robed body
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-32, -30, 32, -30, 0, 80);
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-22, -22, 22, -22, 0, 60);
+
+  // Hood / head
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-22, -56, 22, -56, 0, -28);
+  g.fillStyle(0xfff060);
+  g.fillCircle(-6, -42, 3);
+  g.fillCircle(6, -42, 3);
+
+  // Crackling hands — small bolts
+  g.fillStyle(COLORS.steam);
+  g.fillRect(-44, 0, 8, 14);
+  g.fillRect(36, 0, 8, 14);
+  g.fillStyle(0xfff060);
+  g.fillCircle(-40, 18, 4);
+  g.fillCircle(40, 18, 4);
+  // Lightning crackle accents
+  g.fillStyle(0xfff060, 0.9);
+  g.fillTriangle(-44, 22, -40, 22, -42, 30);
+  g.fillTriangle(38, 22, 42, 22, 40, 30);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Brass Acolyte (Act 4) -----
+// Hooded brass figure with a chant book. Vertical robe + horn-helm.
+export function drawBrassAcolyte(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Robe (trapezoid)
+  g.fillStyle(COLORS.brassDim);
+  g.fillTriangle(-30, -10, 30, -10, 44, 110);
+  g.fillTriangle(30, -10, -30, -10, -44, 110);
+  // Robe shadow column
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-6, 0, 12, 110);
+
+  // Brass armor breastplate
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-22, -8, 44, 32);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, 6, 44, 4);
+
+  // Horned hood
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-24, -50, 24, -50, 0, -10);
+  // Horns
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-30, -50, -20, -50, -30, -68);
+  g.fillTriangle(30, -50, 20, -50, 30, -68);
+  // Glowing eye-slit
+  g.fillStyle(0xfff060);
+  g.fillRect(-10, -34, 20, 4);
+
+  // Chant book (held)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-14, 30, 28, 16);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(-12, 32, 24, 2);
+  g.fillRect(-12, 38, 24, 2);
+
+  c.add(g);
+  // Slow chant sway
+  scene.tweens.add({ targets: c, y: c.y - 2, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Censer Sentry (Act 4) -----
+// Bruiser with a swinging brass censer chain-arm.
+export function drawCenserSentry(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Heavy legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 50, 22, 70);
+  g.fillRect(10, 50, 22, 70);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-36, 114, 30, 16);
+  g.fillRect(6, 114, 30, 16);
+
+  // Wide brass body
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-48, -22, 96, 80);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-44, -16, 88, 8);
+  g.fillRect(-44, 48, 88, 8);
+
+  // Head — dome with eye slit
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -44, 44, 22);
+  g.fillStyle(0xfff060);
+  g.fillRect(-14, -32, 28, 4);
+
+  // Left arm (gauntlet)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-66, -10, 22, 50);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(-55, 44, 10);
+
+  // Right arm — chain
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(44, -10, 18, 28);
+  // Chain links
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 5; i++) g.fillCircle(80 + i * 3, 16 + i * 6, 3);
+  // Censer (brass ball)
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(96, 50, 9);
+  g.fillStyle(0xffa030);
+  g.fillCircle(96, 50, 5);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, x: c.x + 2, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Hymn Chorister (Act 4) -----
+// Small figure with organ pipes on its back + spiked shoulders (Thorns).
+export function drawHymnChorister(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Organ pipes on back
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 5; i++) {
+    const px = -32 + i * 14;
+    const ph = 30 + (i % 3) * 12;
+    g.fillRect(px, -30 - ph, 10, ph);
+  }
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-36, -34, 72, 6);
+
+  // Robed body
+  g.fillStyle(COLORS.steel);
+  g.fillTriangle(-22, -10, 22, -10, 32, 90);
+  g.fillTriangle(22, -10, -22, -10, -32, 90);
+
+  // Head
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(0, -20, 14);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-10, -22, 20, 4);
+
+  // Thorn-spikes on shoulders
+  g.fillStyle(COLORS.bone);
+  for (const sx of [-28, 28]) {
+    g.fillTriangle(sx - 3, -4, sx + 3, -4, sx, -16);
+    g.fillTriangle(sx - 3, 8, sx + 3, 8, sx, -4);
+  }
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 2, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Litany Crawler (Act 4) -----
+// Low multi-legged carrier with a burning brazier on its back.
+export function drawLitanyCrawler(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // 6 short stubby legs
+  g.fillStyle(COLORS.steelDark);
+  for (let i = 0; i < 6; i++) g.fillRect(-50 + i * 20, 36, 8, 32);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 6; i++) g.fillRect(-52 + i * 20, 64, 12, 6);
+
+  // Low body
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-58, 6, 116, 34);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-54, 12, 108, 4);
+
+  // Brazier on back
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-18, -20, 36, 30);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-14, -16, 28, 22);
+  g.fillStyle(0xffa030);
+  g.fillCircle(0, -2, 8);
+  g.fillStyle(0xfff060, 0.9);
+  g.fillCircle(0, -8, 5);
+
+  // Front "eye"
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(-58, 18, 8);
+  g.fillStyle(0xfff060);
+  g.fillCircle(-58, 18, 3);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, x: c.x + 1.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Brass Inquisitor (Act 4) -----
+// Tall figure with gavel arm. Vuln-applying mook.
+export function drawBrassInquisitor(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, 40, 16, 80);
+  g.fillRect(6, 40, 16, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-26, 114, 22, 12);
+  g.fillRect(4, 114, 22, 12);
+
+  // Tall slim torso
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-26, -32, 52, 78);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-22, -26, 44, 6);
+  g.fillRect(-22, 36, 44, 6);
+
+  // Triangular hood
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-22, -58, 22, -58, 0, -32);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-6, -50, 12, 4);
+
+  // Sash
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-26, -8, 52, 6);
+
+  // Gavel arm (right) — long pole with brass head
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(28, -20, 14, 50);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(20, 28, 30, 16);
+  g.fillRect(50, 32, 8, 8);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 2, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Cathedral Verger (Act 4 elite) -----
+// Massive brass mech, pulpit-shaped torso, gigantic warhammer.
+export function drawCathedralVerger(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Heavy legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-40, 60, 28, 80);
+  g.fillRect(12, 60, 28, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-46, 132, 38, 18);
+  g.fillRect(8, 132, 38, 18);
+
+  // Huge brass body
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-66, -38, 132, 104);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-60, -32, 120, 10);
+  g.fillRect(-60, 50, 120, 10);
+  // Decorative cross
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-4, -14, 8, 50);
+  g.fillRect(-22, 0, 44, 8);
+
+  // Square helm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-26, -62, 52, 24);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-18, -52, 36, 6);
+  // Crown of small horns
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 5; i++) g.fillTriangle(-22 + i * 11, -62, -16 + i * 11, -62, -19 + i * 11, -74);
+
+  // Pulpit hammer (right) — massive
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(64, -10, 18, 70);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(54, 56, 38, 28);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(48, 62, 50, 12);
+
+  // Left armored fist
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-86, -10, 22, 56);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(-75, 50, 14);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, x: c.x + 1.5, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Iron Hymn (Act 4 elite) -----
+// Choir mech — body is a wall of brass organ pipes; debuff caster.
+export function drawIronHymn(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Wide planted legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-36, 60, 22, 80);
+  g.fillRect(14, 60, 22, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-40, 132, 30, 16);
+  g.fillRect(10, 132, 30, 16);
+
+  // Pipe wall body
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-58, -54, 116, 116);
+  for (let i = 0; i < 7; i++) {
+    const px = -54 + i * 16;
+    g.fillStyle(COLORS.brass);
+    g.fillRect(px, -50 + (i % 2) * 8, 12, 110 - (i % 2) * 8);
+    g.fillStyle(COLORS.steelDark);
+    g.fillRect(px, -50 + (i % 2) * 8, 12, 4);
+  }
+
+  // Conductor head atop
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, -68, 16);
+  g.fillStyle(0xfff060);
+  g.fillCircle(0, -68, 6);
+
+  // Sound waves (visual cue for the debuff caster)
+  g.fillStyle(COLORS.shield, 0.5);
+  for (let i = 0; i < 3; i++) {
+    g.fillRect(-78 - i * 6, -10 + i * 8, 14, 4);
+    g.fillRect(64 + i * 6, -10 + i * 8, 14, 4);
+  }
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.01, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- The Choirmaster (Act 4 boss) -----
+// Huge robed brass figure with many horns. Resonance crescendo.
+export function drawChoirmaster(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Wide robed base (no separate legs)
+  g.fillStyle(COLORS.brassDim);
+  g.fillTriangle(-78, -10, 78, -10, 100, 140);
+  g.fillTriangle(78, -10, -78, -10, -100, 140);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-12, 0, 24, 140);
+
+  // Massive torso
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-58, -50, 116, 72);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-52, -44, 104, 8);
+  g.fillRect(-52, 12, 104, 8);
+
+  // Central glowing sigil
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, -14, 20);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, -14, 14);
+  g.fillStyle(0xfff060);
+  g.fillCircle(0, -14, 7);
+
+  // Multi-horned crown
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, -82, 64, 32);
+  g.fillStyle(COLORS.brass);
+  for (let i = 0; i < 6; i++) g.fillTriangle(-30 + i * 12, -82, -22 + i * 12, -82, -26 + i * 12, -110);
+  // Glowing eyes
+  g.fillStyle(0xfff060);
+  g.fillCircle(-10, -68, 4);
+  g.fillCircle(10, -68, 4);
+
+  // Side trumpet horns
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-90, -30, -58, -10, -90, 10);
+  g.fillTriangle( 90, -30,  58, -10,  90, 10);
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(-90, -10, 6);
+  g.fillCircle( 90, -10, 6);
+
+  c.add(g);
+  // Slow ominous breath — vertical
+  scene.tweens.add({ targets: c, scaleY: 1.02, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Iron Saint (Act 4 boss) -----
+// Knight with a brass halo; Strength ramp.
+export function drawIronSaint(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 60, 22, 80);
+  g.fillRect(10, 60, 22, 80);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-36, 132, 30, 18);
+  g.fillRect(6, 132, 30, 18);
+
+  // Armored body
+  g.fillStyle(COLORS.bone);
+  g.fillRect(-50, -36, 100, 96);
+  g.fillStyle(COLORS.boneDim);
+  g.fillRect(-46, -30, 92, 8);
+  g.fillRect(-46, 48, 92, 8);
+  // Chest cross
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-4, -22, 8, 50);
+  g.fillRect(-22, -8, 44, 8);
+
+  // Helm with visor
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-22, -62, 44, 26);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-14, -52, 28, 5);
+
+  // Massive brass halo behind the head
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(0, -54, 38);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(0, -54, 32);
+  g.fillStyle(COLORS.bg);
+  g.fillCircle(0, -54, 26);
+  g.fillStyle(0xfff060, 0.4);
+  g.fillCircle(0, -54, 22);
+
+  // Sword (right) — large, with brass crossguard
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(52, -20, 12, 86);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(40, 60, 36, 8);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(54, 64, 8, 18);
+
+  // Shield (left)
+  g.fillStyle(COLORS.brass);
+  g.fillTriangle(-78, -20, -50, -20, -64, 60);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-66, 0, 4, 40);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.012, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Slag Wraith (Act 5) -----
+// Translucent floating molten figure. No legs; drain attacker.
+export function drawSlagWraith(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Lower mist trail (molten)
+  g.fillStyle(COLORS.danger, 0.5);
+  g.fillCircle(0, 80, 22);
+  g.fillCircle(-14, 64, 16);
+  g.fillCircle(14, 66, 14);
+
+  // Tall robed silhouette (semi-transparent)
+  g.fillStyle(COLORS.rust, 0.85);
+  g.fillTriangle(-32, -30, 32, -30, 0, 80);
+
+  // Hooded skull-head
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-24, -56, 24, -56, 0, -22);
+  g.fillStyle(0xffa030);
+  g.fillCircle(-8, -42, 4);
+  g.fillCircle(8, -42, 4);
+
+  // Outstretched hands
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-48, 0, 10, 18);
+  g.fillRect(38, 0, 10, 18);
+  g.fillStyle(0xffa030);
+  g.fillCircle(-43, 24, 5);
+  g.fillCircle(43, 24, 5);
+
+  // Central molten heart
+  g.fillStyle(0xffa030, 0.9);
+  g.fillCircle(0, 8, 8);
+  g.fillStyle(0xfff060);
+  g.fillCircle(0, 8, 4);
+
+  c.add(g);
+  // Float idle
+  scene.tweens.add({ targets: c, y: c.y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Anvil Striker (Act 5) -----
+// Heavy hammer-wielder, big burst hitter.
+export function drawAnvilStriker(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Heavy planted legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-36, 50, 24, 72);
+  g.fillRect(12, 50, 24, 72);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-40, 116, 32, 14);
+  g.fillRect(8, 116, 32, 14);
+
+  // Wide body
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-56, -28, 112, 84);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-50, -22, 100, 8);
+
+  // Helm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-24, -52, 48, 24);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-16, -42, 32, 5);
+
+  // Hammer (right) — colossal
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(56, -16, 18, 50);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(40, 30, 50, 28);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(40, 32, 50, 4);
+  // Hammer face ember
+  g.fillStyle(0xffa030);
+  g.fillRect(82, 38, 6, 14);
+
+  // Left fist
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-74, -10, 22, 50);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(-63, 44, 12);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 2, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Hammer Spirit (Act 5) -----
+// Ember-glowing humanoid with thorns of cinder.
+export function drawHammerSpirit(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Floating tail
+  g.fillStyle(0xffa030, 0.5);
+  g.fillCircle(0, 90, 20);
+  g.fillCircle(-12, 76, 14);
+  g.fillCircle(12, 76, 14);
+
+  // Body
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-26, -20, 52, 80);
+  g.fillStyle(0xffa030);
+  g.fillRect(-22, -16, 44, 72);
+
+  // Ember cracks
+  g.fillStyle(0xfff060);
+  for (let i = 0; i < 5; i++) g.fillRect(-18 + i * 9, -10 + (i % 2) * 30, 2, 16);
+
+  // Head
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, -36, 16);
+  g.fillStyle(0xfff060);
+  g.fillCircle(-6, -38, 3);
+  g.fillCircle(6, -38, 3);
+
+  // Cinder thorns (shoulders)
+  g.fillStyle(COLORS.bone);
+  for (const sx of [-32, 32]) {
+    g.fillTriangle(sx - 4, -10, sx + 4, -10, sx, -24);
+    g.fillTriangle(sx - 4, 6, sx + 4, 6, sx, -8);
+  }
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.02, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Forge Imp (Act 5) -----
+// Small mischievous mech; drops Heat Damage.
+export function drawForgeImp(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Stubby legs
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-18, 40, 12, 36);
+  g.fillRect(6, 40, 12, 36);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-22, 72, 18, 10);
+  g.fillRect(4, 72, 18, 10);
+
+  // Tiny round body
+  g.fillStyle(COLORS.rust);
+  g.fillCircle(0, 10, 30);
+  g.fillStyle(0xffa030);
+  g.fillCircle(0, 14, 22);
+
+  // Tiny horns
+  g.fillStyle(COLORS.steelDark);
+  g.fillTriangle(-20, -16, -10, -16, -16, -34);
+  g.fillTriangle(10, -16, 20, -16, 16, -34);
+
+  // Glowing eyes
+  g.fillStyle(0xfff060);
+  g.fillCircle(-8, 4, 4);
+  g.fillCircle(8, 4, 4);
+
+  // Toothy grin
+  g.fillStyle(COLORS.bone);
+  for (let i = 0; i < 4; i++) g.fillRect(-10 + i * 6, 22, 4, 4);
+
+  // Tail
+  g.fillStyle(COLORS.rust);
+  g.fillRect(28, 14, 14, 6);
+  g.fillStyle(0xffa030);
+  g.fillCircle(46, 16, 5);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, y: c.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Magma Lurker (Act 5) -----
+// Squat half-buried predator that throws Heat Damage curses.
+export function drawMagmaLurker(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Magma pool base
+  g.fillStyle(COLORS.danger, 0.7);
+  g.fillRect(-70, 70, 140, 30);
+  g.fillStyle(0xffa030, 0.6);
+  g.fillRect(-60, 78, 120, 18);
+
+  // Squat dome body
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-50, -10, 100, 80);
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-44, -4, 88, 6);
+  g.fillRect(-44, 50, 88, 10);
+
+  // Cracks
+  g.fillStyle(0xffa030);
+  for (let i = 0; i < 4; i++) g.fillRect(-30 + i * 18, 6, 3, 28);
+
+  // Eye row across mid
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, 18, 88, 12);
+  g.fillStyle(0xfff060);
+  for (let i = 0; i < 4; i++) g.fillCircle(-30 + i * 20, 24, 4);
+
+  // Tendril claws emerging from magma
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, 60, 10, 18);
+  g.fillRect(48, 60, 10, 18);
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(-53, 80, 6);
+  g.fillCircle(53, 80, 6);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.015, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Furnace Maw (Act 5 elite) -----
+// Wide gaping mouth with lava drip; AoE Burn pressure.
+export function drawFurnaceMaw(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Tracks at the bottom
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-70, 100, 140, 20);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 7; i++) g.fillRect(-66 + i * 20, 104, 14, 12);
+
+  // Wide squat body
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-68, -40, 136, 140);
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-60, -32, 120, 124);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-60, -32, 120, 8);
+
+  // The maw — big toothy mouth
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-44, 20, 88, 56);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-40, 24, 80, 48);
+  g.fillStyle(0xffa030);
+  g.fillRect(-36, 28, 72, 40);
+  // Teeth (top and bottom)
+  g.fillStyle(COLORS.bone);
+  for (let i = 0; i < 7; i++) {
+    g.fillTriangle(-42 + i * 12, 24, -34 + i * 12, 24, -38 + i * 12, 38);
+    g.fillTriangle(-42 + i * 12, 72, -34 + i * 12, 72, -38 + i * 12, 60);
+  }
+
+  // Eyes
+  g.fillStyle(0xfff060);
+  g.fillCircle(-44, -10, 6);
+  g.fillCircle( 44, -10, 6);
+
+  // Smokestacks
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-58, -68, 14, 30);
+  g.fillRect( 44, -68, 14, 30);
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(-51, -74, 7);
+  g.fillCircle( 51, -74, 7);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.012, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- Crucible Knight (Act 5 elite) -----
+// Heavy armored warrior; Thorns + heavy hits.
+export function drawCrucibleKnight(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Greaves
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-32, 56, 22, 78);
+  g.fillRect(10, 56, 22, 78);
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-36, 126, 30, 16);
+  g.fillRect(6, 126, 30, 16);
+
+  // Heavy plated body
+  g.fillStyle(COLORS.steel);
+  g.fillRect(-52, -38, 104, 96);
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-46, -32, 92, 8);
+  g.fillRect(-46, 50, 92, 8);
+
+  // Glowing forge crack down the chest
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-4, -28, 8, 70);
+  g.fillStyle(0xffa030);
+  g.fillRect(-2, -28, 4, 70);
+
+  // Visored helm
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-22, -64, 44, 26);
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-14, -54, 28, 6);
+
+  // Spiked shoulders (Thorns visual)
+  g.fillStyle(COLORS.bone);
+  for (const sx of [-52, 52]) {
+    g.fillTriangle(sx - 4, -34, sx + 4, -34, sx, -50);
+    g.fillTriangle(sx - 4, -18, sx + 4, -18, sx, -34);
+  }
+
+  // Greatsword (right)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(54, -20, 14, 100);
+  g.fillStyle(COLORS.bone);
+  g.fillRect(42, 76, 38, 8);
+
+  // Shield (left)
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-82, -16, 22, 60);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-78, -12, 14, 52);
+
+  c.add(g);
+  scene.tweens.add({ targets: c, scaleY: 1.01, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- World-Forge Heart (Act 5 boss) -----
+// Massive stationary glowing core, plating + burn climber.
+export function drawWorldForgeHeart(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Mounting brackets / base
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-90, 80, 180, 40);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-86, 86, 172, 6);
+
+  // Outer ring
+  g.fillStyle(COLORS.steelDark);
+  g.fillCircle(0, 10, 86);
+  g.fillStyle(COLORS.brass);
+  g.fillCircle(0, 10, 76);
+  g.fillStyle(COLORS.brassDim);
+  g.fillCircle(0, 10, 64);
+
+  // Glowing core
+  g.fillStyle(COLORS.danger);
+  g.fillCircle(0, 10, 52);
+  g.fillStyle(0xffa030);
+  g.fillCircle(0, 10, 38);
+  g.fillStyle(0xfff060);
+  g.fillCircle(0, 10, 22);
+
+  // Cross-bracing
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-86, 6, 172, 8);
+  g.fillRect(-4, -76, 8, 172);
+
+  // Rivet ring
+  g.fillStyle(COLORS.brassDim);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.fillCircle(Math.cos(a) * 70, 10 + Math.sin(a) * 70, 3);
+  }
+
+  // Side smokestacks
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-90, -50, 16, 50);
+  g.fillRect( 74, -50, 16, 50);
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(-82, -58, 8);
+  g.fillCircle( 82, -58, 8);
+
+  c.add(g);
+  // Slow pulse like a beating heart
+  scene.tweens.add({ targets: c, scaleX: 1.025, scaleY: 1.025, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
+// ----- The First Engine (Act 5 boss) -----
+// Colossal pistoned engine on tracks. Three-phase charge/vent/smash.
+export function drawFirstEngine(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const g = scene.add.graphics();
+
+  // Heavy tracks at the bottom
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-90, 116, 180, 28);
+  g.fillStyle(COLORS.steel);
+  for (let i = 0; i < 9; i++) g.fillRect(-86 + i * 20, 122, 14, 16);
+  // Wheel discs
+  g.fillStyle(COLORS.brassDim);
+  for (const wx of [-70, -30, 10, 50]) g.fillCircle(wx, 130, 10);
+
+  // Hulking body
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-80, -56, 160, 172);
+  g.fillStyle(COLORS.rust);
+  g.fillRect(-74, -50, 148, 160);
+  g.fillStyle(COLORS.brassDim);
+  g.fillRect(-74, -50, 148, 8);
+  g.fillRect(-74, 102, 148, 8);
+
+  // Piston row (chest)
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-60, -10, 120, 56);
+  for (let i = 0; i < 4; i++) {
+    const px = -54 + i * 30;
+    g.fillStyle(COLORS.brass);
+    g.fillRect(px, -4, 22, 44);
+    g.fillStyle(0xffa030);
+    g.fillRect(px + 2, 0, 18, 36);
+    g.fillStyle(0xfff060);
+    g.fillRect(px + 6, 4, 10, 8);
+  }
+
+  // Top vent / chimney cluster
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-52, -88, 16, 32);
+  g.fillRect(-14, -98, 16, 42);
+  g.fillRect( 22, -84, 16, 28);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-54, -92, 20, 6);
+  g.fillRect(-16, -102, 20, 6);
+  g.fillRect( 20, -88, 20, 6);
+  // Heavy smoke
+  g.fillStyle(COLORS.boneDim, 0.5);
+  g.fillCircle(-44, -104, 9);
+  g.fillCircle( -6, -116, 11);
+  g.fillCircle( 30, -100, 9);
+
+  // Side arms — heavy pistons
+  g.fillStyle(COLORS.steelDark);
+  g.fillRect(-100, 0, 22, 70);
+  g.fillRect( 78, 0, 22, 70);
+  g.fillStyle(COLORS.brass);
+  g.fillRect(-104, 56, 30, 18);
+  g.fillRect( 74, 56, 30, 18);
+
+  // Boss eye-light at top
+  g.fillStyle(COLORS.danger);
+  g.fillRect(-20, -42, 40, 20);
+  g.fillStyle(0xfff060);
+  g.fillRect(-14, -36, 28, 6);
+
+  c.add(g);
+  // Big thrum
+  scene.tweens.add({ targets: c, scaleY: 1.01, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  return c;
+}
+
 export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   scrapRaider: drawRaider,
   junkHound: drawJunkHound,
@@ -2688,5 +3774,29 @@ export const ENEMY_SPRITES: Record<string, EnemyDraw> = {
   emberSpitter: drawEmberSpitter,
   pigIronBrute: drawPigIronBrute,
   mistSpecter: drawMistSpecter,
-  cloudCorsair: drawCloudCorsair
+  cloudCorsair: drawCloudCorsair,
+  // Slice 54 — Act 1-3 variety
+  gritJackal: drawGritJackal,
+  slagViper: drawSlagViper,
+  stormHusk: drawStormHusk,
+  // Slice 54 — Act 4
+  brassAcolyte: drawBrassAcolyte,
+  censerSentry: drawCenserSentry,
+  hymnChorister: drawHymnChorister,
+  litanyCrawler: drawLitanyCrawler,
+  brassInquisitor: drawBrassInquisitor,
+  cathedralVerger: drawCathedralVerger,
+  ironHymn: drawIronHymn,
+  choirmaster: drawChoirmaster,
+  ironSaint: drawIronSaint,
+  // Slice 54 — Act 5
+  slagWraith: drawSlagWraith,
+  anvilStriker: drawAnvilStriker,
+  hammerSpirit: drawHammerSpirit,
+  forgeImp: drawForgeImp,
+  magmaLurker: drawMagmaLurker,
+  furnaceMaw: drawFurnaceMaw,
+  crucibleKnight: drawCrucibleKnight,
+  worldForgeHeart: drawWorldForgeHeart,
+  firstEngine: drawFirstEngine
 };
