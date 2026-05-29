@@ -216,12 +216,26 @@ export class CombatScene extends Phaser.Scene {
       run.ascension ?? 0
     );
 
-    // Top HUD strip. Portrait centers the HP bar horizontally and moves
-    // the PILOT label ABOVE it so the bar can use the full width without
-    // overlapping the label. Landscape keeps the side-by-side layout.
-    const hudY = portrait ? 46 : 78;
+    // Player sprite. Landscape: left of center, mid-height. Portrait:
+    // centered horizontally, sitting in the player band below the
+    // enemies. We position the mech BEFORE the HP bar in portrait so
+    // the bar can anchor directly above the mech's head.
+    const characterId = run.player.characterId ?? 'pilot';
+    const drawCharacter = CHARACTER_SPRITES[characterId] ?? CHARACTER_SPRITES.pilot;
+    const mechX = portrait ? width * 0.5 : width * 0.22;
+    const mechY = portrait ? height * 0.55 : height * 0.48;
+    this.mech = drawCharacter(this, mechX, mechY);
+    if (portrait) this.mech.setScale(0.7);
 
-    const playerBarW = portrait ? Math.min(width - 160, 360) : 280;
+    // Player HP bar + PILOT label. Landscape keeps the historical
+    // top-left HUD layout. Portrait used to pin the bar to the very
+    // top of the screen, where it sat directly next to the active
+    // enemy's bar — visually confusing, and far from the actual
+    // pilot. Portrait now places the bar just above the mech's head
+    // so the pilot's vitals read as belonging to the pilot.
+    const hudY = portrait ? Math.round(mechY - 70) : 78;
+
+    const playerBarW = portrait ? Math.min(width - 120, 300) : 280;
     const playerBarX = portrait ? width / 2 : width * 0.24;
     this.playerBar = new StatBar(this, playerBarX, hudY, playerBarW);
     this.add.existing(this.playerBar);
@@ -229,7 +243,7 @@ export class CombatScene extends Phaser.Scene {
     this.add
       .text(
         portrait ? width / 2 : 24,
-        portrait ? hudY - 22 : hudY,
+        portrait ? hudY - 18 : hudY,
         'PILOT',
         {
           fontFamily: FONTS.display,
@@ -239,16 +253,6 @@ export class CombatScene extends Phaser.Scene {
         }
       )
       .setOrigin(portrait ? 0.5 : 0, 0.5);
-
-    // Player sprite. Landscape: left of center, mid-height. Portrait:
-    // centered horizontally, sitting in the player band below the
-    // enemies.
-    const characterId = run.player.characterId ?? 'pilot';
-    const drawCharacter = CHARACTER_SPRITES[characterId] ?? CHARACTER_SPRITES.pilot;
-    const mechX = portrait ? width * 0.5 : width * 0.22;
-    const mechY = portrait ? height * 0.55 : height * 0.48;
-    this.mech = drawCharacter(this, mechX, mechY);
-    if (portrait) this.mech.setScale(0.7);
 
     // Enemy lineup
     this.layoutEnemies();
