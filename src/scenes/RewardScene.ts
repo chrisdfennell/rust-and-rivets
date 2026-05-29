@@ -8,7 +8,6 @@ import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RewardScene extends Phaser.Scene {
@@ -18,10 +17,7 @@ export class RewardScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — quiet aftermath

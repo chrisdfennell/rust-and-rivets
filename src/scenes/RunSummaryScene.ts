@@ -9,7 +9,6 @@ import {
   recordRunWin
 } from '../game/meta';
 import { Button } from '../ui/Button';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RunSummaryScene extends Phaser.Scene {
@@ -18,10 +17,7 @@ export class RunSummaryScene extends Phaser.Scene {
   }
 
   create() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     const run = getRun();

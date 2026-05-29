@@ -4,7 +4,6 @@ import { RELICS } from '../game/relics';
 import type { CardDef, CardRarity } from '../game/types';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex, RARITY_COLORS } from '../ui/theme';
 
 type Tab = 'cards' | 'relics';
@@ -43,10 +42,7 @@ export class LibraryScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — quiet, ledger feel
@@ -135,8 +131,7 @@ export class LibraryScene extends Phaser.Scene {
   }
 
   private rebuild() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     this.content.removeAll(true);
 
     if (this.tab === 'cards') this.buildCards();
@@ -169,7 +164,7 @@ export class LibraryScene extends Phaser.Scene {
         return CARDS[a].name.localeCompare(CARDS[b].name);
       });
 
-    const width = DESIGN_W;
+    const { width } = this.scale;
     const gridW = CARD_COLS * CARD_CELL_W + (CARD_COLS - 1) * CARD_GAP_X;
     const startX = (width - gridW) / 2 + CARD_CELL_W / 2;
     const startY = CARD_CELL_H / 2;
@@ -186,7 +181,7 @@ export class LibraryScene extends Phaser.Scene {
     const ids = Object.keys(RELICS).sort((a, b) =>
       RELICS[a].name.localeCompare(RELICS[b].name)
     );
-    const width = DESIGN_W;
+    const { width } = this.scale;
     const gridW = RELIC_COLS * RELIC_CELL_W + (RELIC_COLS - 1) * RELIC_GAP_X;
     const startX = (width - gridW) / 2 + RELIC_CELL_W / 2;
     const startY = RELIC_CELL_H / 2;

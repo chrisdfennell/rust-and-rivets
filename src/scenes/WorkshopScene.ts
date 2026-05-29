@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { loadMeta, buyUpgrade, META_UPGRADES, type UpgradeDef } from '../game/meta';
 import { Button } from '../ui/Button';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 interface RowRefs {
@@ -20,10 +19,7 @@ export class WorkshopScene extends Phaser.Scene {
 
   create() {
     this.rows = new Map();
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — workshop bench feel

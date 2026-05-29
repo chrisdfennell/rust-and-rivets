@@ -6,7 +6,6 @@ import type { CombatState, CardInstance, EnemyState, TurnEvent } from '../game/t
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { drawPotionIcon } from '../ui/PotionIcon';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { setupPause } from '../ui/setupPause';
 import { sfx, playCardLayer } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
@@ -137,15 +136,7 @@ export class CombatScene extends Phaser.Scene {
     // browser's context menu intercepting that click anywhere on the canvas.
     this.input.mouse?.disableContextMenu();
 
-    // Slice 58 — combat uses a fixed 1280×720 design canvas. The camera
-    // fits it into whatever viewport Phaser's RESIZE mode hands us, so
-    // the original layout reads correctly regardless of window size or
-    // device rotation. Width / height below come from sceneFit constants
-    // instead of this.scale.* so positions stay in design space.
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Wasteland horizon
@@ -318,8 +309,7 @@ export class CombatScene extends Phaser.Scene {
   // ===== Enemy layout =====
 
   private enemyPositionFor(i: number, count: number): { x: number; y: number; scale: number } {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     const baseY = height * 0.5;
     if (count <= 1) return { x: width * 0.72, y: baseY, scale: 1 };
     if (count === 2) {
@@ -491,7 +481,7 @@ export class CombatScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(900);
     // Aim banner — only visible while choosing a potion target.
-    const width = DESIGN_W;
+    const { width } = this.scale;
     this.potionAimBanner = this.add
       .text(width / 2, 56, 'CHOOSE A TARGET — CLICK ELSEWHERE TO CANCEL', {
         fontFamily: FONTS.display,
@@ -1411,8 +1401,7 @@ export class CombatScene extends Phaser.Scene {
     staleViews.forEach((stale, i) => this.animateDiscardOut(stale, i));
     this.cardViews = next;
 
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     const baseY = height - CARD_H * 0.5 - 16;
     const n = next.length;
     if (n === 0) return;
@@ -1562,8 +1551,7 @@ export class CombatScene extends Phaser.Scene {
 
   private showOverlay(title: string, sub: string, color: number) {
     this.overlay.removeAll(true);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.65);
     const t = this.add.text(width / 2, height / 2 - 20, title, {
       fontFamily: FONTS.display,

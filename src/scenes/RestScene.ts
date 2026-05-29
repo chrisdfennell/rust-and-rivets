@@ -11,7 +11,6 @@ import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RestScene extends Phaser.Scene {
@@ -25,10 +24,7 @@ export class RestScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Quiet camp backdrop with a glowing fire
@@ -62,8 +58,7 @@ export class RestScene extends Phaser.Scene {
   }
 
   private buildMainView() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
 
     this.mainView.add(
       this.add.text(width / 2, 70, 'WAYSIDE CAMP', {
@@ -128,8 +123,7 @@ export class RestScene extends Phaser.Scene {
   }
 
   private buildUpgradeView() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
 
     this.upgradeView.add(
       this.add.text(width / 2, 50, 'CHOOSE A CARD TO UPGRADE', {
@@ -156,7 +150,7 @@ export class RestScene extends Phaser.Scene {
     this.upgradeView.removeAll(false);
     for (const c of keep) this.upgradeView.add(c);
 
-    const width = DESIGN_W;
+    const { width } = this.scale;
     const r = getRun();
     const deck = r.player.deck;
 

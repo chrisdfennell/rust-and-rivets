@@ -3,7 +3,6 @@ import { getRun, completeNode, resolveEvent } from '../game/run';
 import { EVENTS_BY_ID, type EventChoice, type EventDef } from '../game/events';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class EventScene extends Phaser.Scene {
@@ -16,10 +15,7 @@ export class EventScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — dim corridor / road feel
@@ -85,7 +81,7 @@ export class EventScene extends Phaser.Scene {
   }
 
   private buildChoices(event: EventDef) {
-    const width = DESIGN_W;
+    const { width } = this.scale;
     const n = event.choices.length;
     const spacing = 320;
     const startX = width / 2 - (spacing * (n - 1)) / 2;
@@ -126,8 +122,7 @@ export class EventScene extends Phaser.Scene {
   }
 
   private buildResult() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { width, height } = this.scale;
     const messageText = this.add
       .text(width / 2, 410, '', {
         fontFamily: FONTS.display,

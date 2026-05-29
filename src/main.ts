@@ -13,20 +13,20 @@ import { EventScene } from './scenes/EventScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
 import { LibraryScene } from './scenes/LibraryScene';
 
-// Slice 57 — RESIZE mode passes the *actual* viewport dimensions to
-// scenes via `this.scale.width / height`. Scenes that already compute
-// positions from those values (most of ours) adapt naturally; portrait
-// orientation simply hands them a taller, narrower canvas. Scenes that
-// want to redraw on rotation hook `this.scale.on('resize')` and
-// re-layout. Width / height in the config are the INITIAL design size
-// but Phaser overwrites them on every resize event.
+// Slice 58 — Phaser.Scale.FIT renders the 1280×720 design canvas at
+// its native size internally, then CSS-scales the canvas to fit the
+// browser viewport while preserving aspect ratio. Letterbox bars
+// appear on whichever axis has extra room. Scenes use this.scale.width
+// / height (always 1280 × 720). Responsive scenes that want to adapt
+// to the actual viewport size read window.innerWidth / innerHeight
+// directly — see TitleScene + CharacterSelectScene.
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#14110f',
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.NO_CENTER,
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 1280,
     height: 720
   },
