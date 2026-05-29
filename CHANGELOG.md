@@ -72,6 +72,45 @@ middle of looking at the title clears it.
 drag threshold went 6 → 8 px to match MapScene / CharacterSelectScene.
 6 px was triggering scroll on finger jitter.
 
+### Title screen polish + potion icons
+
+Three fixes off the responsive pass:
+
+**Records popover.** The always-visible RECORDS panel in the
+top-right corner was overlapping the title in portrait. Replaced
+with a small `RECORDS` button in the same corner that toggles a
+popup overlay with the stats. Tapping the dim outside the panel or
+the button itself dismisses; the panel anchors to the button when
+there's room and centers on the viewport otherwise. Clean for both
+phone portrait and desktop landscape.
+
+**Compact-layout threshold raised** from `height < 580` to
+`height < 700`. The audio mute toggles in the landscape layout sit
+at `0.75 × height + 150` from the top, so anything below 700 px
+clipped them off-screen. The vertical stack layout now kicks in
+for any window narrower than 900 wide OR shorter than 700 tall,
+which catches resized desktop browsers and most tablets.
+
+**Potion icons.** `PotionDef` gained an optional `icon: string`
+field (single-glyph emoji) — rendered on the combat potion belt
+(22 px above the abbreviated label), the shop's potion offer (26 px
+on the left of the name), and the reward-scene drop line:
+
+| Potion | Icon |
+|---|:---:|
+| Block | 🛡️ |
+| Fire | 🔥 |
+| Swift (draw) | 🃏 |
+| Energy (steam) | 💨 |
+| Weak | ☠️ |
+| Vulnerable | 🎯 |
+| Strength | 💪 |
+| Repair | 🔧 |
+| Cinder (burn) | 🌋 |
+| Spike (thorns) | 🌵 |
+| Bracer (dex) | 🤸 |
+| Surge (rare) | ⚡ |
+
 ### Responsive scenes (portrait + landscape)
 
 **Engine config switched from FIT to RESIZE mode.** RESIZE hands

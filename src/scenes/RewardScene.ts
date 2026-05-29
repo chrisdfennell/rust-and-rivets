@@ -54,11 +54,13 @@ export class RewardScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Potion drop line (auto-claimed to belt, no UI choice — just info)
+    // Potion drop line (auto-claimed to belt, no UI choice — just info).
+    // Slice 58 — prefixed with the potion's emoji icon for quick recognition.
     if (reward.potionId) {
       const def = POTIONS[reward.potionId];
+      const iconStr = def?.icon ? `${def.icon}  ` : '';
       this.add
-        .text(width / 2, 124, `+1 potion: ${def?.name ?? reward.potionId}`, {
+        .text(width / 2, 124, `${iconStr}+1 potion: ${def?.name ?? reward.potionId}`, {
           fontFamily: FONTS.display,
           fontSize: '14px',
           color: hex(COLORS.brass),

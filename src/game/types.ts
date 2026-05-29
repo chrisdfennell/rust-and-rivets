@@ -59,6 +59,10 @@ export interface PotionDef {
   description: string;
   effects: PotionEffect[];
   rarity?: CardRarity;
+  // Slice 58 — single-glyph icon (emoji or unicode symbol) rendered on
+  // the potion belt + shop + reward views so players can read what
+  // each potion does at a glance without expanding the tooltip.
+  icon?: string;
 }
 
 export type CardType = 'attack' | 'skill' | 'power';

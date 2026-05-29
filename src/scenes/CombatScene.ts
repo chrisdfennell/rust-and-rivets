@@ -36,6 +36,8 @@ interface PotionSlotUI {
   bg: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
+  // Slice 58 — single-glyph icon (emoji) rendered on top of the slot.
+  icon: Phaser.GameObjects.Text;
 }
 
 // Pre-endTurn snapshot of bar-relevant stats. Reuses the same shape the
@@ -437,17 +439,27 @@ export class CombatScene extends Phaser.Scene {
       const bg = this.add
         .rectangle(0, 0, slotSize, slotSize, COLORS.bgPanel)
         .setStrokeStyle(2, COLORS.brassDim);
+      // Slice 58 — icon on top, abbreviated label below. Icon is the
+      // primary at-a-glance signal; label is the fallback when emoji
+      // rendering can't disambiguate (older Android, niche fonts).
+      const icon = this.add
+        .text(0, -10, '', {
+          fontFamily: FONTS.body,
+          fontSize: '22px',
+          align: 'center'
+        })
+        .setOrigin(0.5);
       const label = this.add
-        .text(0, 0, '', {
+        .text(0, 14, '', {
           fontFamily: FONTS.display,
-          fontSize: '11px',
+          fontSize: '9px',
           color: hex(COLORS.bone),
           align: 'center',
           fontStyle: 'bold',
           wordWrap: { width: slotSize - 4 }
         })
         .setOrigin(0.5);
-      container.add([glow, bg, label]);
+      container.add([glow, bg, icon, label]);
       bg.setInteractive({ useHandCursor: true });
       const idx = i;
       bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -456,7 +468,7 @@ export class CombatScene extends Phaser.Scene {
       });
       bg.on('pointerover', () => this.onPotionHover(idx, true));
       bg.on('pointerout', () => this.onPotionHover(idx, false));
-      this.potionSlots.push({ container, bg, glow, label });
+      this.potionSlots.push({ container, bg, glow, label, icon });
     }
     // Hover tooltip — anchored above the belt, hidden when nothing hovered.
     this.potionTooltip = this.add
@@ -495,12 +507,16 @@ export class CombatScene extends Phaser.Scene {
       const id = potions[i];
       const def = id ? POTIONS[id] : null;
       if (def) {
-        // Compact label: first 4 chars of each word, capped at 10 chars.
-        const short = def.name.split(' ').map((w) => w.slice(0, 4)).join(' ').slice(0, 12);
-        ui.label.setText(short);
+        // Slice 58 — icon does the heavy lifting; label is the first
+        // word of the potion name (e.g. "Fire", "Block") for the brief
+        // text confirmation underneath.
+        ui.icon.setText(def.icon ?? '🧪');
+        const firstWord = def.name.split(' ')[0];
+        ui.label.setText(firstWord.toUpperCase());
         ui.bg.setFillStyle(COLORS.steelDark);
         ui.bg.setStrokeStyle(2, COLORS.steam);
       } else {
+        ui.icon.setText('');
         ui.label.setText('');
         ui.bg.setFillStyle(COLORS.bgPanel);
         ui.bg.setStrokeStyle(2, COLORS.brassDim);

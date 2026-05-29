@@ -203,8 +203,16 @@ export class ShopScene extends Phaser.Scene {
       priceColor = canAfford ? COLORS.steam : COLORS.danger;
     }
 
+    // Slice 58 — emoji icon on the left so the offer reads at a glance.
+    const icon = this.add
+      .text(-w / 2 + 18, 0, def.icon ?? '🧪', {
+        fontFamily: FONTS.body,
+        fontSize: '26px'
+      })
+      .setOrigin(0.5);
+    const nameX = -w / 2 + 42;
     const name = this.add
-      .text(-w / 2 + 14, -10, def.name, {
+      .text(nameX, -10, def.name, {
         fontFamily: FONTS.display,
         fontSize: '15px',
         color: hex(canAfford ? COLORS.bone : COLORS.boneDim),
@@ -212,7 +220,7 @@ export class ShopScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     const desc = this.add
-      .text(-w / 2 + 14, 12, def.description, {
+      .text(nameX, 12, def.description, {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
@@ -226,7 +234,7 @@ export class ShopScene extends Phaser.Scene {
         fontStyle: 'bold'
       })
       .setOrigin(1, 0.5);
-    slot.add([bg, name, desc, price]);
+    slot.add([bg, icon, name, desc, price]);
 
     if (canAfford) {
       bg.setInteractive({ useHandCursor: true });

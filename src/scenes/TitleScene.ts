@@ -33,10 +33,12 @@ export class TitleScene extends Phaser.Scene {
     startMusic(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
-    // Slice 57 — portrait flag drives the responsive layout below.
-    // Phaser's RESIZE mode hands us the actual viewport, so flipping a
-    // phone from landscape to portrait makes width < height here.
+    // Slice 58 — "compact" covers both portrait phones AND small landscape
+    // windows (resized desktop, tablets). The vertical button stack fits
+    // either case cleanly; the 3-across landscape layout only kicks in
+    // when there's genuinely room for it.
     const portrait = height > width;
+    const compact = portrait || width < 900 || height < 700;
 
     // Backdrop: smokestacks silhouette
     const bg = this.add.graphics();
@@ -68,8 +70,10 @@ export class TitleScene extends Phaser.Scene {
       bg.fillCircle(x - 8, baseY - 36, 10);
     }
 
-    // Records panel in the top-right corner.
-    this.buildRecordsPanel(width - 30, 30);
+    // Slice 58 — records is now a tap-to-open popover (was an always-on
+    // panel that collided with the title in portrait). The button sits
+    // in the top-right corner; tapping it pops the stats overlay.
+    this.buildRecordsButton(width - 12, 12);
 
     // Title — scales with viewport so a narrow phone screen doesn't
     // get a title that clips off the side. Caps at the original 72px
@@ -77,7 +81,7 @@ export class TitleScene extends Phaser.Scene {
     const titleSize = Math.min(72, Math.max(36, Math.floor(width / 18)));
     const subtitleSize = Math.min(16, Math.max(11, Math.floor(width / 70)));
     this.add
-      .text(width / 2, height * (portrait ? 0.14 : 0.28), 'RUST & RIVETS', {
+      .text(width / 2, height * (compact ? 0.14 : 0.28), 'RUST & RIVETS', {
         fontFamily: FONTS.display,
         fontSize: `${titleSize}px`,
         color: hex(COLORS.brass),
@@ -85,7 +89,7 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.add
-      .text(width / 2, height * (portrait ? 0.14 : 0.28) + titleSize * 0.85, 'a dieselpunk deckbuilder', {
+      .text(width / 2, height * (compact ? 0.14 : 0.28) + titleSize * 0.85, 'a dieselpunk deckbuilder', {
         fontFamily: FONTS.body,
         fontSize: `${subtitleSize}px`,
         color: hex(COLORS.boneDim)
@@ -95,7 +99,7 @@ export class TitleScene extends Phaser.Scene {
     // Saved-run summary. Positioned higher in portrait so the button
     // stack below has room.
     const haveSave = hasSavedRun();
-    const summaryY = height * (portrait ? 0.26 : 0.52);
+    const summaryY = height * (compact ? 0.26 : 0.52);
     if (haveSave) {
       const peeked = loadSavedRun();
       if (peeked) {
@@ -124,7 +128,7 @@ export class TitleScene extends Phaser.Scene {
     // Workshop points banner.
     const meta = loadMeta();
     this.add
-      .text(width / 2, height * (portrait ? 0.34 : 0.62), `WORKSHOP POINTS  ${meta.points}`, {
+      .text(width / 2, height * (compact ? 0.34 : 0.62), `WORKSHOP POINTS  ${meta.points}`, {
         fontFamily: FONTS.display,
         fontSize: '16px',
         color: hex(meta.points > 0 ? COLORS.steam : COLORS.boneDim),
@@ -134,15 +138,15 @@ export class TitleScene extends Phaser.Scene {
 
     // Ascension selector.
     if (meta.highestAscension > 0) {
-      this.buildAscensionSelector(width / 2, height * (portrait ? 0.39 : 0.69), meta);
+      this.buildAscensionSelector(width / 2, height * (compact ? 0.39 : 0.69), meta);
     }
 
     // ===== Buttons. Landscape uses the original 3-across rows; portrait
     // stacks them vertically so each button stays touch-friendly. =====
     const cx = width / 2;
-    const btnW = portrait ? Math.min(width - 40, 320) : 210;
+    const btnW = compact ? Math.min(width - 40, 320) : 210;
     const btnH = 56;
-    if (portrait) {
+    if (compact) {
       // Vertical stack: CONTINUE / NEW RUN / WORKSHOP / LIBRARY / EXPORT /
       // IMPORT / MUSIC / SFX. Each row 64 px tall (button + 8 gap).
       let y = height * 0.46;
@@ -258,33 +262,80 @@ export class TitleScene extends Phaser.Scene {
     }, 120);
   };
 
-  // Slice 55 — small RECORDS card in the top-right. Origin is top-right
-  // so the panel anchors to (x, y) regardless of label width.
-  private buildRecordsPanel(rightX: number, topY: number) {
+  // Slice 58 — RECORDS popover. The corner button stays always visible;
+  // tapping it overlays the stats panel and tapping anywhere else (or
+  // the button again) dismisses. Replaces the always-on panel which
+  // collided with the title in portrait.
+  private recordsOverlay: Phaser.GameObjects.Container | null = null;
+
+  private buildRecordsButton(rightX: number, topY: number) {
+    const meta = loadMeta();
+    if (!meta.history) return;
+    const w = 96;
+    const h = 36;
+    const btn = new Button(
+      this,
+      rightX - w / 2,
+      topY + h / 2,
+      'RECORDS',
+      () => this.toggleRecordsOverlay(rightX, topY + h + 6),
+      {
+        width: w,
+        height: h,
+        fontSize: 11,
+        fill: COLORS.bgPanel,
+        hoverFill: COLORS.steelDark
+      }
+    );
+    this.add.existing(btn);
+  }
+
+  private toggleRecordsOverlay(rightX: number, topY: number) {
+    if (this.recordsOverlay) {
+      this.dismissRecordsOverlay();
+      return;
+    }
     const meta = loadMeta();
     const h = meta.history;
     if (!h) return;
-    const panelW = 200;
-    const panelH = 132;
+    const { width: vw, height: vh } = this.scale;
+    const panelW = 240;
+    const panelH = 160;
+    // Anchor the panel to the button when there's room; otherwise
+    // center on the viewport (compact / portrait phone case).
+    const anchorX = Math.min(vw - 10, rightX);
+    const anchorY = Math.min(vh - panelH - 10, topY);
+    // Full-viewport tap-catcher so a tap anywhere outside the panel
+    // dismisses it. setInteractive lets it receive pointerdown without
+    // visual presence (alpha 0.01 — just enough to register).
+    const overlay = this.add.container(0, 0);
+    const dim = this.add.rectangle(vw / 2, vh / 2, vw, vh, 0x000000, 0.35)
+      .setInteractive();
+    dim.on('pointerdown', () => this.dismissRecordsOverlay());
+    overlay.add(dim);
+
     const panel = this.add
-      .rectangle(rightX, topY, panelW, panelH, COLORS.bgPanel, 0.85)
-      .setStrokeStyle(2, COLORS.brassDim)
-      .setOrigin(1, 0);
-    void panel;
-    const titleY = topY + 12;
-    this.add
-      .text(rightX - panelW / 2, titleY, 'RECORDS', {
+      .rectangle(anchorX, anchorY, panelW, panelH, COLORS.bgPanel, 0.96)
+      .setStrokeStyle(2, COLORS.brass)
+      .setOrigin(1, 0)
+      .setInteractive();
+    // Tapping the panel itself shouldn't dismiss — eat the event.
+    panel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev?: Phaser.Types.Input.EventData) => {
+      ev?.stopPropagation?.();
+    });
+    overlay.add(panel);
+
+    overlay.add(this.add
+      .text(anchorX - panelW / 2, anchorY + 12, 'RECORDS', {
         fontFamily: FONTS.display,
-        fontSize: '13px',
+        fontSize: '15px',
         color: hex(COLORS.brass),
         fontStyle: 'bold'
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5, 0));
 
-    // Stats grid. Two-column rows: label left-aligned at the panel's
-    // left edge, value right-aligned at the panel's right edge.
-    const leftX = rightX - panelW + 14;
-    const valueX = rightX - 14;
+    const leftX = anchorX - panelW + 16;
+    const valueX = anchorX - 16;
     const winRate = h.runsStarted > 0
       ? Math.round((h.runsWon / h.runsStarted) * 100)
       : 0;
@@ -296,23 +347,32 @@ export class TitleScene extends Phaser.Scene {
       ['Win rate', `${winRate}%`]
     ];
     rows.forEach(([label, value], i) => {
-      const ry = topY + 38 + i * 17;
-      this.add
+      const ry = anchorY + 42 + i * 20;
+      overlay.add(this.add
         .text(leftX, ry, label, {
           fontFamily: FONTS.body,
-          fontSize: '11px',
+          fontSize: '12px',
           color: hex(COLORS.boneDim)
         })
-        .setOrigin(0, 0);
-      this.add
+        .setOrigin(0, 0));
+      overlay.add(this.add
         .text(valueX, ry, value, {
           fontFamily: FONTS.display,
-          fontSize: '12px',
+          fontSize: '13px',
           color: hex(COLORS.bone),
           fontStyle: 'bold'
         })
-        .setOrigin(1, 0);
+        .setOrigin(1, 0));
     });
+    overlay.setDepth(2000);
+    this.recordsOverlay = overlay;
+  }
+
+  private dismissRecordsOverlay() {
+    if (this.recordsOverlay) {
+      this.recordsOverlay.destroy();
+      this.recordsOverlay = null;
+    }
   }
 
   // Renders the ASCENSION X selector at (x, y). Re-renders on click by
