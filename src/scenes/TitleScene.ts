@@ -204,16 +204,6 @@ export class TitleScene extends Phaser.Scene {
     );
     this.add.existing(importBtn);
 
-    // Hint text under the IMPORT button — discovers the drop-to-import path
-    this.add
-      .text(width / 2 + 220, secondaryY + 28, 'or drop a save file anywhere', {
-        fontFamily: FONTS.body,
-        fontSize: '10px',
-        color: hex(COLORS.boneDim),
-        fontStyle: 'italic'
-      })
-      .setOrigin(0.5);
-
     // Wire up window-level drag-and-drop. While a file is being dragged
     // over the page, the IMPORT button switches to "DROP TO IMPORT" so
     // the player knows where to release it.
@@ -237,7 +227,7 @@ export class TitleScene extends Phaser.Scene {
     );
 
     this.add
-      .text(width / 2, height - 8, 'Your run auto-saves between rooms.', {
+      .text(width / 2, height - 8, 'Your run auto-saves between rooms.  ·  Drop a save file anywhere to import.', {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
