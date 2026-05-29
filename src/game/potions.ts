@@ -25,7 +25,21 @@ export const POTIONS: Record<string, PotionDef> = {
   strengthPotion: potion('strengthPotion', 'Strength Potion', 'self', 'Gain 2 Strength.',
     [{ kind: 'gainStrength', amount: 2 }], 'uncommon'),
   regenPotion: potion('regenPotion', 'Repair Potion', 'self', 'Heal 8 hull.',
-    [{ kind: 'heal', amount: 8 }], 'uncommon')
+    [{ kind: 'heal', amount: 8 }], 'uncommon'),
+
+  // ===== Slice 52 — Potion expansion =====
+  cinderPotion: potion('cinderPotion', 'Cinder Potion', 'allEnemies',
+    'Apply 8 Burn to ALL enemies.',
+    [{ kind: 'applyBurnAll', amount: 8 }]),
+  spikePotion: potion('spikePotion', 'Spike Potion', 'self', 'Gain 5 Thorns.',
+    [{ kind: 'gainThorns', amount: 5 }]),
+  bracerPotion: potion('bracerPotion', 'Bracer Potion', 'self', 'Gain 2 Dexterity.',
+    [{ kind: 'gainDexterity', amount: 2 }], 'uncommon'),
+  // First rare-tier potion. Surge is two effects rolled into one — the
+  // payoff is meant to feel deck-defining when it shows up.
+  surgePotion: potion('surgePotion', 'Surge Potion', 'none',
+    'Gain 3 Steam and draw 2 cards.',
+    [{ kind: 'gainSteam', amount: 3 }, { kind: 'draw', amount: 2 }], 'rare')
 };
 
 export const POTION_POOL: string[] = Object.keys(POTIONS);

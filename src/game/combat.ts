@@ -465,6 +465,12 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       if (target) {
         target.burn += eff.amount;
         logTo(state, `${target.def.name} is Burning (${target.burn}).`);
+        // Hot Coil — every Burn application chips for 1. Fires once per
+        // applyBurn effect (not per stack) so it's a pinch not a bonk.
+        if (state.relicIds.includes('hotCoil')) {
+          const idx = state.enemies.indexOf(target);
+          if (idx >= 0) dealDamageToEnemy(c, 1, idx);
+        }
       }
       break;
     }
@@ -506,9 +512,18 @@ function applyEffect(state: CombatState, eff: CardEffect) {
       break;
     }
     case 'applyBurnAll': {
-      for (const e of state.enemies) {
+      const hotCoil = state.relicIds.includes('hotCoil');
+      for (let i = 0; i < state.enemies.length; i++) {
+        const e = state.enemies[i];
         if (!isAlive(e)) continue;
         e.burn += eff.amount;
+        // Hot Coil chips each enemy once per AoE burn. Bail if defeat
+        // mid-sweep (Thorns retaliation could in theory take us down).
+        if (hotCoil) {
+          dealDamageToEnemy(c, 1, i);
+          const phaseNow: string = state.phase;
+          if (phaseNow === 'defeat') break;
+        }
       }
       logTo(state, `All foes Burning (+${eff.amount}).`);
       break;
@@ -621,7 +636,14 @@ function effectiveCost(state: CombatState, def: CardDef): number {
   const p = state.player;
   if (p.firstCardFree && p.cardsPlayedThisTurn === 0) return 0;
   if (def.xCost) return p.steam;
-  return def.cost;
+  // Reactor Lens — power cards cost 1 less Steam (min 0). Read directly
+  // off relicIds rather than via a hook so canPlay() and the cost badge
+  // both see the discounted number.
+  let cost = def.cost;
+  if (def.type === 'power' && state.relicIds.includes('reactorLens')) {
+    cost = Math.max(0, cost - 1);
+  }
+  return cost;
 }
 
 export function canPlay(state: CombatState, uid: number): boolean {
@@ -634,9 +656,21 @@ export function canPlay(state: CombatState, uid: number): boolean {
 
 // ----- Mid-combat card insertion. Used by enemy actions that punish the
 // player with status / curse cards (e.g. Rust Sprayer's Slag Lob).
+// Known status/curse card IDs. Slag Filter routes any of these to the
+// exhaust pile so they never cycle back into hand.
+const STATUS_CARD_IDS = new Set(['slagGlob', 'shrapnel', 'heatDamage', 'oldRust']);
+
 export function addCardToDiscard(c: ResolveCtx, cardId: string): void {
   const def = CARDS[cardId];
   if (!def) return;
+  // Slag Filter — status cards from enemies skip discard and go straight
+  // to exhaust. Card-effect-driven additions go through here too; that's
+  // fine — there are no cards that add status cards to the player's deck.
+  if (STATUS_CARD_IDS.has(cardId) && c.state.relicIds.includes('slagFilter')) {
+    c.state.player.exhaust.push(instance(cardId));
+    c.log(`Slag Filter vents a ${def.name}.`);
+    return;
+  }
   c.state.player.discard.push(instance(cardId));
   c.log(`A ${def.name} clatters into your discard pile.`);
 }

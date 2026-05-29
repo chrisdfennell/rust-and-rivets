@@ -412,7 +412,9 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
 
   const isElite = node?.kind === 'elite';
   const baseReward = isElite ? 25 + Math.floor(Math.random() * 11) : 12 + Math.floor(Math.random() * 8);
-  const bonus = r.relics.includes('salvageLoop') ? 5 : 0;
+  const bonus =
+    (r.relics.includes('salvageLoop') ? 5 : 0) +
+    (r.relics.includes('salvageWreath') ? 3 : 0);
   const reward = baseReward + bonus;
   r.scrap += reward;
 

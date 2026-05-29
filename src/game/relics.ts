@@ -324,6 +324,107 @@ const STEAM_WHISTLE: Relic = {
   }
 };
 
+// ===== Slice 52 — Relic expansion pack =====
+// Eight new relics, each using a different hook. None are pure stat
+// boosts — every one ties to a specific combat verb (Burn-apply, power
+// cards, status cards, full-Hull turns, etc.) so picks feel build-defining.
+
+// Hot Coil — Burn-deck damage rider. The chip damage is small but it
+// kicks in on every Burn application, including AoE ones, so a Stoker
+// deck can crank 5-8 extra dpt through it. Resolved inline in the
+// applyBurn / applyBurnAll effect handlers.
+const HOT_COIL: Relic = {
+  id: 'hotCoil',
+  name: 'Hot Coil',
+  description: 'Whenever you apply Burn to an enemy, deal 1 damage to it.'
+};
+
+// Reactor Lens — power-deck enabler. Demon Form 3 → 2, Barricade 3 → 2,
+// Metallicize 1 → 0. effectiveCost reads relicIds directly so this
+// works for upgraded Powers too (xCost / firstCardFree paths bypass it,
+// which is intended).
+const REACTOR_LENS: Relic = {
+  id: 'reactorLens',
+  name: 'Reactor Lens',
+  description: 'Power cards cost 1 less Steam (min 0).'
+};
+
+// Salvage Wreath — flat scrap bonus on every non-boss win. Stacks with
+// Salvage Loop, so a full economy build can pull +8 scrap per fight.
+const SALVAGE_WREATH: Relic = {
+  id: 'salvageWreath',
+  name: 'Salvage Wreath',
+  description: '+3 Scrap on every non-boss combat win.'
+};
+
+// Mechanic's Loop — trickle heal tied to card cadence. Pairs with the
+// Conductor's Steam Whistle and other combo cards; even casual decks
+// see 2-3 hull per turn back.
+const MECHANICS_LOOP: Relic = {
+  id: 'mechanicsLoop',
+  name: "Mechanic's Loop",
+  description: 'Every 3rd card played each turn, heal 1 Hull.',
+  onCardPlayed: (state, _card, indexInTurn) => {
+    if ((indexInTurn + 1) % 3 !== 0) return;
+    const p = state.player;
+    if (p.hull >= p.maxHull) return;
+    p.hull = Math.min(p.maxHull, p.hull + 1);
+    state.log.push("Mechanic's Loop: +1 Hull.");
+  }
+};
+
+// Forge Bell — slow boss-stretch payoff. Turn 4 / 8 / 12 each add 1
+// Strength permanently this combat. Long fights benefit most.
+const FORGE_BELL: Relic = {
+  id: 'forgeBell',
+  name: 'Forge Bell',
+  description: 'Every 4th turn, gain 1 Strength this combat.',
+  onTurnStart: (state) => {
+    if (state.turn % 4 !== 0) return;
+    state.player.strength += 1;
+    state.log.push('Forge Bell tolls: +1 Strength.');
+  }
+};
+
+// Slag Filter — anti-deck-pollution. Routes status cards (Slag Glob,
+// Shrapnel, Heat Damage, Old Rust) to the exhaust pile instead of the
+// discard pile when an enemy / event tries to jam one in. addCardToDiscard
+// reads `relicIds` directly.
+const SLAG_FILTER: Relic = {
+  id: 'slagFilter',
+  name: 'Slag Filter',
+  description: 'Status / curse cards added by enemies exhaust immediately.'
+};
+
+// Twin Boiler — one-time +1 Steam at the start of every combat. Not max
+// Steam (that's Pressure Gauge / Reserve Tank); just a turn-1 burst that
+// lets you slam a 4-cost card on the opener.
+const TWIN_BOILER: Relic = {
+  id: 'twinBoiler',
+  name: 'Twin Boiler',
+  description: 'Start each combat with +1 Steam this turn.',
+  onCombatStart: (state) => {
+    state.player.steam += 1;
+    state.log.push('Twin Boiler: +1 Steam.');
+  }
+};
+
+// Iron Heart — full-Hull defensive ramp. Rewards keeping plating up so
+// no damage leaks through; pairs hard with Battle Cap (full-Hull scrap)
+// and Barricade (plating doesn't wear off).
+const IRON_HEART: Relic = {
+  id: 'ironHeart',
+  name: 'Iron Heart',
+  description: 'At the end of each turn, if at full Hull, gain 5 Plating.',
+  onTurnEnd: (state) => {
+    const p = state.player;
+    if (p.hull >= p.maxHull) {
+      p.plating += 5;
+      state.log.push('Iron Heart: +5 Plating.');
+    }
+  }
+};
+
 // ===== Boss-signature relics (Slice 48) =====
 //
 // Each of the 9 bosses drops a unique relic on kill. They're tagged
@@ -560,6 +661,14 @@ export const RELICS: Record<string, Relic> = {
   [BRISTLE_PLATE.id]: BRISTLE_PLATE,
   [FURNACE_HEART.id]: FURNACE_HEART,
   [STEAM_WHISTLE.id]: STEAM_WHISTLE,
+  [HOT_COIL.id]: HOT_COIL,
+  [REACTOR_LENS.id]: REACTOR_LENS,
+  [SALVAGE_WREATH.id]: SALVAGE_WREATH,
+  [MECHANICS_LOOP.id]: MECHANICS_LOOP,
+  [FORGE_BELL.id]: FORGE_BELL,
+  [SLAG_FILTER.id]: SLAG_FILTER,
+  [TWIN_BOILER.id]: TWIN_BOILER,
+  [IRON_HEART.id]: IRON_HEART,
   [TYRANTS_BELLOWS.id]:   TYRANTS_BELLOWS,
   [COLOSSUS_ARM.id]:      COLOSSUS_ARM,
   [RECLAIMER_SPIKE.id]:   RECLAIMER_SPIKE,

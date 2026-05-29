@@ -38,11 +38,12 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
   Damage, Old Rust) inject via enemy actions and events.
 - **Powers** (persistent in-combat buffs): Demon Form, Barricade,
   Metallicize, Combust.
-- **Relics:** 24 total, with hooks `onCombatStart` / `onCombatEnd` /
-  `onPickup` / `onTurnStart` / `onTurnEnd` / `onCardPlayed`. Three
-  potion-specific (Potion Belt, Sacred Bark, Toy Ornithopter); two
-  end-of-turn passives (Auto-Mortar, Bristle Plate).
-- **Potions:** 8 in the pool. 3-slot belt (expandable via Potion Belt
+- **Relics:** 47 total (33 normal + 13 boss-signature + 1 character-
+  signature). Hooks `onCombatStart` / `onCombatEnd` / `onPickup` /
+  `onTurnStart` / `onTurnEnd` / `onCardPlayed`, plus inline-resolved
+  effects (Hot Coil on Burn-apply, Reactor Lens on cost calc, Slag
+  Filter on enemy-added curses, Salvage Wreath on win rewards).
+- **Potions:** 12 in the pool. 3-slot belt (expandable via Potion Belt
   relic). Right-click to discard. 40% drop chance after regular
   combats, guaranteed after elites, never overflows.
 - **Statuses:** Vulnerable, Weak, Strength, Dexterity, Burn, Thorns,
@@ -67,7 +68,52 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 51 — Card pack + Workshop expansion *(current)*
+### Slice 52 — Relic + Potion expansion *(current)*
+Eight new relics, four new potions. Every relic ties to a specific
+combat verb instead of being a flat stat boost.
+
+**8 new relics** ([src/game/relics.ts](src/game/relics.ts)):
+
+| Relic | Hook | Effect |
+|---|---|---|
+| Hot Coil | inline `applyBurn` / `applyBurnAll` | Burn-apply chips for 1 dmg per target |
+| Reactor Lens | inline `effectiveCost` | Power cards cost 1 less Steam (min 0) |
+| Salvage Wreath | inline `completeCombat` | +3 Scrap on every non-boss win |
+| Mechanic's Loop | `onCardPlayed` | Heal 1 every 3rd card played per turn |
+| Forge Bell | `onTurnStart` | Every 4th turn, +1 Strength this combat |
+| Slag Filter | inline `addCardToDiscard` | Enemy-added status cards exhaust instead |
+| Twin Boiler | `onCombatStart` | +1 Steam at combat start (one-time, not max) |
+| Iron Heart | `onTurnEnd` | At full Hull at end of turn → +5 Plating |
+
+Wire-ups outside the standard relic interface:
+
+- `effectiveCost` in [src/game/combat.ts](src/game/combat.ts) reads
+  `relicIds.includes('reactorLens')` so `canPlay()` and the cost
+  badge both see the discount on Power cards.
+- `applyBurn` / `applyBurnAll` handlers fire `dealDamageToEnemy(c, 1)`
+  after the burn lands when Hot Coil is owned. AoE bails on defeat
+  mid-sweep to handle the Thorns edge.
+- `addCardToDiscard` checks `STATUS_CARD_IDS` (`slagGlob`, `shrapnel`,
+  `heatDamage`, `oldRust`) and routes to `exhaust` instead when Slag
+  Filter is owned.
+- `completeCombat` in [src/game/run.ts](src/game/run.ts) adds a
+  3-scrap bonus on non-boss wins alongside the existing Salvage Loop
+  +5. Both can stack — full economy build gets +8 per fight.
+
+**4 new potions** ([src/game/potions.ts](src/game/potions.ts)):
+
+| Potion | Rarity | Effect |
+|---|---|---|
+| Cinder Potion | common | Apply 8 Burn to ALL enemies |
+| Spike Potion | common | Gain 5 Thorns |
+| Bracer Potion | uncommon | Gain 2 Dexterity |
+| Surge Potion | rare | Gain 3 Steam + draw 2 |
+
+Surge is the first rare-tier potion. The rarity weight table in
+`pickRandomPotionId` (common: 65, uncommon: 30, rare: 5) already
+covered rare with a 5% slot so no rebalance needed.
+
+### Slice 51 — Card pack + Workshop expansion
 Expansion pass. The shop pool gained 12 cards; the Workshop gained 6
 upgrades; one new effect kind plus two new persistent fields cover
 the new mechanical surface area.
