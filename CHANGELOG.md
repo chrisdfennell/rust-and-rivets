@@ -11,12 +11,29 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 - **Vitest** added as a dev dependency. `npm test` runs the suite once;
   `npm run test:watch` runs in watch mode.
-- **24 combat tests** in `tests/combat.test.ts` covering the damage
-  pipeline (plating absorption, Vuln/Weak/Strength/Dex), status
-  applications (Burn, Vuln, AoE), end-of-turn pipeline (burn ticks,
-  debuff decay, plating wipe), power cards (Metallicize, Demon Form),
-  the Echo and Volatile keywords, conditional damage (combo + Weak
-  payoffs), and ascension HP scaling stacks.
+- **65 tests** across three suites:
+  - **`tests/combat.test.ts`** (24 tests) — damage pipeline (plating
+    absorption, Vuln/Weak/Strength/Dex), status applications (Burn,
+    Vuln, AoE), end-of-turn pipeline (burn ticks, debuff decay, plating
+    wipe), power cards (Metallicize, Demon Form), the Echo and Volatile
+    keywords, conditional damage (combo + Weak payoffs), and ascension
+    HP scaling stacks.
+  - **`tests/relics.test.ts`** (22 tests) — onCombatStart hooks (Iron
+    Plating, Calibration Spike, Pressure Gauge, Power Cell, Twin
+    Boiler, Spike Mantle), onCardPlayed hooks (Steam Whistle,
+    Pneumatic Strike, Backup Capacitor, Reactor Lens), onTurnStart
+    hooks (Brass Knuckles, Boiler Vent), inline-resolved relics (Hot
+    Coil single + AoE, Slag Filter routing), onTurnEnd hooks (Bristle
+    Plate, Iron Heart full-Hull gating, Forge Bell turn-divisible
+    trigger), and onCombatEnd hooks (Engine Oil, Battle Cap).
+  - **`tests/events.test.ts`** (19 tests) — event pool integrity
+    (`EVENTS_BY_ID` mirrors `ALL_EVENTS`, every event has choices,
+    `pickEventId` respects the `acts` filter), and end-to-end choice
+    resolutions for SALVAGED_MECH (salvage / scavenge / leave),
+    STEAM_VENT (heal clamp, hull-for-scrap trade), JUNKERS_BET
+    (gambling with seeded rng), CONFESSIONAL (Act 4 — status removal
+    gated on scrap and deck contents), EMBER_PROPHET (Act 5 — Power /
+    AoE / Legendary inscription with Hull cost).
 
 ### Visuals
 
@@ -47,6 +64,13 @@ All notable changes to **Rust & Rivets**. Format loosely follows
   - Enemy attacks → light or heavy thump based on raw damage.
   - Burn-applying cards layer a sizzling cinder hiss.
   - Echo cards add a rapid double-tap echo.
+- **Per-relic SFX triggers.** New `relicTriggered` TurnEvent variant
+  bridges the pure `combat.ts` relic hooks to the audio layer. Relic
+  hooks that meaningfully fire (Steam Whistle, Furnace Heart, Forge
+  Bell, Iron Heart, Bristle Plate, Mechanic's Loop, Auto-Mortar,
+  Pneumatic Strike, Backup Capacitor, Hot Coil's two combat-side
+  patches) push the event; CombatScene's `playTurnEvents` consumes it
+  and rings a soft brass-bell tick (`sfx.relicTrigger`).
 - New atomic SFX: `attackLight`, `attackHeavy`, `defendCard`,
   `burnApply`, `aoe`, `powerCast`, `echoTrigger`, `volatileFuse`,
   `relicTrigger`, `drawCards`.

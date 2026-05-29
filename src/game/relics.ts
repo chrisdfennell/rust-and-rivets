@@ -89,6 +89,14 @@ const BRASS_KNUCKLES: Relic = {
   }
 };
 
+// Tiny helper — relic hooks that meaningfully fire push a relicTriggered
+// event so CombatScene's audio layer plays the brass-bell tick. Quiet
+// no-op when state.turnEvents isn't initialized (unit tests that drive
+// hooks outside a turn cycle).
+function ping(state: CombatState, id: string) {
+  state.turnEvents?.push({ kind: 'relicTriggered', id });
+}
+
 const BOILER_VENT: Relic = {
   id: 'boilerVent',
   name: 'Boiler Vent',
@@ -124,6 +132,7 @@ const PNEUMATIC_STRIKE: Relic = {
   onCardPlayed: (state, _card, indexInTurn) => {
     if ((indexInTurn + 1) % 3 === 0) {
       dealDamageToEnemy({ state, log: (m) => state.log.push(m) }, 5);
+      ping(state, 'pneumaticStrike');
     }
   }
 };
@@ -208,6 +217,7 @@ const BACKUP_CAPACITOR: Relic = {
     if (!card.exhaust) return;
     state.player.steam += 1;
     state.log.push('Backup Capacitor: +1 Steam.');
+    ping(state, 'backupCapacitor');
   }
 };
 
@@ -271,6 +281,7 @@ const AUTO_MORTAR: Relic = {
     const target = alive[Math.floor(Math.random() * alive.length)];
     const idx = state.enemies.indexOf(target);
     dealDamageToEnemy({ state, log: (m) => state.log.push(m) }, 5, idx);
+    ping(state, 'autoMortar');
   }
 };
 
@@ -285,6 +296,7 @@ const BRISTLE_PLATE: Relic = {
     if (state.player.plating < 5) {
       state.player.plating += 3;
       state.log.push('Bristle Plate: +3 Plating.');
+      ping(state, 'bristlePlate');
     }
   }
 };
@@ -303,6 +315,7 @@ const FURNACE_HEART: Relic = {
     if (gain > 0) {
       state.player.strength += gain;
       state.log.push(`Furnace Heart: +${gain} Strength.`);
+      ping(state, 'furnaceHeart');
     }
   }
 };
@@ -320,6 +333,7 @@ const STEAM_WHISTLE: Relic = {
     if ((indexInTurn + 1) % 3 === 0) {
       state.player.strength += 1;
       state.log.push('Steam Whistle: +1 Strength.');
+      ping(state, 'steamWhistle');
     }
   }
 };
@@ -370,6 +384,7 @@ const MECHANICS_LOOP: Relic = {
     if (p.hull >= p.maxHull) return;
     p.hull = Math.min(p.maxHull, p.hull + 1);
     state.log.push("Mechanic's Loop: +1 Hull.");
+    ping(state, 'mechanicsLoop');
   }
 };
 
@@ -383,6 +398,7 @@ const FORGE_BELL: Relic = {
     if (state.turn % 4 !== 0) return;
     state.player.strength += 1;
     state.log.push('Forge Bell tolls: +1 Strength.');
+    ping(state, 'forgeBell');
   }
 };
 
@@ -421,6 +437,7 @@ const IRON_HEART: Relic = {
     if (p.hull >= p.maxHull) {
       p.plating += 5;
       state.log.push('Iron Heart: +5 Plating.');
+      ping(state, 'ironHeart');
     }
   }
 };

@@ -1231,6 +1231,13 @@ export class CombatScene extends Phaser.Scene {
         this.refreshBarsFromDisplay(display);
         return this.wait(200);
       }
+      case 'relicTriggered': {
+        // Soft brass-bell tick layered on whatever else is happening.
+        // We don't wait — the relic event flows past the existing
+        // damage / status beats without blocking them.
+        sfx.relicTrigger();
+        return Promise.resolve();
+      }
       case 'log':
         return Promise.resolve();
     }

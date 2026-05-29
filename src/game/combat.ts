@@ -470,6 +470,7 @@ function applyEffect(state: CombatState, eff: CardEffect) {
         if (state.relicIds.includes('hotCoil')) {
           const idx = state.enemies.indexOf(target);
           if (idx >= 0) dealDamageToEnemy(c, 2, idx);
+          state.turnEvents.push({ kind: 'relicTriggered', id: 'hotCoil' });
         }
       }
       break;
@@ -513,6 +514,7 @@ function applyEffect(state: CombatState, eff: CardEffect) {
     }
     case 'applyBurnAll': {
       const hotCoil = state.relicIds.includes('hotCoil');
+      let hotCoilFired = false;
       for (let i = 0; i < state.enemies.length; i++) {
         const e = state.enemies[i];
         if (!isAlive(e)) continue;
@@ -521,10 +523,14 @@ function applyEffect(state: CombatState, eff: CardEffect) {
         // mid-sweep (Thorns retaliation could in theory take us down).
         if (hotCoil) {
           dealDamageToEnemy(c, 2, i);
+          hotCoilFired = true;
           const phaseNow: string = state.phase;
           if (phaseNow === 'defeat') break;
         }
       }
+      // Single relicTriggered for the whole AoE burst — don't spam one
+      // per enemy hit. CombatScene's SFX layer plays one bell.
+      if (hotCoilFired) state.turnEvents.push({ kind: 'relicTriggered', id: 'hotCoil' });
       logTo(state, `All foes Burning (+${eff.amount}).`);
       break;
     }

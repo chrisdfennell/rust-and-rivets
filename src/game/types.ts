@@ -207,6 +207,11 @@ export type TurnEvent =
   | { kind: 'playerStatus'; status: 'vulnerable' | 'weak' | 'burn'; amount: number }
   | { kind: 'playerBurnTick'; amount: number }
   | { kind: 'playerHealed'; amount: number }
+  // A relic's combat hook fired. CombatScene listens for these and
+  // plays a soft brass-bell SFX so the player hears their gear ticking
+  // over without having to read the log. `id` is the relic id for any
+  // future per-relic flourishes.
+  | { kind: 'relicTriggered'; id: string }
   | { kind: 'log'; text: string };
 
 export interface CombatState {
