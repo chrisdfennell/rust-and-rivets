@@ -214,23 +214,29 @@ export class CombatScene extends Phaser.Scene {
       run.ascension ?? 0
     );
 
-    // Top HUD strip. Portrait packs the player's HP bar tight against
-    // the top edge so the play area below has maximum vertical room.
-    const hudY = portrait ? 36 : 78;
+    // Top HUD strip. Portrait centers the HP bar horizontally and moves
+    // the PILOT label ABOVE it so the bar can use the full width without
+    // overlapping the label. Landscape keeps the side-by-side layout.
+    const hudY = portrait ? 46 : 78;
 
-    const playerBarW = portrait ? Math.min(width - 120, 320) : 280;
-    const playerBarX = portrait ? 64 + playerBarW / 2 : width * 0.24;
+    const playerBarW = portrait ? Math.min(width - 160, 360) : 280;
+    const playerBarX = portrait ? width / 2 : width * 0.24;
     this.playerBar = new StatBar(this, playerBarX, hudY, playerBarW);
     this.add.existing(this.playerBar);
 
     this.add
-      .text(portrait ? 16 : 24, hudY, 'PILOT', {
-        fontFamily: FONTS.display,
-        fontSize: portrait ? '12px' : '14px',
-        color: hex(COLORS.bone),
-        fontStyle: 'bold'
-      })
-      .setOrigin(0, 0.5);
+      .text(
+        portrait ? width / 2 : 24,
+        portrait ? hudY - 22 : hudY,
+        'PILOT',
+        {
+          fontFamily: FONTS.display,
+          fontSize: portrait ? '11px' : '14px',
+          color: hex(COLORS.bone),
+          fontStyle: 'bold'
+        }
+      )
+      .setOrigin(portrait ? 0.5 : 0, 0.5);
 
     // Player sprite. Landscape: left of center, mid-height. Portrait:
     // centered horizontally, sitting in the player band below the
@@ -1532,16 +1538,20 @@ export class CombatScene extends Phaser.Scene {
   // its hand slot. The setHome call before this already positioned the view
   // at (homeX, homeY); we override that to start at the pile, then tween.
   private animateDrawIn(view: CardView, homeX: number, homeY: number, stagger: number) {
+    // Slice 59 — target the same scale layoutHand picked. Without this,
+    // the tween's `scale: 1` overrides the portrait card scale we set
+    // a few lines earlier, and cards land at full size.
+    const targetScale = view.scaleX;
     view.x = this.drawPile.x;
     view.y = this.drawPile.y;
     view.alpha = 0;
-    view.setScale(0.35);
+    view.setScale(targetScale * 0.35);
     this.tweens.add({
       targets: view,
       x: homeX,
       y: homeY,
       alpha: 1,
-      scale: 1,
+      scale: targetScale,
       duration: 220,
       delay: stagger * 50,
       ease: 'Cubic.Out'
