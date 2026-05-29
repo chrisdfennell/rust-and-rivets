@@ -6,8 +6,8 @@
 
 ### *A dieselpunk roguelike deckbuilder*
 
-**Pilot a salvaged mech through three acts of rusting wasteland.**
-**Forge a deck. Survive the foundry. Reach the cloudline.**
+**Pilot a salvaged mech through five acts of rusting wasteland.**
+**Forge a deck. Stoke the furnace. Walk into the World-Forge.**
 
 <br>
 
@@ -21,15 +21,15 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/version-v0.1.0_·_slice_46-b88a3e?style=flat-square&labelColor=14110f)
+![Version](https://img.shields.io/badge/version-v0.1.0_·_slice_53-b88a3e?style=flat-square&labelColor=14110f)
 &nbsp;
-![Bosses](https://img.shields.io/badge/bosses-9_across_3_acts-c44a2a?style=flat-square&labelColor=14110f)
+![Bosses](https://img.shields.io/badge/bosses-13_across_5_acts-c44a2a?style=flat-square&labelColor=14110f)
 &nbsp;
-![Pilots](https://img.shields.io/badge/pilots-4-4f7a9b?style=flat-square&labelColor=14110f)
+![Pilots](https://img.shields.io/badge/pilots-5-4f7a9b?style=flat-square&labelColor=14110f)
 &nbsp;
-![Cards](https://img.shields.io/badge/cards-~61_+_upgrades-6b9b4f?style=flat-square&labelColor=14110f)
+![Cards](https://img.shields.io/badge/cards-~77_+_upgrades-6b9b4f?style=flat-square&labelColor=14110f)
 &nbsp;
-![Events](https://img.shields.io/badge/events-30-d9ae4a?style=flat-square&labelColor=14110f)
+![Events](https://img.shields.io/badge/events-42-d9ae4a?style=flat-square&labelColor=14110f)
 
 <br>
 
@@ -43,7 +43,7 @@
 lineage of *Slay the Spire* — reimagined with grease, soot, and brass.
 Pick a pilot, board a battered war-mech, and chart your own route
 through a procedurally-stitched map of combats, shops, rests, events,
-and bosses. Beat the act-3 boss to win the run; die anywhere along
+and bosses. Beat the act-5 boss to win the run; die anywhere along
 the way and the wasteland keeps your scrap.
 
 There are **no asset files** for art or audio — every sprite is drawn
@@ -65,22 +65,24 @@ any modern browser.
 
 ### Run Structure
 
-- **3 acts** &nbsp;·&nbsp; **~20 nodes** each
-- **9 bosses** total — each act picks 1 of 3
-- **6 elites** &nbsp;·&nbsp; **10 regulars** across all acts
-- **30 narrative events** with multi-choice outcomes
+- **5 acts** &nbsp;·&nbsp; **~40 nodes** each (scroll the map)
+- **13 bosses** total — 3 / 3 / 3 / 2 / 2 per act
+- **10 elites** &nbsp;·&nbsp; **24 regulars** across all acts
+- **42 narrative events**, 12 act-themed for the late game
 - **InterAct boons** between acts:
 
   ![Repair](https://img.shields.io/badge/REPAIR-8a3b1f?style=flat-square)
   ![Refit](https://img.shields.io/badge/REFIT-4a4640?style=flat-square)
   ![Salvage](https://img.shields.io/badge/SALVAGE-b88a3e?style=flat-square)
 
+- **7 Ascension tiers** for replay difficulty
+
 </td>
 <td valign="top" width="50%">
 
 ### Deck &amp; Cards
 
-- **~61 base** cards, each with a `+` upgrade
+- **~77 base** cards, each with a `+` upgrade
 - **5 rarities**, border-tinted on every card:
 
   ![Common](https://img.shields.io/badge/COMMON-b88a3e?style=flat-square)
@@ -89,7 +91,7 @@ any modern browser.
   ![Epic](https://img.shields.io/badge/EPIC-9b4fa6?style=flat-square)
   ![Legendary](https://img.shields.io/badge/LEGENDARY-d97a2a?style=flat-square)
 
-- Keywords: *exhaust · retain · ethereal · innate · AoE · X-cost*
+- Keywords: *exhaust · retain · ethereal · innate · AoE · X-cost · **echo** · **volatile***
 - **Status / curse cards** injected by enemies and events
 - **4 powers**: Demon Form, Barricade, Metallicize, Combust
 
@@ -100,12 +102,13 @@ any modern browser.
 
 ### Mechs &amp; Meta
 
-- **24 relics** with rich lifecycle hooks
+- **47 relics** with rich lifecycle hooks
   <br><sub>`onCombatStart` · `onTurnEnd` · `onCardPlayed` ...</sub>
-- **8 potions** in a 3-slot belt (expandable)
-- **Workshop meta-progression** — 8 upgrades, 18-point cap
+  <br><sub>13 are boss-signature drops — beat that boss, own the trophy.</sub>
+- **12 potions** in a 3-slot belt (expandable)
+- **Workshop meta-progression** — 14 upgrades, 28-point cap
 - **Save / load** to `localStorage` after every mutation
-- **Export / Import** via base64 bundle (run + meta)
+- **Export / Import** as `.json` file (drag-and-drop)
 
 </td>
 <td valign="top" width="50%">
@@ -150,6 +153,7 @@ means something.**
 | **THE ENGINEER** | ![60](https://img.shields.io/badge/60_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Iron Plating](https://img.shields.io/badge/Iron_Plating-4f7a9b?style=flat-square&labelColor=14110f) | Layered armor, careful hands. Trades raw hull for plating. |
 | **THE SABOTEUR** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Calibration Spike](https://img.shields.io/badge/Calibration_Spike-6b9b4f?style=flat-square&labelColor=14110f) | Toxic. Fragile. Sharp. Begin every fight with the enemy already compromised. |
 | **THE STOKER** | ![55](https://img.shields.io/badge/55_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Furnace Heart](https://img.shields.io/badge/Furnace_Heart-ff6b1f?style=flat-square&labelColor=14110f) | Set them alight. Reap the smoke. Burning enemies ramp Strength every turn. |
+| **THE CONDUCTOR** | ![58](https://img.shields.io/badge/58_HP-c44a2a?style=flat-square&labelColor=14110f) | ![Steam Whistle](https://img.shields.io/badge/Steam_Whistle-d9ae4a?style=flat-square&labelColor=14110f) | Keep the beat. Every 3rd card played each turn pays a Strength dividend. |
 
 ---
 
@@ -171,36 +175,50 @@ get punished by another.
 }}}%%
 flowchart LR
     Start([START<br/>pick a pilot]):::start --> A1
-    A1[ACT 1<br/><b>Road to the Foundry</b><br/>6 mooks · 2 elites]:::act1 --> A1B{Boss}:::pick
+    A1[ACT 1<br/><b>Road to the Foundry</b><br/>7 mooks · 2 elites]:::act1 --> A1B{Boss}:::pick
     A1B -.-> B1A[Foundry Tyrant<br/><i>steady pressure</i>]:::boss1
     A1B -.-> B1B[Salvage Colossus<br/><i>Strength snowball</i>]:::boss1
     A1B -.-> B1C[Reclaimer Prime<br/><i>Thorns retaliator</i>]:::boss1
     B1A --> A2
     B1B --> A2
     B1C --> A2
-    A2[ACT 2<br/><b>The Foundry Depths</b><br/>5 mooks · 2 elites]:::act2 --> A2B{Boss}:::pick
+    A2[ACT 2<br/><b>The Foundry Depths</b><br/>6 mooks · 2 elites]:::act2 --> A2B{Boss}:::pick
     A2B -.-> B2A[Iron Sovereign<br/><i>charged volley</i>]:::boss2
     A2B -.-> B2B[Pyroclast Engine<br/><i>Burn pressure</i>]:::boss2
     A2B -.-> B2C[Vault Warden<br/><i>Slag pollution</i>]:::boss2
     B2A --> A3
     B2B --> A3
     B2C --> A3
-    A3[ACT 3<br/><b>Above the Cloudline</b><br/>5 mooks · 2 elites]:::act3 --> A3B{Boss}:::pick
+    A3[ACT 3<br/><b>Above the Cloudline</b><br/>6 mooks · 2 elites]:::act3 --> A3B{Boss}:::pick
     A3B -.-> B3A[Stormheart<br/><i>lightning fortress</i>]:::boss3
     A3B -.-> B3B[The Wraith<br/><i>debuff + drain</i>]:::boss3
     A3B -.-> B3C[Cyclone King<br/><i>alternating stance</i>]:::boss3
-    B3A --> Win
-    B3B --> Win
-    B3C --> Win([VICTORY]):::win
+    B3A --> A4
+    B3B --> A4
+    B3C --> A4
+    A4[ACT 4<br/><b>The Brass Cathedral</b><br/>5 mooks · 2 elites]:::act4 --> A4B{Boss}:::pick
+    A4B -.-> B4A[The Choirmaster<br/><i>resonance crescendo</i>]:::boss4
+    A4B -.-> B4B[Iron Saint<br/><i>Strength ramp</i>]:::boss4
+    B4A --> A5
+    B4B --> A5
+    A5[ACT 5<br/><b>The World-Forge</b><br/>5 mooks · 2 elites]:::act5 --> A5B{Boss}:::pick
+    A5B -.-> B5A[World-Forge Heart<br/><i>Plating + Burn climb</i>]:::boss5
+    A5B -.-> B5B[The First Engine<br/><i>charge → vent → smash</i>]:::boss5
+    B5A --> Win
+    B5B --> Win([VICTORY]):::win
 
     classDef start fill:#1f1a16,stroke:#b88a3e,stroke-width:2px,color:#d9c9a3
     classDef act1  fill:#8a3b1f,stroke:#b88a3e,stroke-width:2px,color:#fff
     classDef act2  fill:#c44a2a,stroke:#b88a3e,stroke-width:2px,color:#fff
     classDef act3  fill:#4f7a9b,stroke:#b88a3e,stroke-width:2px,color:#fff
+    classDef act4  fill:#9b4fa6,stroke:#b88a3e,stroke-width:2px,color:#fff
+    classDef act5  fill:#d97a2a,stroke:#b88a3e,stroke-width:2px,color:#fff
     classDef pick  fill:#2a2724,stroke:#d9ae4a,stroke-width:2px,color:#d9ae4a
     classDef boss1 fill:#2a2724,stroke:#8a3b1f,color:#d9c9a3
     classDef boss2 fill:#2a2724,stroke:#c44a2a,color:#d9c9a3
     classDef boss3 fill:#2a2724,stroke:#4f7a9b,color:#d9c9a3
+    classDef boss4 fill:#2a2724,stroke:#9b4fa6,color:#d9c9a3
+    classDef boss5 fill:#2a2724,stroke:#d97a2a,color:#d9c9a3
     classDef win   fill:#6b9b4f,stroke:#d9c9a3,stroke-width:2px,color:#14110f
 ```
 
@@ -238,16 +256,17 @@ npm run preview
 src/
 ├── audio/         Procedural Web Audio — ambient music, SFX, mute persistence
 ├── game/          Pure game logic, no Phaser imports
-│   ├── cards.ts        ~61 cards + `+` variants
-│   ├── enemies.ts      19 enemies + 9 bosses + encounter pickers
-│   ├── relics.ts       24 relics with lifecycle hooks
-│   ├── potions.ts      8 potions
-│   ├── powers.ts       Demon Form, Barricade, Metallicize, Combust
-│   ├── events.ts       30 narrative events
-│   ├── combat.ts       Turn loop, damage pipeline, statuses
-│   ├── map.ts          Procedural node graph
-│   ├── meta.ts         Workshop / persistent upgrades
-│   ├── save.ts         localStorage + base64 export
+│   ├── cards.ts        ~77 cards + `+` variants
+│   ├── characters.ts   5 pilots, signature relics, starter decks
+│   ├── enemies.ts      24 regulars + 10 elites + 13 bosses + encounter pickers
+│   ├── relics.ts       47 relics with lifecycle hooks (incl. boss-signature drops)
+│   ├── potions.ts      12 potions
+│   ├── events.ts       42 narrative events (12 act-themed)
+│   ├── combat.ts       Turn loop, damage pipeline, statuses, keywords
+│   ├── map.ts          Procedural node graph — 15 floors, ~40 nodes per act
+│   ├── meta.ts         Workshop upgrades + Ascension ladder (7 tiers)
+│   ├── save.ts         localStorage + JSON file export
+│   ├── run.ts          RunState lifecycle (startRun, completeCombat, advanceAct)
 │   └── types.ts        EnemyDef, CardDef, ResolveCtx, ...
 ├── scenes/        Phaser Scenes — Title, CharacterSelect, Map, Combat, ...
 ├── ui/            CardView, IntentBubble, MechSprite (all sprites here)
@@ -296,11 +315,12 @@ made — lives in **[DEVLOG.md](DEVLOG.md)**.
 ## Status
 
 ![Version](https://img.shields.io/badge/version-v0.1.0-b88a3e?style=for-the-badge&labelColor=14110f)
-![Slice](https://img.shields.io/badge/latest_slice-46-c44a2a?style=for-the-badge&labelColor=14110f)
+![Slice](https://img.shields.io/badge/latest_slice-53-c44a2a?style=for-the-badge&labelColor=14110f)
 ![Status](https://img.shields.io/badge/status-playable_end--to--end-6b9b4f?style=for-the-badge&labelColor=14110f)
 
-Four pilots. Nine bosses. Thirty events. Twenty-four relics. Balance
-is being tuned in public; the [DEVLOG](DEVLOG.md) is the running record.
+Five pilots. Thirteen bosses. Forty-two events. Forty-seven relics.
+Seven ascension tiers. Balance is tuned in public; the
+[DEVLOG](DEVLOG.md) is the running record.
 
 This is a solo personal project. Issues and PRs welcome but aren't
 the development driver — the project ships on its own cadence.
