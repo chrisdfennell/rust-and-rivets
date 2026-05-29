@@ -8,6 +8,9 @@ import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class CharacterSelectScene extends Phaser.Scene {
+  // Slice 58 — debounce for resize-triggered re-layout.
+  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     super('CharacterSelect');
   }
@@ -15,6 +18,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
+    const portrait = height > width;
 
     // Backdrop: hangar bay
     const bg = this.add.graphics();
@@ -25,51 +29,70 @@ export class CharacterSelectScene extends Phaser.Scene {
     bg.fillStyle(COLORS.brass, 0.05);
     bg.fillCircle(width / 2, height * 0.42, 320);
 
-    // Title
+    // Title — scales down at small viewports.
+    const titleSize = Math.min(36, Math.max(22, Math.floor(width / 24)));
     this.add
-      .text(width / 2, 50, 'CHOOSE YOUR PILOT', {
+      .text(width / 2, 36, 'CHOOSE YOUR PILOT', {
         fontFamily: FONTS.display,
-        fontSize: '36px',
+        fontSize: `${titleSize}px`,
         color: hex(COLORS.brass),
         fontStyle: 'bold'
       })
-      .setOrigin(0.5);
-
+      .setOrigin(0.5, 0);
     this.add
-      .text(width / 2, 92, 'Each rig wears the wasteland differently.', {
+      .text(width / 2, 36 + titleSize + 6, 'Each rig wears the wasteland differently.', {
         fontFamily: FONTS.body,
         fontSize: '13px',
         color: hex(COLORS.boneDim)
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
 
-    // Cards stay at a fixed width; if the row doesn't fit the viewport we
-    // let the player drag horizontally to scroll. drawCharacterCard now
-    // returns a Container so the whole row lives inside cardsLayer.
-    const cardW = 380;
-    const gap = 30;
+    // Slice 58 — cards now scale to fit the viewport instead of being
+    // fixed at 380×560. The natural design is what the original layout
+    // produced; we apply a single uniform scale to the whole card
+    // container so internal text + sprite positions stay correct.
+    const NATURAL_W = 380;
+    const NATURAL_H = 560;
+    // Vertical budget: from below the title block down to above the
+    // BACK button + scroll hint. We keep ~120 px of fixed chrome reserved.
+    const headerH = 36 + titleSize + 26;
+    const footerH = 80; // BACK button + scroll hint padding
+    const availH = Math.max(280, height - headerH - footerH);
+    // Horizontal budget: in portrait, one card should take ~85% of the
+    // width; in landscape, allow several cards to fit at natural width.
+    const targetW = portrait
+      ? Math.min(NATURAL_W, width * 0.85)
+      : NATURAL_W;
+    const scaleByH = availH / NATURAL_H;
+    const scaleByW = targetW / NATURAL_W;
+    const cardScale = Math.min(1, scaleByH, scaleByW);
+    const cardW = NATURAL_W * cardScale; // effective width after scaling
+
+    const gap = Math.max(12, 30 * cardScale);
     const cardCount = CHARACTERS.length;
     const totalContentW = cardCount * cardW + (cardCount - 1) * gap;
-    const cardsLayer = this.add.container(width / 2, 390);
+    // Center the card row vertically in the available area.
+    const rowY = headerH + availH / 2;
+    const cardsLayer = this.add.container(width / 2, rowY);
 
     CHARACTERS.forEach((c, i) => {
       const localX = -totalContentW / 2 + cardW / 2 + i * (cardW + gap);
-      cardsLayer.add(this.drawCharacterCard(c, localX, 0, cardW));
+      const cardContainer = this.drawCharacterCard(c, localX, 0, NATURAL_W);
+      cardContainer.setScale(cardScale);
+      cardsLayer.add(cardContainer);
     });
 
     // Drag-scroll bounds — only scroll if the row is wider than the
-    // visible margin-trimmed viewport. minX/maxX are the allowed
-    // container-x positions (clamped during drag).
-    const viewable = width - 80; // 40 px margin each side
+    // visible margin-trimmed viewport.
+    const viewable = width - 40;
     const overflow = Math.max(0, totalContentW - viewable);
     const minX = width / 2 - overflow / 2;
     const maxX = width / 2 + overflow / 2;
 
     if (overflow > 0) {
       this.setupDragScroll(cardsLayer, minX, maxX);
-      // Small hint at the bottom so the player knows the row scrolls.
       this.add
-        .text(width / 2, height - 100, 'DRAG TO SCROLL', {
+        .text(width / 2, height - footerH + 12, 'DRAG OR SWIPE TO SCROLL', {
           fontFamily: FONTS.display,
           fontSize: '11px',
           color: hex(COLORS.boneDim)
@@ -77,17 +100,37 @@ export class CharacterSelectScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    // Back button (top-left)
+    // Back button (top-left). Smaller on narrow viewports so it doesn't
+    // crowd the card row.
+    const backW = Math.min(180, Math.max(110, width / 6));
     const back = new Button(
       this,
-      120,
-      height - 50,
+      backW / 2 + 20,
+      height - 36,
       'BACK',
       () => this.scene.start('Title'),
-      { width: 180, height: 44, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      { width: backW, height: 40, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(back);
+
+    // Slice 58 — re-layout on resize / orientation change.
+    this.scale.on('resize', this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.handleResize, this);
+      if (this.resizeTimer) {
+        clearTimeout(this.resizeTimer);
+        this.resizeTimer = null;
+      }
+    });
   }
+
+  private handleResize = () => {
+    if (this.resizeTimer) clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => {
+      this.resizeTimer = null;
+      this.scene.restart();
+    }, 120);
+  };
 
   // Adds scene-level pointer handlers that drag `layer` horizontally.
   // Uses a small distance threshold so accidental moves during a SELECT
