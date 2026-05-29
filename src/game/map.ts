@@ -16,9 +16,14 @@ export interface MapData {
   bossNodeId: string;
 }
 
-const FLOORS = 7;
+// 15-floor StS-style act layout. Floor 0 is the entry combat, floors 1..-3
+// are the varied "interior," FLOORS-2 is the always-rest pre-boss room,
+// and FLOORS-1 is the boss. Total walked nodes per run lands around 40
+// once paths overlap. MapScene renders the map taller than the viewport
+// and exposes scroll input so the player can pan to upcoming floors.
+const FLOORS = 15;
 const WIDTH = 5;
-const PATHS = 6;
+const PATHS = 7;
 
 export function generateMap(rng: () => number = Math.random): MapData {
   const nodes = new Map<string, MapNode>();

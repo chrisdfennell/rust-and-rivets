@@ -1630,6 +1630,161 @@ export const CYCLONE_KING: EnemyDef = {
   }
 };
 
+// ===== Slice 50 — Act 1-3 variety regulars =====
+// One extra mook per existing act so the longer 15-floor maps don't
+// recycle the same fights too often. Each fills a small archetype gap
+// in its act's pool.
+
+// Act 1 — Grit Jackal. Pack-style debuffer that pulls plating off the
+// player via Strip. Junk Hound already covers raw frenzy; this one
+// pressures the player's defensive cycle instead.
+export const GRIT_JACKAL: EnemyDef = {
+  id: 'gritJackal',
+  name: 'Grit Jackal',
+  maxHull: 30,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'attack', label: `Snap: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Strip') && roll < 0.35) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'debuff', label: `Strip: ${dmg} → -4 Plating`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          const p = ctx.state.player;
+          const stripped = Math.min(4, p.plating);
+          p.plating -= stripped;
+          if (stripped > 0) ctx.log(`The Jackal tears off ${stripped} Plating.`);
+        }
+      };
+    }
+    if (roll < 0.75) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Nip: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const dmg = 9;
+    return {
+      intent: { kind: 'attack', label: `Lunge: ${dmg}`, damage: dmg, hits: 1 },
+      resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+    };
+  }
+};
+
+// Act 2 — Slag Viper. Fast multi-hit attacker. Three-hit Lash punishes
+// thin plating; the existing Cinder Hound is a pack hit-and-run mook,
+// while Slag Viper is a single bigger threat with multi-hit pressure.
+export const SLAG_VIPER: EnemyDef = {
+  id: 'slagViper',
+  name: 'Slag Viper',
+  maxHull: 44,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Lash: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Lash') && roll < 0.4) {
+      const dmg = 4;
+      return {
+        intent: { kind: 'attack', label: `Lash: ${dmg}x3`, damage: dmg, hits: 3 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Venom') && roll < 0.7) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Venom: ${dmg} + Weak 1`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyWeakToPlayer(ctx, 1);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Coil: +9' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 9)
+    };
+  }
+};
+
+// Act 3 — Storm Husk. Heavy aerial with innate Thorns and an AoE-style
+// wind sweep that hits twice. Mist Specter already does ghost-thorns at
+// the small end; Storm Husk is the meatier counterpart for the longer
+// final-original act.
+export const STORM_HUSK: EnemyDef = {
+  id: 'stormHusk',
+  name: 'Storm Husk',
+  maxHull: 48,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Stormshroud: +8 + 3 Thorns' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 8);
+          const idx = ctx.state.activeAttackerIndex ?? 0;
+          ctx.state.enemies[idx].thorns += 3;
+          ctx.log('The Husk crackles with static (+3 Thorns).');
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Gust') && roll < 0.45) {
+      const dmg = 7;
+      return {
+        intent: { kind: 'attack', label: `Gust: ${dmg}x2`, damage: dmg, hits: 2 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          dealDamageToPlayer(ctx, dmg);
+        }
+      };
+    }
+    if (!last.startsWith('Static Bolt') && roll < 0.75) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Static Bolt: ${dmg} + Vuln 1`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 1);
+        }
+      };
+    }
+    return {
+      intent: { kind: 'buff', label: 'Re-charge: refresh Thorns' },
+      resolve: (ctx) => {
+        const idx = ctx.state.activeAttackerIndex ?? 0;
+        ctx.state.enemies[idx].thorns = Math.max(ctx.state.enemies[idx].thorns, 4);
+        gainEnemyPlating(ctx, 5);
+      }
+    };
+  }
+};
+
 // ===== Slice 50 — Act 4 (Brass Cathedral) regulars =====
 // Theme: clockwork cult — chanting acolytes, censer-swinging bruisers,
 // thorny choristers, burn-dropping crawlers. Hull tier between Act 3
@@ -1803,6 +1958,51 @@ export const LITANY_CRAWLER: EnemyDef = {
     return {
       intent: { kind: 'defend', label: 'Pious Plating: +8' },
       resolve: (ctx) => gainEnemyPlating(ctx, 8)
+    };
+  }
+};
+
+// Brass Inquisitor — Act 4 pressure mook. Layers Vulnerable on top of a
+// modest hit so a damage-on-Vuln deck can still leverage the debuff even
+// when Iron Hymn isn't on the board. Brings a Vuln-focused option to a
+// pool otherwise dominated by Weak / Burn / Thorns.
+export const BRASS_INQUISITOR: EnemyDef = {
+  id: 'brassInquisitor',
+  name: 'Brass Inquisitor',
+  maxHull: 50,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Indictment: ${dmg} + Vuln 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Indictment') && roll < 0.35) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Indictment: ${dmg} + Vuln 2`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyVulnerableToPlayer(ctx, 2);
+        }
+      };
+    }
+    if (!last.startsWith('Gavel') && roll < 0.75) {
+      const dmg = 12;
+      return {
+        intent: { kind: 'attack', label: `Gavel: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    return {
+      intent: { kind: 'defend', label: 'Robe: +10' },
+      resolve: (ctx) => gainEnemyPlating(ctx, 10)
     };
   }
 };
@@ -2197,6 +2397,64 @@ export const FORGE_IMP: EnemyDef = {
   }
 };
 
+// Magma Lurker — Act 5 burst mook with deck pollution. Heat Toss puts a
+// Heat Damage curse in the player's discard, then a delayed payoff that
+// big-swings on turns the curse hasn't been cycled. Gives the final act
+// a real "your deck is the danger" pressure beyond the Forge Imp drip.
+export const MAGMA_LURKER: EnemyDef = {
+  id: 'magmaLurker',
+  name: 'Magma Lurker',
+  maxHull: 60,
+  pickAction: ({ turn, rng, lastIntent }): EnemyAction => {
+    if (turn === 1) {
+      return {
+        intent: { kind: 'defend', label: 'Submerge: +10 + Burn 3' },
+        resolve: (ctx) => {
+          gainEnemyPlating(ctx, 10);
+          applyBurnToPlayer(ctx, 3);
+        }
+      };
+    }
+    const roll = rng();
+    const last = lastIntent?.label ?? '';
+    if (!last.startsWith('Eruption') && roll < 0.35) {
+      const dmg = 16;
+      return {
+        intent: { kind: 'attack', label: `Eruption: ${dmg}`, damage: dmg, hits: 1 },
+        resolve: (ctx) => dealDamageToPlayer(ctx, dmg)
+      };
+    }
+    if (!last.startsWith('Magma Spit') && roll < 0.65) {
+      const dmg = 5;
+      return {
+        intent: { kind: 'debuff', label: `Magma Spit: ${dmg} + Burn 4`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          applyBurnToPlayer(ctx, 4);
+        }
+      };
+    }
+    if (!last.startsWith('Heat Lob') && roll < 0.85) {
+      const dmg = 6;
+      return {
+        intent: { kind: 'debuff', label: `Heat Lob: ${dmg} + Heat Damage`, damage: dmg, hits: 1 },
+        resolve: (ctx) => {
+          dealDamageToPlayer(ctx, dmg);
+          addCardToDiscard(ctx, 'heatDamage');
+        }
+      };
+    }
+    const dmg = 7;
+    return {
+      intent: { kind: 'attack', label: `Twin Strike: ${dmg}x2`, damage: dmg, hits: 2 },
+      resolve: (ctx) => {
+        dealDamageToPlayer(ctx, dmg);
+        dealDamageToPlayer(ctx, dmg);
+      }
+    };
+  }
+};
+
 // ===== Slice 50 — Act 5 elites =====
 
 export const FURNACE_MAW: EnemyDef = {
@@ -2400,29 +2658,34 @@ export const THE_FIRST_ENGINE: EnemyDef = {
 
 export const ACT1_POOL: EnemyDef[] = [
   SCRAP_RAIDER, JUNK_HOUND, SENTINEL_DRONE,
-  RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK
+  RUST_SPRAYER, PYLON_CRAWLER, TINKER_HAWK,
+  GRIT_JACKAL
 ];
 export const ACT1_ELITE_POOL: EnemyDef[] = [SLAG_WALKER, IRON_RECLAIMER];
 
 export const ACT2_POOL: EnemyDef[] = [
   CINDER_HOUND, SLAG_DRONE, FORGE_REAVER,
-  EMBER_SPITTER, PIG_IRON_BRUTE
+  EMBER_SPITTER, PIG_IRON_BRUTE,
+  SLAG_VIPER
 ];
 export const ACT2_ELITE_POOL: EnemyDef[] = [MAGMA_SENTINEL, RECLAIMER_MK2];
 
 export const ACT3_POOL: EnemyDef[] = [
   STRATUS_DRONE, SKY_PIRATE, LIGHTNING_SPRITE,
-  MIST_SPECTER, CLOUD_CORSAIR
+  MIST_SPECTER, CLOUD_CORSAIR,
+  STORM_HUSK
 ];
 export const ACT3_ELITE_POOL: EnemyDef[] = [CLOUD_REAVER, SKY_MARSHAL];
 
 export const ACT4_POOL: EnemyDef[] = [
-  BRASS_ACOLYTE, CENSER_SENTRY, HYMN_CHORISTER, LITANY_CRAWLER
+  BRASS_ACOLYTE, CENSER_SENTRY, HYMN_CHORISTER, LITANY_CRAWLER,
+  BRASS_INQUISITOR
 ];
 export const ACT4_ELITE_POOL: EnemyDef[] = [CATHEDRAL_VERGER, IRON_HYMN];
 
 export const ACT5_POOL: EnemyDef[] = [
-  SLAG_WRAITH, ANVIL_STRIKER, HAMMER_SPIRIT, FORGE_IMP
+  SLAG_WRAITH, ANVIL_STRIKER, HAMMER_SPIRIT, FORGE_IMP,
+  MAGMA_LURKER
 ];
 export const ACT5_ELITE_POOL: EnemyDef[] = [FURNACE_MAW, CRUCIBLE_KNIGHT];
 
@@ -2598,5 +2861,11 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   [FURNACE_MAW.id]: FURNACE_MAW,
   [CRUCIBLE_KNIGHT.id]: CRUCIBLE_KNIGHT,
   [WORLD_FORGE_HEART.id]: WORLD_FORGE_HEART,
-  [THE_FIRST_ENGINE.id]: THE_FIRST_ENGINE
+  [THE_FIRST_ENGINE.id]: THE_FIRST_ENGINE,
+  // Slice 50 — Act 1-3 variety regulars
+  [GRIT_JACKAL.id]: GRIT_JACKAL,
+  [SLAG_VIPER.id]: SLAG_VIPER,
+  [STORM_HUSK.id]: STORM_HUSK,
+  [BRASS_INQUISITOR.id]: BRASS_INQUISITOR,
+  [MAGMA_LURKER.id]: MAGMA_LURKER
 };

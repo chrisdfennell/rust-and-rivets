@@ -9,9 +9,22 @@ import { COLORS, FONTS, hex } from '../ui/theme';
 
 const NODE_R = 22;
 const BOSS_R = 32;
+// Slice 50 — maps grew from 7 floors to 15. Floors are now spaced with a
+// FIXED pixel gap so the natural map height is taller than the viewport;
+// MapScene wraps the map in a scroll layer and listens for wheel / drag
+// input to pan vertically. Floor 0 lives at the bottom of the content,
+// the boss at the top.
+const FLOOR_H = 92;
+const MARGIN_BOTTOM = 80;
 
 export class MapScene extends Phaser.Scene {
   private nodeViews = new Map<string, Phaser.GameObjects.Container>();
+  private mapLayer!: Phaser.GameObjects.Container;
+  private scrollY = 0;
+  private scrollMin = 0;
+  private scrollMax = 0;
+  private dragStart: { pointerY: number; scrollY: number } | null = null;
+  private dragging = false;
 
   constructor() {
     super('Map');
@@ -19,12 +32,18 @@ export class MapScene extends Phaser.Scene {
 
   create() {
     this.nodeViews = new Map();
+    this.scrollY = 0;
+    this.scrollMin = 0;
+    this.scrollMax = 0;
+    this.dragStart = null;
+    this.dragging = false;
     setupPause(this);
 
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
-    // Wasteland horizon (same vibe as combat)
+    // Wasteland horizon (same vibe as combat). Drawn in screen space, not
+    // inside the scroll layer, so the backdrop stays put as the map pans.
     const horizon = this.add.graphics();
     horizon.fillStyle(0x1a1612);
     horizon.fillRect(0, 0, width, height);
@@ -40,6 +59,11 @@ export class MapScene extends Phaser.Scene {
     }
 
     const run = getRun();
+
+    // Map content lives inside a translatable container so we can pan it
+    // vertically when there are more floors than fit on-screen.
+    this.mapLayer = this.add.container(0, 0);
+    this.mapLayer.setDepth(0);
 
     this.add
       .text(width / 2, 28, `ACT ${run.act} — ${getActName(run.act)}`, {
@@ -88,6 +112,23 @@ export class MapScene extends Phaser.Scene {
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
+
+    // Scroll bounds — the layer's y translates to pan the map. Travel
+    // range covers from "boss visible near header" to "floor 0 visible
+    // near hint." Auto-center on the player's current node (or floor 0
+    // if they haven't picked a starting road yet).
+    const hudTop = 80;
+    const hudBottom = 50;
+    const naturalY = (floor: number) => height - MARGIN_BOTTOM - floor * FLOOR_H;
+    const topFloor = run.map.floors - 1;
+    this.scrollMax = hudTop - naturalY(topFloor);
+    this.scrollMin = (height - hudBottom) - naturalY(0);
+    if (this.scrollMax < this.scrollMin) this.scrollMax = this.scrollMin;
+    const focusNode = run.currentNodeId ? run.map.nodes.get(run.currentNodeId) : null;
+    const focusFloor = focusNode ? focusNode.floor : 0;
+    const midScreen = (hudTop + (height - hudBottom)) / 2;
+    this.setScroll(midScreen - naturalY(focusFloor));
+    this.attachScrollInput();
 
     // Game-end overlays
     if (run.result === 'victory') this.showRunEnd('RUN COMPLETE', 'The First Engine falls silent. The World-Forge cools.', COLORS.ok);
@@ -171,16 +212,14 @@ export class MapScene extends Phaser.Scene {
     });
   }
 
+  // Returns the natural (unscrolled) screen position of a node. Floor 0
+  // sits at the bottom of the natural-content area; the boss is at the
+  // top. Vertical scrolling translates the whole mapLayer by `scrollY`,
+  // so children stay at these coords in layer-local space.
   private nodeXY(node: MapNode): { x: number; y: number } {
     const { width, height } = this.scale;
+    const y = height - MARGIN_BOTTOM - node.floor * FLOOR_H;
     const run = getRun();
-    const marginTop = 80;
-    const marginBottom = 70;
-    const usableH = height - marginTop - marginBottom;
-    const floorH = usableH / (run.map.floors - 1);
-    // Floor 0 at bottom, top floor at top
-    const y = height - marginBottom - node.floor * floorH;
-
     const colW = width / (run.map.width + 1);
     const x = colW * (node.col + 1);
     return { x, y };
@@ -189,8 +228,11 @@ export class MapScene extends Phaser.Scene {
   private drawMap() {
     const run = getRun();
 
-    // Edges first, so nodes draw on top
+    // Edges first, so nodes draw on top. Both edges and node containers
+    // are added to mapLayer so a single y-translate scrolls everything
+    // together.
     const edges = this.add.graphics();
+    this.mapLayer.add(edges);
     for (const node of run.map.nodes.values()) {
       const from = this.nodeXY(node);
       for (const nextId of node.next) {
@@ -224,6 +266,7 @@ export class MapScene extends Phaser.Scene {
     for (const node of run.map.nodes.values()) {
       const { x, y } = this.nodeXY(node);
       const view = this.drawNode(node, x, y);
+      this.mapLayer.add(view);
       this.nodeViews.set(node.id, view);
     }
   }
@@ -330,10 +373,55 @@ export class MapScene extends Phaser.Scene {
         circle.setStrokeStyle(strokeW, stroke);
         this.tweens.add({ targets: container, scale: 1, duration: 120 });
       });
-      hit.on('pointerdown', () => this.goToNode(node));
+      // Fire on pointerup, not pointerdown, so a drag that started on the
+      // node scrolls the map instead of navigating. The dragging guard
+      // is set by the scene-level pointermove handler.
+      hit.on('pointerup', () => {
+        if (this.dragging) return;
+        this.goToNode(node);
+      });
     }
 
     return container;
+  }
+
+  private setScroll(y: number) {
+    this.scrollY = Math.max(this.scrollMin, Math.min(this.scrollMax, y));
+    this.mapLayer.y = this.scrollY;
+  }
+
+  private attachScrollInput() {
+    // Wheel scroll: works regardless of overflow (no-ops when bounds equal).
+    this.input.on(
+      'wheel',
+      (_p: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
+        this.setScroll(this.scrollY - dy);
+      }
+    );
+
+    // Drag scroll. pointerdown records start; pointermove past threshold
+    // flips `dragging` on and pans. Node click handlers gate on this flag.
+    const THRESHOLD = 6;
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.dragStart = { pointerY: p.y, scrollY: this.scrollY };
+      this.dragging = false;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!this.dragStart) return;
+      const dy = p.y - this.dragStart.pointerY;
+      if (!this.dragging && Math.abs(dy) >= THRESHOLD) this.dragging = true;
+      if (this.dragging) this.setScroll(this.dragStart.scrollY + dy);
+    });
+    const end = () => {
+      this.dragStart = null;
+      // Reset `dragging` on the next tick so the node's pointerup handler
+      // (which fires BEFORE this event in Phaser) still sees `true` and
+      // suppresses navigation. Without the delay, fast taps after a drag
+      // would slip through.
+      this.time.delayedCall(0, () => { this.dragging = false; });
+    };
+    this.input.on('pointerup', end);
+    this.input.on('pointerupoutside', end);
   }
 
   private goToNode(node: MapNode) {
