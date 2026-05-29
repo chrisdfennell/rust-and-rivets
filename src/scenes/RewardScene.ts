@@ -5,6 +5,7 @@ import { RELICS } from '../game/relics';
 import { POTIONS } from '../game/potions';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
+import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -54,19 +55,26 @@ export class RewardScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Potion drop line (auto-claimed to belt, no UI choice — just info).
-    // Slice 58 — prefixed with the potion's emoji icon for quick recognition.
+    // Potion drop line. Slice 58 — vector icon to the left of the text
+    // line. Both are centered together so the row reads as a single unit.
     if (reward.potionId) {
       const def = POTIONS[reward.potionId];
-      const iconStr = def?.icon ? `${def.icon}  ` : '';
-      this.add
-        .text(width / 2, 124, `${iconStr}+1 potion: ${def?.name ?? reward.potionId}`, {
+      const label = `+1 potion: ${def?.name ?? reward.potionId}`;
+      const text = this.add
+        .text(0, 0, label, {
           fontFamily: FONTS.display,
           fontSize: '14px',
           color: hex(COLORS.brass),
           fontStyle: 'bold'
         })
-        .setOrigin(0.5);
+        .setOrigin(0, 0.5);
+      const iconSize = 22;
+      const gap = 8;
+      const totalW = iconSize + gap + text.width;
+      const startX = width / 2 - totalW / 2;
+      const icon = drawPotionIcon(this, reward.potionId, startX + iconSize / 2, 124, 1.1);
+      void icon;
+      text.setPosition(startX + iconSize + gap, 124);
     }
 
     // Relic banner (elite only)

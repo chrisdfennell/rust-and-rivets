@@ -5,6 +5,7 @@ import { POTIONS } from '../game/potions';
 import type { CombatState, CardInstance, EnemyState, TurnEvent } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
+import { drawPotionIcon } from '../ui/PotionIcon';
 import { setupPause } from '../ui/setupPause';
 import { sfx, playCardLayer } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
@@ -36,8 +37,10 @@ interface PotionSlotUI {
   bg: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
-  // Slice 58 — single-glyph icon (emoji) rendered on top of the slot.
-  icon: Phaser.GameObjects.Text;
+  // Slice 58 — vector potion icon. iconSlot is a persistent Container
+  // we rebuild on every refresh: removeAll(true) wipes the previous
+  // potion drawing and we add the new one via drawPotionIcon().
+  iconSlot: Phaser.GameObjects.Container;
 }
 
 // Pre-endTurn snapshot of bar-relevant stats. Reuses the same shape the
@@ -439,18 +442,12 @@ export class CombatScene extends Phaser.Scene {
       const bg = this.add
         .rectangle(0, 0, slotSize, slotSize, COLORS.bgPanel)
         .setStrokeStyle(2, COLORS.brassDim);
-      // Slice 58 — icon on top, abbreviated label below. Icon is the
-      // primary at-a-glance signal; label is the fallback when emoji
-      // rendering can't disambiguate (older Android, niche fonts).
-      const icon = this.add
-        .text(0, -10, '', {
-          fontFamily: FONTS.body,
-          fontSize: '22px',
-          align: 'center'
-        })
-        .setOrigin(0.5);
+      // Slice 58 — vector icon on top (drawPotionIcon paints into the
+      // iconSlot container), abbreviated label below. Icon does the
+      // heavy lifting; label is the textual confirmation.
+      const iconSlot = this.add.container(0, -6);
       const label = this.add
-        .text(0, 14, '', {
+        .text(0, 16, '', {
           fontFamily: FONTS.display,
           fontSize: '9px',
           color: hex(COLORS.bone),
@@ -459,7 +456,7 @@ export class CombatScene extends Phaser.Scene {
           wordWrap: { width: slotSize - 4 }
         })
         .setOrigin(0.5);
-      container.add([glow, bg, icon, label]);
+      container.add([glow, bg, iconSlot, label]);
       bg.setInteractive({ useHandCursor: true });
       const idx = i;
       bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -468,7 +465,7 @@ export class CombatScene extends Phaser.Scene {
       });
       bg.on('pointerover', () => this.onPotionHover(idx, true));
       bg.on('pointerout', () => this.onPotionHover(idx, false));
-      this.potionSlots.push({ container, bg, glow, label, icon });
+      this.potionSlots.push({ container, bg, glow, label, iconSlot });
     }
     // Hover tooltip — anchored above the belt, hidden when nothing hovered.
     this.potionTooltip = this.add
@@ -506,17 +503,18 @@ export class CombatScene extends Phaser.Scene {
       const ui = this.potionSlots[i];
       const id = potions[i];
       const def = id ? POTIONS[id] : null;
-      if (def) {
-        // Slice 58 — icon does the heavy lifting; label is the first
-        // word of the potion name (e.g. "Fire", "Block") for the brief
-        // text confirmation underneath.
-        ui.icon.setText(def.icon ?? '🧪');
+      // Wipe any prior icon drawing — we paint the new one fresh each
+      // refresh so animations / glow tweens on the icon container don't
+      // accumulate across potion swaps.
+      ui.iconSlot.removeAll(true);
+      if (def && id) {
+        const icon = drawPotionIcon(this, id, 0, 0, 1.05);
+        if (icon) ui.iconSlot.add(icon);
         const firstWord = def.name.split(' ')[0];
         ui.label.setText(firstWord.toUpperCase());
         ui.bg.setFillStyle(COLORS.steelDark);
         ui.bg.setStrokeStyle(2, COLORS.steam);
       } else {
-        ui.icon.setText('');
         ui.label.setText('');
         ui.bg.setFillStyle(COLORS.bgPanel);
         ui.bg.setStrokeStyle(2, COLORS.brassDim);

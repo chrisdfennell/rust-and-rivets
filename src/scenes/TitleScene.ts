@@ -75,31 +75,40 @@ export class TitleScene extends Phaser.Scene {
     // in the top-right corner; tapping it pops the stats overlay.
     this.buildRecordsButton(width - 12, 12);
 
-    // Title — scales with viewport so a narrow phone screen doesn't
+    // Title size scales with viewport so a narrow phone screen doesn't
     // get a title that clips off the side. Caps at the original 72px
     // on a desktop window.
     const titleSize = Math.min(72, Math.max(36, Math.floor(width / 18)));
     const subtitleSize = Math.min(16, Math.max(11, Math.floor(width / 70)));
+    const haveSave = hasSavedRun();
+    const meta = loadMeta();
+    const cx = width / 2;
+
+    // Slice 58 — landscape uses the original % positions. Compact uses
+    // SEQUENTIAL top-down flow with absolute gaps so smaller viewports
+    // (~680 tall and below) don't compress headers into each other.
+    let topCursor = compact ? 24 : height * 0.28;
+    // Title (origin top-center)
     this.add
-      .text(width / 2, height * (compact ? 0.14 : 0.28), 'RUST & RIVETS', {
+      .text(cx, topCursor, 'RUST & RIVETS', {
         fontFamily: FONTS.display,
         fontSize: `${titleSize}px`,
         color: hex(COLORS.brass),
         fontStyle: 'bold'
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, compact ? 0 : 0.5);
+    topCursor += compact ? titleSize + 4 : titleSize * 0.85;
+
     this.add
-      .text(width / 2, height * (compact ? 0.14 : 0.28) + titleSize * 0.85, 'a dieselpunk deckbuilder', {
+      .text(cx, topCursor, 'a dieselpunk deckbuilder', {
         fontFamily: FONTS.body,
         fontSize: `${subtitleSize}px`,
         color: hex(COLORS.boneDim)
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, compact ? 0 : 0.5);
+    topCursor += compact ? subtitleSize + 18 : 0;
 
-    // Saved-run summary. Positioned higher in portrait so the button
-    // stack below has room.
-    const haveSave = hasSavedRun();
-    const summaryY = height * (compact ? 0.26 : 0.52);
+    // Saved-run summary (3 lines).
     if (haveSave) {
       const peeked = loadSavedRun();
       if (peeked) {
@@ -109,8 +118,9 @@ export class TitleScene extends Phaser.Scene {
           peeked.result === 'defeat' ? 'Run lost.' :
           peeked.awaitingInterAct ? `Act ${peeked.act} cleared — choose a boon.` :
           `Act ${peeked.act}, Floor ${this.deepestVisitedFloor(peeked.visitedNodeIds, peeked.map)} of ${peeked.map.floors - 1}`;
+        const summaryY = compact ? topCursor : height * 0.52;
         this.add
-          .text(width / 2, summaryY,
+          .text(cx, summaryY,
             `SAVED RUN\nHull ${peeked.player.hull}/${peeked.player.maxHull}   ` +
             `Scrap ${peeked.scrap}   Deck ${peeked.player.deck.length}   Cleared ${visited}\n` +
             resultLine,
@@ -121,74 +131,87 @@ export class TitleScene extends Phaser.Scene {
               align: 'center',
               lineSpacing: 8
             })
-          .setOrigin(0.5);
+          .setOrigin(0.5, compact ? 0 : 0.5);
+        if (compact) topCursor += 60;
       }
     }
 
     // Workshop points banner.
-    const meta = loadMeta();
+    const workshopY = compact ? topCursor : height * 0.62;
     this.add
-      .text(width / 2, height * (compact ? 0.34 : 0.62), `WORKSHOP POINTS  ${meta.points}`, {
+      .text(cx, workshopY, `WORKSHOP POINTS  ${meta.points}`, {
         fontFamily: FONTS.display,
         fontSize: '16px',
         color: hex(meta.points > 0 ? COLORS.steam : COLORS.boneDim),
         fontStyle: 'bold'
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, compact ? 0 : 0.5);
+    if (compact) topCursor += 26;
 
     // Ascension selector.
     if (meta.highestAscension > 0) {
-      this.buildAscensionSelector(width / 2, height * (compact ? 0.39 : 0.69), meta);
+      const ascY = compact ? topCursor + 10 : height * 0.69;
+      this.buildAscensionSelector(cx, ascY, meta);
+      if (compact) topCursor += 42;
     }
 
-    // ===== Buttons. Landscape uses the original 3-across rows; portrait
+    // ===== Buttons. Landscape uses the original 3-across rows; compact
     // stacks them vertically so each button stays touch-friendly. =====
-    const cx = width / 2;
     const btnW = compact ? Math.min(width - 40, 320) : 210;
-    const btnH = 56;
+    const btnH = 50;
     if (compact) {
-      // Vertical stack: CONTINUE / NEW RUN / WORKSHOP / LIBRARY / EXPORT /
-      // IMPORT / MUSIC / SFX. Each row 64 px tall (button + 8 gap).
-      let y = height * 0.46;
+      // Vertical stack starts a small gap below the header content.
+      // Row pitch scaled to remaining viewport height so even short
+      // landscape viewports (e.g. 600 px tall browser windows) get the
+      // audio toggles on-screen instead of clipped under the footer.
+      const footerH = 24;
+      const remaining = height - topCursor - footerH - 12;
+      // Six logical rows: CONTINUE / NEW RUN / WORKSHOP / LIBRARY /
+      // EXPORT+IMPORT / MUSIC+SFX. Last two are half-width side-by-side
+      // when there's room.
+      const rowCount = 6;
+      const rowPitch = Math.max(48, Math.min(60, Math.floor(remaining / rowCount)));
+      const mainH = Math.min(btnH, rowPitch - 6);
+      let y = topCursor + 12 + mainH / 2;
       const continueBtn = new Button(this, cx, y, 'CONTINUE', () => this.continueRun(),
-        { width: btnW, height: btnH, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
+        { width: btnW, height: mainH, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
       continueBtn.setEnabled(haveSave);
       this.add.existing(continueBtn);
-      y += 64;
+      y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'NEW RUN', () => this.newRun(),
-        { width: btnW, height: btnH, fontSize: 18 }));
-      y += 64;
+        { width: btnW, height: mainH, fontSize: 18 }));
+      y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'WORKSHOP', () => this.openWorkshop(),
-        { width: btnW, height: btnH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
-      y += 64;
+        { width: btnW, height: mainH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'LIBRARY',
         () => {
           this.cameras.main.fadeOut(180, 20, 17, 15);
           this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
         },
-        { width: btnW, height: 44, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
-      y += 52;
-      // EXPORT and IMPORT side-by-side, half-width each (or full-width
-      // when the viewport is too narrow even for that).
+        { width: btnW, height: mainH, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      y += rowPitch;
+      // EXPORT + IMPORT side-by-side. Falls back to full-width stacked
+      // rows only if the viewport is genuinely too narrow.
       const halfW = btnW > 200 ? (btnW - 12) / 2 : btnW;
+      const smallH = Math.min(44, mainH);
       if (halfW < 140) {
-        // Two rows
         this.add.existing(new Button(this, cx, y, 'EXPORT SAVE', () => this.doExport(),
-          { width: btnW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
-        y += 52;
+          { width: btnW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+        y += rowPitch;
         const importBtn = new Button(this, cx, y, 'IMPORT SAVE', () => this.doImport(),
-          { width: btnW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+          { width: btnW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
         this.add.existing(importBtn);
         this.setupFileDrop(importBtn);
-        y += 52;
+        y += rowPitch;
       } else {
         this.add.existing(new Button(this, cx - halfW / 2 - 6, y, 'EXPORT', () => this.doExport(),
-          { width: halfW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+          { width: halfW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
         const importBtn = new Button(this, cx + halfW / 2 + 6, y, 'IMPORT', () => this.doImport(),
-          { width: halfW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+          { width: halfW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
         this.add.existing(importBtn);
         this.setupFileDrop(importBtn);
-        y += 52;
+        y += rowPitch;
       }
       const halfMute = btnW > 200 ? (btnW - 12) / 2 : btnW;
       this.makeMuteToggle(cx - halfMute / 2 - 6, y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), halfMute);

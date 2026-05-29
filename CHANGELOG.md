@@ -72,6 +72,48 @@ middle of looking at the title clears it.
 drag threshold went 6 → 8 px to match MapScene / CharacterSelectScene.
 6 px was triggering scroll on finger jitter.
 
+### Vector potion icons + compact layout overlap fix
+
+**Procedural vector potion icons** ([src/ui/PotionIcon.ts](src/ui/PotionIcon.ts)).
+Replaced the emoji icons from the previous pass with twelve hand-drawn
+`Phaser.Graphics` icons that match the game's existing pure-procedural
+art style (the same approach used for `MechSprite`). Each icon shares
+a common flask silhouette (brass cap, glass body, brass base band) and
+diverges on the contents drawn inside:
+
+| Potion | Content |
+|---|---|
+| Block | Shield emblem on plating-blue liquid |
+| Fire | Layered flame on dark-red liquid |
+| Swift | Three overlapping mini-cards |
+| Energy | Rising steam puffs on teal liquid |
+| Weak | Skull suggestion on poison-green liquid |
+| Vulnerable | Concentric target rings |
+| Strength | Brass dumbbell |
+| Repair | Bone wrench on healing-green liquid |
+| Cinder | Glowing embers / coals |
+| Spike | Radiating thorns |
+| Bracer | Riveted brass band |
+| Surge | Lightning bolt on bright yellow (rare tier) |
+
+`drawPotionIcon(scene, id, x, y, scale?)` is the universal entry point;
+it wires into CombatScene's potion belt (per-slot icon container that
+rebuilds on every refresh), ShopScene's offer panel (left of the name),
+and RewardScene's drop line (left of the `+1 potion:` text). The dead
+`icon?: string` field on `PotionDef` was removed along with the emoji
+literals from `src/game/potions.ts` — icons are now purely a UI concern
+keyed off the potion's `id`.
+
+**Compact layout overlap fixed.** The previous compact branch used
+percentage positions (`height * 0.14`, `0.26`, `0.34`, etc.) which
+crammed the title / subtitle / saved-run / workshop / ascension into
+each other on viewports around 600-700 px tall. Replaced with a
+top-down sequential flow: a `topCursor` variable advances by each
+element's height + a fixed gap, so spacing stays consistent regardless
+of viewport size. The button stack's row pitch is computed from the
+remaining vertical room (`Math.max(48, Math.min(60, remaining / 6))`)
+so the audio toggles always land on-screen even at 600 px tall windows.
+
 ### Title screen polish + potion icons
 
 Three fixes off the responsive pass:

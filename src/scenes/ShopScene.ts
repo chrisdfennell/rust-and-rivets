@@ -4,6 +4,7 @@ import { CARDS } from '../game/cards';
 import { POTIONS } from '../game/potions';
 import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
+import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -203,14 +204,13 @@ export class ShopScene extends Phaser.Scene {
       priceColor = canAfford ? COLORS.steam : COLORS.danger;
     }
 
-    // Slice 58 — emoji icon on the left so the offer reads at a glance.
-    const icon = this.add
-      .text(-w / 2 + 18, 0, def.icon ?? '🧪', {
-        fontFamily: FONTS.body,
-        fontSize: '26px'
-      })
-      .setOrigin(0.5);
-    const nameX = -w / 2 + 42;
+    // Slice 58 — procedural vector icon on the left of the offer. Falls
+    // back to nothing if the potion id doesn't have a registered drawer
+    // (shouldn't happen — POTION_ICONS mirrors the potions registry).
+    const iconHolder = this.add.container(-w / 2 + 22, 0);
+    const icon = drawPotionIcon(this, offer.potionId, 0, 0, 1.3);
+    if (icon) iconHolder.add(icon);
+    const nameX = -w / 2 + 46;
     const name = this.add
       .text(nameX, -10, def.name, {
         fontFamily: FONTS.display,
@@ -234,7 +234,7 @@ export class ShopScene extends Phaser.Scene {
         fontStyle: 'bold'
       })
       .setOrigin(1, 0.5);
-    slot.add([bg, icon, name, desc, price]);
+    slot.add([bg, iconHolder, name, desc, price]);
 
     if (canAfford) {
       bg.setInteractive({ useHandCursor: true });
