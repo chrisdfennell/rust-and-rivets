@@ -128,9 +128,12 @@ export class CardView extends Phaser.GameObjects.Container {
     if (card.def.innate) keywords.push('INNATE');
     if (card.def.retain) keywords.push('RETAIN');
     if (card.def.ethereal) keywords.push('ETHEREAL');
+    if (card.def.echo) keywords.push('ECHO');
+    if (card.def.volatileDamage) keywords.push(`VOLATILE ${card.def.volatileDamage}`);
     // POWER implies EXHAUST in our system, so don't show both — keeps
-    // the badge line short on power cards.
-    if (card.def.exhaust && card.def.type !== 'power') keywords.push('EXHAUST');
+    // the badge line short on power cards. Volatile cards exhaust via
+    // their own routing, so suppress the redundant EXHAUST badge too.
+    if (card.def.exhaust && card.def.type !== 'power' && !card.def.volatileDamage) keywords.push('EXHAUST');
     if (keywords.length > 0) {
       const color = card.def.unplayable ? COLORS.danger
         : card.def.type === 'power' ? COLORS.steam

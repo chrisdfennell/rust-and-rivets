@@ -28,14 +28,16 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
   relics. The Stoker ramps Strength every turn an enemy is Burning
   (Furnace Heart). The Conductor gains +1 Strength every 3rd card
   played each turn (Steam Whistle).
-- **Cards:** ~61 base + `+` upgraded variants. Types: attack / skill /
+- **Cards:** ~77 base + `+` upgraded variants. Types: attack / skill /
   power. Keywords: exhaust, retain, ethereal, innate, AoE
-  (`target: 'allEnemies'`), X-cost, unplayable. Rarities: common /
-  uncommon / rare / epic / legendary, each border-tinted on `CardView`
-  (brass / green / blue / purple / orange). Star indicator
-  (★ / ★★ / ★★★) for rare / epic / legendary; upgrade indicator (▲)
-  for `+` variants. Status / curse cards (Slag Glob, Shrapnel, Heat
-  Damage, Old Rust) inject via enemy actions and events.
+  (`target: 'allEnemies'`), X-cost, unplayable, **echo** (effects
+  resolve twice on play), **volatile** (end-of-turn random-enemy
+  damage if unplayed). Rarities: common / uncommon / rare / epic /
+  legendary, each border-tinted on `CardView` (brass / green / blue /
+  purple / orange). Star indicator (★ / ★★ / ★★★) for rare / epic /
+  legendary; upgrade indicator (▲) for `+` variants. Status / curse
+  cards (Slag Glob, Shrapnel, Heat Damage, Old Rust) inject via enemy
+  actions and events.
 - **Powers** (persistent in-combat buffs): Demon Form, Barricade,
   Metallicize, Combust.
 - **Relics:** 47 total (33 normal + 13 boss-signature + 1 character-
@@ -52,10 +54,10 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 - **Combat:** Up to 3 simultaneous enemies, drag-to-target for
   single-enemy cards, dedicated aim mode for enemy-target potions.
 - **Map node kinds:** combat / elite / shop / rest / event / boss.
-  **30 events** with multi-choice outcomes — original 13 plus a
-  Slice-43 batch covering paid card removal, archetype-specific
-  drops (random Power / random AoE), max-hull-trade vendors, sealed
-  loot boxes, and a snake-oil salesman who might sell you a curse.
+  **42 events** total — 30 act-agnostic (original 13 plus Slice-43
+  expansion) and 12 act-themed (6 Brass Cathedral for Act 4, 6
+  World-Forge for Act 5). Act-themed events filter via the optional
+  `acts` field on EventDef.
 - **Meta:** Workshop with 14 upgrades (max spend 28 pts). Points
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
@@ -68,7 +70,66 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 52 — Relic + Potion expansion *(current)*
+### Slice 53 — Themed events + Volatile / Echo keywords *(current)*
+Two parallel expansions: 12 act-themed events for the late-game
+maps, plus two new card keywords with four cards to seed them.
+
+**Act-themed events**
+([src/game/events.ts](src/game/events.ts)). `EventDef` grew an
+optional `acts?: number[]` field; `pickEventId(rng, act)` filters
+to events that either match the current act or have no act tag at
+all. The pre-existing 30 events stay act-agnostic; the 12 new ones
+are tagged so they only roll in their home act.
+
+| Act | Event | Hook |
+|---|---|---|
+| 4 | Brass Confessional | Pay scrap to remove a curse / status card |
+| 4 | Offering Brazier | Burn a random card → gain a random Power card |
+| 4 | Tempered Hymn | Upgrade a random card OR +5 max Hull + 10 heal |
+| 4 | Vestigial Bell | -8 Hull → rare card; OR +1 max Steam |
+| 4 | Pilgrims' March | -8 Hull → 2 random cards; OR +50 scrap |
+| 4 | Clockwork Acolyte | -55 scrap → random Power card; OR free common |
+| 5 | Molten Vein | -8 Hull → upgrade random card; OR -12 Hull → +60 scrap |
+| 5 | Ancient Anvil | Free upgrade random card; OR break for +80 scrap (-3 max Hull) |
+| 5 | Crucible Test | -15 Hull → random Relic; OR safer route to 1 potion |
+| 5 | Ember Prophet | Free random Power / AoE / Legendary (legendary costs -10 Hull) |
+| 5 | Forge Engine | -8 Hull → Power Cell relic guaranteed; OR +60 scrap |
+| 5 | World-Shard | Coin flip full heal OR -20 Hull; or -5 max Hull → Legendary card |
+
+`pickEventId` is now called with `r.act` from `run.ts:201`.
+
+**Two new keywords**
+([src/game/types.ts](src/game/types.ts) +
+[src/game/combat.ts](src/game/combat.ts)):
+
+- **Volatile X**: `CardDef.volatileDamage`. If the card is still in
+  hand at end of turn, it deals X to a random alive enemy (through
+  `dealDamageToEnemy`, so Strength / Vuln / Weak / Thorns all apply)
+  and exhausts. The end-of-turn pipeline gained a pre-routing loop
+  for this; the routing loop priorities volatile → exhaust over the
+  default discard.
+- **Echo**: `CardDef.echo`. When played, the effects list resolves
+  twice in a row. Counts as ONE card played (cardsPlayedThisTurn
+  ticks once), so Echo Strike doesn't double-trigger Steam Whistle
+  or Mechanic's Loop. Bails between passes on victory/defeat so a
+  killing-blow first pass doesn't waste damage.
+
+**4 new keyword cards** (all in `SHOP_POOL`, all with `+` variants):
+
+| Card | Rarity | Cost | Effect |
+|---|---|---|---|
+| Smoldering Round | common | 1 | Deal 4. Volatile 6. |
+| Thermite Charge | uncommon | 1 | Apply 3 Burn. Volatile 8. |
+| Echo Strike | uncommon | 1 | Deal 4. Echo. |
+| Resonant Shield | rare | 1 | Gain 4 Plating. Echo. |
+
+`CardView` ([src/ui/CardView.ts](src/ui/CardView.ts)) renders
+`ECHO` and `VOLATILE N` in the keyword badge strip alongside the
+existing INNATE / RETAIN / ETHEREAL / POWER tags. Volatile cards
+suppress the redundant `EXHAUST` tag since their routing already
+sends them there.
+
+### Slice 52 — Relic + Potion expansion
 Eight new relics, four new potions. Every relic ties to a specific
 combat verb instead of being a flat stat boost.
 

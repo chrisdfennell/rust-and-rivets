@@ -95,6 +95,15 @@ export interface CardDef {
   // BEFORE the regular hand-routing step so even ethereal curses sting
   // before they auto-exhaust.
   endOfTurnDamageInHand?: number;
+  // Volatile keyword (Slice 53). If the card is still in hand at end of
+  // turn, deal this much damage to a random alive enemy and exhaust the
+  // card (instead of discarding it). Pre-Strength/Vuln since it routes
+  // through `dealDamageToEnemy`, same pipeline as regular attacks.
+  volatileDamage?: number;
+  // Echo keyword (Slice 53). When played, the effects list resolves a
+  // second time before the card moves to discard/exhaust. Only one card
+  // gets played for counters like cardsPlayedThisTurn.
+  echo?: boolean;
 }
 
 export interface CardInstance {

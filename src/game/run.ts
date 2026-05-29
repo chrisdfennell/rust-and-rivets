@@ -198,7 +198,7 @@ export function enterNode(nodeId: string): void {
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
   } else if (node.kind === 'event') {
-    r.pendingEventId = pickEventId(Math.random);
+    r.pendingEventId = pickEventId(Math.random, r.act);
   }
   persist();
 }

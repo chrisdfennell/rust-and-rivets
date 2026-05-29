@@ -17,6 +17,8 @@ const card = (
     xCost?: boolean;
     unplayable?: boolean;
     endOfTurnDamageInHand?: number;
+    volatileDamage?: number;
+    echo?: boolean;
   }
 ): CardDef => ({ id, name, cost, target, description, effects, exhaust, rarity, ...flags });
 
@@ -486,7 +488,39 @@ export const CARDS: Record<string, CardDef> = {
     [{ kind: 'xDamage', amount: 10 }, { kind: 'applyWeak', amount: 4 }], true, 'legendary', { xCost: true }),
   'finalHammer+': card('finalHammer+', 'Final Hammer+', 0, 'enemy',
     'Deal 13 damage X times. Apply 5 Weak. Exhaust.',
-    [{ kind: 'xDamage', amount: 13 }, { kind: 'applyWeak', amount: 5 }], true, 'legendary', { xCost: true })
+    [{ kind: 'xDamage', amount: 13 }, { kind: 'applyWeak', amount: 5 }], true, 'legendary', { xCost: true }),
+
+  // ===== Slice 53 — Keyword cards =====
+  // Two new keywords: Volatile (cooks off at end of turn for damage to
+  // a random enemy) and Echo (effects resolve twice on play).
+
+  smolderingRound: card('smolderingRound', 'Smoldering Round', 1, 'enemy',
+    'Deal 4 damage. Volatile 6.',
+    [{ kind: 'damage', amount: 4 }], false, 'common', { volatileDamage: 6 }),
+  'smolderingRound+': card('smolderingRound+', 'Smoldering Round+', 1, 'enemy',
+    'Deal 6 damage. Volatile 8.',
+    [{ kind: 'damage', amount: 6 }], false, 'common', { volatileDamage: 8 }),
+
+  thermiteCharge: card('thermiteCharge', 'Thermite Charge', 1, 'enemy',
+    'Apply 3 Burn. Volatile 8.',
+    [{ kind: 'applyBurn', amount: 3 }], false, 'uncommon', { volatileDamage: 8 }),
+  'thermiteCharge+': card('thermiteCharge+', 'Thermite Charge+', 1, 'enemy',
+    'Apply 5 Burn. Volatile 11.',
+    [{ kind: 'applyBurn', amount: 5 }], false, 'uncommon', { volatileDamage: 11 }),
+
+  echoStrike: card('echoStrike', 'Echo Strike', 1, 'enemy',
+    'Deal 4 damage. Echo.',
+    [{ kind: 'damage', amount: 4 }], false, 'uncommon', { echo: true }),
+  'echoStrike+': card('echoStrike+', 'Echo Strike+', 1, 'enemy',
+    'Deal 6 damage. Echo.',
+    [{ kind: 'damage', amount: 6 }], false, 'uncommon', { echo: true }),
+
+  resonantShield: card('resonantShield', 'Resonant Shield', 1, 'self',
+    'Gain 4 Plating. Echo.',
+    [{ kind: 'plating', amount: 4 }], false, 'rare', { echo: true }),
+  'resonantShield+': card('resonantShield+', 'Resonant Shield+', 1, 'self',
+    'Gain 6 Plating. Echo.',
+    [{ kind: 'plating', amount: 6 }], false, 'rare', { echo: true })
 };
 
 export const STARTER_DECK: string[] = [
@@ -519,7 +553,9 @@ export const SHOP_POOL: string[] = [
   'suppressor', 'pneumaticSlam', 'coalScoop', 'ironFist',
   'twinHammers', 'tempest',
   'ironMaelstrom',
-  'finalHammer'
+  'finalHammer',
+  // Slice 53 — Keyword cards (Volatile / Echo)
+  'smolderingRound', 'thermiteCharge', 'echoStrike', 'resonantShield'
 ];
 
 export function isUpgradable(cardId: string): boolean {

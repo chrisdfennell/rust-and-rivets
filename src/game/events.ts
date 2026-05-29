@@ -15,6 +15,10 @@ export interface EventDef {
   title: string;
   body: string;
   choices: EventChoice[];
+  // Optional act restriction. When set, this event only appears on
+  // event-node rolls during the listed acts. Omitted = act-agnostic
+  // (the original behavior for the first 30 events).
+  acts?: number[];
 }
 
 function losePlayerHull(run: RunState, amount: number) {
@@ -1152,6 +1156,507 @@ const CRACKED_ENGINEER: EventDef = {
   ]
 };
 
+// ===== Slice 53 — Act-themed events =====
+// 12 new events split between Act 4 (Brass Cathedral, clockwork cult)
+// and Act 5 (World-Forge, molten depths). Each is tagged via the
+// `acts` field so pickEventId only surfaces them in the right act.
+
+// ----- Act 4: Brass Cathedral -----
+
+// Removes a status/curse card from the deck. Returns the removed name
+// or null if nothing matched. Used by Confessional / similar.
+const STATUS_CARD_IDS = new Set(['slagGlob', 'shrapnel', 'heatDamage', 'oldRust']);
+function removeOneStatusCard(run: RunState): string | null {
+  const idx = run.player.deck.findIndex((id) => STATUS_CARD_IDS.has(id));
+  if (idx < 0) return null;
+  const removed = run.player.deck.splice(idx, 1)[0];
+  return cardName(removed);
+}
+
+const CONFESSIONAL: EventDef = {
+  id: 'confessional',
+  title: 'BRASS CONFESSIONAL',
+  body:
+    'A clockwork priest opens its cabinet. Gears grind softly inside. ' +
+    'A hand-painted sign reads: ONE SIN, ONE COIN.',
+  acts: [4],
+  choices: [
+    {
+      label: 'CONFESS — 20 Scrap',
+      description: 'Remove a status / curse card from your deck.',
+      enabled: (run) => run.scrap >= 20 && run.player.deck.some((id) => STATUS_CARD_IDS.has(id)),
+      resolve: (run) => {
+        if (run.scrap < 20) return 'Not enough scrap for the tithe.';
+        const name = removeOneStatusCard(run);
+        if (!name) return 'The priest finds no fault in your gear.';
+        run.scrap -= 20;
+        return `-20 Scrap. ${name} burns out of the cabinet.`;
+      }
+    },
+    {
+      label: 'TITHE — 30 Scrap',
+      description: 'Heal 12 Hull from the priest\'s ministrations.',
+      enabled: (run) => run.scrap >= 30,
+      resolve: (run) => {
+        if (run.scrap < 30) return 'The priest waves you off — coin first.';
+        const healed = gainPlayerHull(run, 12);
+        run.scrap -= 30;
+        return `-30 Scrap. +${healed} Hull.`;
+      }
+    },
+    {
+      label: 'WALK PAST',
+      description: 'Pilgrims confess. You don\'t.',
+      resolve: () => 'You leave the cabinet humming.'
+    }
+  ]
+};
+
+const OFFERING_BRAZIER: EventDef = {
+  id: 'offeringBrazier',
+  title: 'OFFERING BRAZIER',
+  body:
+    'A wide brass bowl of green flame stands at a crossroads. Pilgrims ' +
+    'feed it old cards — and pluck other things back out.',
+  acts: [4],
+  choices: [
+    {
+      label: 'OFFER A CARD',
+      description: 'Remove a random card. Gain a random Power card.',
+      enabled: (run) => run.player.deck.length > 1,
+      resolve: (run, rng) => {
+        if (run.player.deck.length <= 1) return 'The flame won\'t accept your last card.';
+        const idx = Math.floor(rng() * run.player.deck.length);
+        const burned = run.player.deck.splice(idx, 1)[0];
+        const powers = SHOP_POOL.filter((id) => CARDS[id].type === 'power');
+        if (powers.length === 0) {
+          // Refund and bail
+          run.player.deck.push(burned);
+          return 'The flame sputters out. Your card falls back.';
+        }
+        const id = powers[Math.floor(rng() * powers.length)];
+        run.player.deck.push(id);
+        return `${cardName(burned)} burns to brass. The flame answers: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'PLUCK A COIN',
+      description: '-6 Hull from the green flame. +35 Scrap.',
+      resolve: (run) => {
+        losePlayerHull(run, 6);
+        run.scrap += 35;
+        return '-6 Hull. +35 Scrap from the brazier floor.';
+      }
+    },
+    {
+      label: 'WALK BY',
+      description: 'You owe no offering.',
+      resolve: () => 'You step around the green light.'
+    }
+  ]
+};
+
+const TEMPERED_HYMN: EventDef = {
+  id: 'temperedHymn',
+  title: 'TEMPERED HYMN',
+  body:
+    'A choir of brass crawlers hums in the eaves of a roofless chapel. ' +
+    'The harmony makes your wiring sing.',
+  acts: [4],
+  choices: [
+    {
+      label: 'LISTEN',
+      description: 'Upgrade a random card in your deck.',
+      enabled: (run) => run.player.deck.some(isUpgradable),
+      resolve: (run, rng) => {
+        const upgradable = run.player.deck
+          .map((id, i) => (isUpgradable(id) ? i : -1))
+          .filter((i) => i >= 0);
+        if (upgradable.length === 0) return 'The hymn finds nothing in your gear to sharpen.';
+        const pick = upgradable[Math.floor(rng() * upgradable.length)];
+        const oldId = run.player.deck[pick];
+        const newId = upgradeCardId(oldId);
+        run.player.deck[pick] = newId;
+        return `${cardName(oldId)} → ${cardName(newId)}.`;
+      }
+    },
+    {
+      label: 'CHANT BACK',
+      description: '+10 Hull. +5 max Hull.',
+      resolve: (run) => {
+        run.player.maxHull += 5;
+        const healed = gainPlayerHull(run, 10 + 5);
+        return `+5 max Hull. +${healed} Hull restored.`;
+      }
+    },
+    {
+      label: 'PLUG YOUR EARS',
+      description: 'Some hymns get under the hull.',
+      resolve: () => 'You hum a different tune and walk past.'
+    }
+  ]
+};
+
+const VESTIGIAL_BELL: EventDef = {
+  id: 'vestigialBell',
+  title: 'VESTIGIAL BELL',
+  body:
+    'A bronze bell the size of your mech\'s cabin hangs from a brass ' +
+    'frame. The rope is frayed. The bell is older than the road.',
+  acts: [4],
+  choices: [
+    {
+      label: 'RING IT',
+      description: '-8 Hull from the shockwave. Gain a rare card.',
+      resolve: (run) => {
+        losePlayerHull(run, 8);
+        const id = pickRewardCards(1, true)[0];
+        if (id) run.player.deck.push(id);
+        return `-8 Hull. The bell echoes through your wiring: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'EXAMINE',
+      description: '+1 max Steam. (Rare boost.)',
+      resolve: (run) => {
+        run.player.maxSteam = (run.player.maxSteam ?? 3) + 1;
+        return '+1 max Steam. The bell\'s tone rings in your boiler.';
+      }
+    },
+    {
+      label: 'LEAVE THE ROPE',
+      description: 'Old bells stay old for a reason.',
+      resolve: () => 'You leave the rope swinging.'
+    }
+  ]
+};
+
+const PILGRIMS_MARCH: EventDef = {
+  id: 'pilgrimsMarch',
+  title: 'PILGRIMS\' MARCH',
+  body:
+    'A long procession of clockwork pilgrims winds toward the Cathedral. ' +
+    'They wave you in. The path is harder; the company is generous.',
+  acts: [4],
+  choices: [
+    {
+      label: 'JOIN THEM',
+      description: '-8 Hull on the march. Gain 2 random cards.',
+      resolve: (run) => {
+        losePlayerHull(run, 8);
+        const ids = pickRewardCards(2, true);
+        for (const id of ids) run.player.deck.push(id);
+        return `-8 Hull. Pilgrim gifts: ${ids.map(cardName).join(', ')}.`;
+      }
+    },
+    {
+      label: 'TRADE WITH THEM',
+      description: '+50 Scrap from the procession\'s wares.',
+      resolve: (run) => {
+        run.scrap += 50;
+        return '+50 Scrap. The procession passes singing.';
+      }
+    },
+    {
+      label: 'WALK ALONE',
+      description: 'Pilgrims have their road. You have yours.',
+      resolve: () => 'You watch them pass and continue alone.'
+    }
+  ]
+};
+
+const CLOCKWORK_ACOLYTE: EventDef = {
+  id: 'clockworkAcolyte',
+  title: 'CLOCKWORK ACOLYTE',
+  body:
+    'A small brass priest tilts its head at you. Inside its cabinet are ' +
+    'a stack of inscribed tomes. Brass tongue, brass voice.',
+  acts: [4],
+  choices: [
+    {
+      label: 'BUY A TOME — 55 Scrap',
+      description: 'Acquire a random Power card.',
+      enabled: (run) => run.scrap >= 55,
+      resolve: (run, rng) => {
+        if (run.scrap < 55) return 'Not enough scrap.';
+        const powers = SHOP_POOL.filter((id) => CARDS[id].type === 'power');
+        if (powers.length === 0) return 'The cabinet is empty.';
+        run.scrap -= 55;
+        const id = powers[Math.floor(rng() * powers.length)];
+        run.player.deck.push(id);
+        return `-55 Scrap. Inscribed: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'RECEIVE A BLESSING',
+      description: 'Free. Gain a common card.',
+      resolve: (run) => {
+        const id = pickRewardCards(1, false)[0];
+        if (id) run.player.deck.push(id);
+        return `The acolyte taps your hull. Gift: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'WALK PAST',
+      description: 'Brass tongues are not for you.',
+      resolve: () => 'You bow and pass on.'
+    }
+  ]
+};
+
+// ----- Act 5: World-Forge -----
+
+const MOLTEN_VEIN: EventDef = {
+  id: 'moltenVein',
+  title: 'MOLTEN VEIN',
+  body:
+    'A glowing red river runs across the path. Heat shimmers above it. ' +
+    'A pilgrim\'s anvil rests at the edge.',
+  acts: [5],
+  choices: [
+    {
+      label: 'FORGE A CARD',
+      description: '-8 Hull from the heat. Upgrade a random card in your deck.',
+      enabled: (run) => run.player.deck.some(isUpgradable),
+      resolve: (run, rng) => {
+        const upgradable = run.player.deck
+          .map((id, i) => (isUpgradable(id) ? i : -1))
+          .filter((i) => i >= 0);
+        if (upgradable.length === 0) return 'Your deck has nothing left to temper.';
+        losePlayerHull(run, 8);
+        const pick = upgradable[Math.floor(rng() * upgradable.length)];
+        const oldId = run.player.deck[pick];
+        const newId = upgradeCardId(oldId);
+        run.player.deck[pick] = newId;
+        return `-8 Hull. ${cardName(oldId)} → ${cardName(newId)}.`;
+      }
+    },
+    {
+      label: 'WADE FOR ORE',
+      description: '-12 Hull. +60 Scrap from the vein bed.',
+      resolve: (run) => {
+        losePlayerHull(run, 12);
+        run.scrap += 60;
+        return '-12 Hull. +60 Scrap. Your plating sizzles for an hour.';
+      }
+    },
+    {
+      label: 'LEAVE',
+      description: 'Some rivers don\'t want crossing.',
+      resolve: () => 'You walk the long way around.'
+    }
+  ]
+};
+
+const ANCIENT_ANVIL: EventDef = {
+  id: 'ancientAnvil',
+  title: 'ANCIENT ANVIL',
+  body:
+    'A black iron anvil sits in the middle of the road, untouched by ' +
+    'rust. The brass plaque is unreadable. The hammer rests beside it.',
+  acts: [5],
+  choices: [
+    {
+      label: 'HAMMER A CARD',
+      description: 'Free. Upgrade a random card in your deck.',
+      enabled: (run) => run.player.deck.some(isUpgradable),
+      resolve: (run, rng) => {
+        const upgradable = run.player.deck
+          .map((id, i) => (isUpgradable(id) ? i : -1))
+          .filter((i) => i >= 0);
+        if (upgradable.length === 0) return 'The anvil rings on nothing — no card to sharpen.';
+        const pick = upgradable[Math.floor(rng() * upgradable.length)];
+        const oldId = run.player.deck[pick];
+        const newId = upgradeCardId(oldId);
+        run.player.deck[pick] = newId;
+        return `The hammer rings. ${cardName(oldId)} → ${cardName(newId)}.`;
+      }
+    },
+    {
+      label: 'BREAK THE ANVIL',
+      description: '+80 Scrap. -3 max Hull from the recoil.',
+      resolve: (run) => {
+        run.player.maxHull = Math.max(1, run.player.maxHull - 3);
+        run.player.hull = Math.min(run.player.hull, run.player.maxHull);
+        run.scrap += 80;
+        return '-3 max Hull. +80 Scrap. The anvil splits clean.';
+      }
+    },
+    {
+      label: 'WALK PAST',
+      description: 'Anvils on the road are warnings.',
+      resolve: () => 'You step around the iron.'
+    }
+  ]
+};
+
+const CRUCIBLE_TEST: EventDef = {
+  id: 'crucibleTest',
+  title: 'CRUCIBLE TEST',
+  body:
+    'A circle of stones rings a low pit of fire. A scorched plaque names ' +
+    'this the Crucible of Pilots. Step in, step out.',
+  acts: [5],
+  choices: [
+    {
+      label: 'STAND IN THE FIRE',
+      description: '-15 Hull. Gain a random Relic.',
+      enabled: (run) => pickRelicFor(new Set(run.relics)) !== null,
+      resolve: (run) => {
+        losePlayerHull(run, 15);
+        const id = grantRelic(run);
+        if (!id) return '-15 Hull. The crucible has nothing left to give you.';
+        return `-15 Hull. Bolted to your frame: ${RELICS[id]?.name ?? id}.`;
+      }
+    },
+    {
+      label: 'WALK THE RIM',
+      description: '+1 random potion.',
+      enabled: (run) => run.potions.some((p) => p === null),
+      resolve: (run, rng) => {
+        const pid = pickRandomPotionId(rng);
+        const placed = tryAddPotion(run, pid);
+        return placed
+          ? `Bottled from the heat: ${potionName(pid)}.`
+          : 'Belt full — the heat slides off you.';
+      }
+    },
+    {
+      label: 'LEAVE',
+      description: 'Pilots don\'t have to prove anything.',
+      resolve: () => 'You walk the long way around.'
+    }
+  ]
+};
+
+const EMBER_PROPHET: EventDef = {
+  id: 'emberProphet',
+  title: 'EMBER PROPHET',
+  body:
+    'A figure of glowing coals sits crosslegged in your path, eyes blank. ' +
+    '"Choose your inscription, pilot. I will see it done."',
+  acts: [5],
+  choices: [
+    {
+      label: 'INSCRIBE A POWER',
+      description: 'Gain a random Power card.',
+      resolve: (run, rng) => {
+        const ids = SHOP_POOL.filter((id) => CARDS[id].type === 'power');
+        if (ids.length === 0) return 'The prophet shakes their head.';
+        const id = ids[Math.floor(rng() * ids.length)];
+        run.player.deck.push(id);
+        return `Inscribed: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'INSCRIBE AN AOE',
+      description: 'Gain a random AoE card.',
+      resolve: (run, rng) => {
+        const ids = SHOP_POOL.filter((id) => CARDS[id].target === 'allEnemies');
+        if (ids.length === 0) return 'The prophet shakes their head.';
+        const id = ids[Math.floor(rng() * ids.length)];
+        run.player.deck.push(id);
+        return `Inscribed: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'INSCRIBE A LEGENDARY',
+      description: 'Gain a random legendary card. -10 Hull from the cost.',
+      resolve: (run, rng) => {
+        const ids = SHOP_POOL.filter((id) => CARDS[id].rarity === 'legendary');
+        if (ids.length === 0) return 'The prophet shakes their head.';
+        losePlayerHull(run, 10);
+        const id = ids[Math.floor(rng() * ids.length)];
+        run.player.deck.push(id);
+        return `-10 Hull. Inscribed: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'REFUSE',
+      description: 'You write your own gear.',
+      resolve: () => 'The prophet nods slowly and dims.'
+    }
+  ]
+};
+
+const FORGE_ENGINE: EventDef = {
+  id: 'forgeEngine',
+  title: 'FORGE ENGINE',
+  body:
+    'A massive idle engine looms in a smokehouse. The boiler is cold. ' +
+    'You could light it — or strip it for parts.',
+  acts: [5],
+  choices: [
+    {
+      label: 'STOKE IT',
+      description: '-8 Hull. Gain the Power Cell relic if you don\'t have it.',
+      enabled: (run) => !run.relics.includes('powerCell'),
+      resolve: (run) => {
+        losePlayerHull(run, 8);
+        if (run.relics.includes('powerCell')) return '-8 Hull. The engine is already yours, in a way.';
+        run.relics.push('powerCell');
+        RELICS['powerCell']?.onPickup?.(run);
+        return '-8 Hull. The engine roars. Bolted on: Power Cell.';
+      }
+    },
+    {
+      label: 'STRIP IT',
+      description: '+60 Scrap from the boiler plates.',
+      resolve: (run) => {
+        run.scrap += 60;
+        return '+60 Scrap. The engine sighs and goes cold.';
+      }
+    },
+    {
+      label: 'LEAVE',
+      description: 'Don\'t wake what\'s sleeping.',
+      resolve: () => 'You leave the smokehouse to its dust.'
+    }
+  ]
+};
+
+const WORLD_SHARD: EventDef = {
+  id: 'worldShard',
+  title: 'WORLD-SHARD',
+  body:
+    'A fragment of glowing iron, the size of a fist, sits unblinking on ' +
+    'a stone. The road bends around it. Pilgrims rumor it is a piece of ' +
+    'the World-Forge itself.',
+  acts: [5],
+  choices: [
+    {
+      label: 'TOUCH IT',
+      description: '50%: heal to full Hull. 50%: -20 Hull from the heat.',
+      resolve: (run, rng) => {
+        if (rng() < 0.5) {
+          const healed = gainPlayerHull(run, run.player.maxHull);
+          return `The shard pulses. +${healed} Hull (full).`;
+        }
+        losePlayerHull(run, 20);
+        return '-20 Hull. The shard answers no.';
+      }
+    },
+    {
+      label: 'EMBED IT',
+      description: 'Gain a random Legendary card. -5 max Hull permanently.',
+      resolve: (run, rng) => {
+        const ids = SHOP_POOL.filter((id) => CARDS[id].rarity === 'legendary');
+        if (ids.length === 0) return 'The shard has no inscription for you.';
+        run.player.maxHull = Math.max(1, run.player.maxHull - 5);
+        run.player.hull = Math.min(run.player.hull, run.player.maxHull);
+        const id = ids[Math.floor(rng() * ids.length)];
+        run.player.deck.push(id);
+        return `-5 max Hull. The shard sinks in. Inscribed: ${cardName(id)}.`;
+      }
+    },
+    {
+      label: 'WALK PAST',
+      description: 'Shards like that aren\'t for pilots.',
+      resolve: () => 'You give it a wide berth.'
+    }
+  ]
+};
+
 export const ALL_EVENTS: EventDef[] = [
   SALVAGED_MECH,
   WANDERING_TRADER,
@@ -1183,13 +1688,33 @@ export const ALL_EVENTS: EventDef[] = [
   BOILER_SPIRIT,
   OLD_SOLDIERS_CACHE,
   DRONE_SWARM,
-  CRACKED_ENGINEER
+  CRACKED_ENGINEER,
+  // Slice 53 — Act 4 themed (Brass Cathedral)
+  CONFESSIONAL,
+  OFFERING_BRAZIER,
+  TEMPERED_HYMN,
+  VESTIGIAL_BELL,
+  PILGRIMS_MARCH,
+  CLOCKWORK_ACOLYTE,
+  // Slice 53 — Act 5 themed (World-Forge)
+  MOLTEN_VEIN,
+  ANCIENT_ANVIL,
+  CRUCIBLE_TEST,
+  EMBER_PROPHET,
+  FORGE_ENGINE,
+  WORLD_SHARD
 ];
 
 export const EVENTS_BY_ID: Record<string, EventDef> = Object.fromEntries(
   ALL_EVENTS.map((e) => [e.id, e])
 );
 
-export function pickEventId(rng: () => number): string {
-  return ALL_EVENTS[Math.floor(rng() * ALL_EVENTS.length)].id;
+// Picks an event appropriate for the current act. Events without an
+// `acts` field can show up in any act; act-tagged events only appear
+// when `act` is in their list. Falls back to the unrestricted pool if
+// somehow no events match (e.g. future act value above any tag).
+export function pickEventId(rng: () => number, act: number = 1): string {
+  const matches = ALL_EVENTS.filter((e) => !e.acts || e.acts.includes(act));
+  const pool = matches.length > 0 ? matches : ALL_EVENTS;
+  return pool[Math.floor(rng() * pool.length)].id;
 }

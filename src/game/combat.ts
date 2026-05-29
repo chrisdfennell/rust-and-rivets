@@ -720,6 +720,22 @@ export function playCard(state: CombatState, uid: number, targetIndex?: number):
     applyEffect(state, eff);
     if (state.phase === 'victory' || state.phase === 'defeat') break;
   }
+  // Echo keyword: resolve the same effects list a second time. Counts
+  // as ONE card played (cardsPlayedThisTurn ticks once below), but the
+  // damage / status hits land twice. Bail on victory/defeat between
+  // passes so a killing-blow first pass doesn't trigger a free 2nd hit.
+  // Phase reads use a widened string to avoid TS narrowing the literal
+  // type after the first guard (same trick the X-cost path uses).
+  if (card.def.echo) {
+    const phaseAfterFirst: string = state.phase;
+    if (phaseAfterFirst === 'playerTurn') {
+      for (const eff of card.def.effects) {
+        applyEffect(state, eff);
+        const phaseNow: string = state.phase;
+        if (phaseNow === 'victory' || phaseNow === 'defeat') break;
+      }
+    }
+  }
 
   const indexInTurn = p.cardsPlayedThisTurn;
   p.cardsPlayedThisTurn += 1;
@@ -765,15 +781,39 @@ export function endTurn(state: CombatState, hooks?: EndTurnHooks) {
       return;
     }
   }
+  // Volatile keyword: cards left in hand fire their volatileDamage at a
+  // random alive enemy. The hit goes through dealDamageToEnemy (so it
+  // benefits from Strength / Vuln / Weak) and the card itself routes to
+  // exhaust below.
+  {
+    const cardsHere = p.hand.slice();
+    const volatileCtx = ctx(state);
+    for (const card of cardsHere) {
+      const dmg = card.def.volatileDamage ?? 0;
+      if (dmg <= 0) continue;
+      const alive = aliveEnemies(state);
+      if (alive.length === 0) break;
+      const target = alive[Math.floor(Math.random() * alive.length)];
+      const idx = state.enemies.indexOf(target);
+      logTo(state, `${card.def.name} cooks off.`);
+      dealDamageToEnemy(volatileCtx, dmg, idx);
+      const phaseNow: string = state.phase;
+      if (phaseNow === 'victory' || phaseNow === 'defeat') break;
+    }
+  }
+
   // Cards in hand at end of turn route by keyword:
   //  - retain → stay in hand
+  //  - volatile → exhaust (after its damage fired above)
   //  - ethereal → exhaust
   //  - otherwise → discard
   // Retain wins over ethereal if a card somehow has both (retain is the
-  // player-friendly outcome).
+  // player-friendly outcome). Volatile takes priority over discard so it
+  // never cycles back into the deck.
   const kept: CardInstance[] = [];
   for (const card of p.hand) {
     if (card.def.retain) kept.push(card);
+    else if (card.def.volatileDamage) p.exhaust.push(card);
     else if (card.def.ethereal) p.exhaust.push(card);
     else p.discard.push(card);
   }
