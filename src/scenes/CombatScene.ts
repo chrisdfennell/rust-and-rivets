@@ -85,6 +85,7 @@ export class CombatScene extends Phaser.Scene {
   private handLayer!: Phaser.GameObjects.Container;
   private cardViews: CardView[] = [];
   private overlay!: Phaser.GameObjects.Container;
+  private overlayAdvance: (() => void) | null = null;
   private endHandled = false;
   private endTurnBg!: Phaser.GameObjects.Rectangle;
   private endTurnTxt!: Phaser.GameObjects.Text;
@@ -128,6 +129,7 @@ export class CombatScene extends Phaser.Scene {
     // Phaser keeps a single instance of each scene across scene.start() calls,
     // so class-field initializers don't re-run. Reset per-combat state here.
     this.endHandled = false;
+    this.overlayAdvance = null;
     this.cardViews = [];
     this.endTurnPending = false;
     this.endTurnTimer = null;
@@ -1423,13 +1425,13 @@ export class CombatScene extends Phaser.Scene {
       if (run.result === 'victory') {
         // Final-act boss down — show the run-summary screen instead of routing back to the map.
         nextScene = 'RunSummary';
-        continueLine = 'Press SPACE for the run summary.';
+        continueLine = 'Tap to continue.';
       } else if (run.awaitingInterAct) {
         nextScene = 'InterAct';
-        continueLine = 'Press SPACE to march on.';
+        continueLine = 'Tap to march on.';
       } else {
         nextScene = 'Reward';
-        continueLine = 'Press SPACE to claim rewards.';
+        continueLine = 'Tap to claim rewards.';
       }
       const rewardLine = reward > 0 ? ` +${reward} scrap.` : '';
       const titleEnemyName =
@@ -1440,7 +1442,7 @@ export class CombatScene extends Phaser.Scene {
     } else if (s.phase === 'defeat' && !this.endHandled) {
       this.endHandled = true;
       failCombat(s.player.hull, this.collectCombatStats());
-      this.showOverlay('DEFEAT', 'Your mech is scrap. Press SPACE for the run summary.', COLORS.danger);
+      this.showOverlay('DEFEAT', 'Your mech is scrap. Tap to continue.', COLORS.danger);
       sfx.defeat();
       this.bindContinue('RunSummary');
     }
@@ -1457,9 +1459,15 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private bindContinue(nextScene: string) {
-    if (!this.input.keyboard) return;
-    this.input.keyboard.removeAllListeners('keydown-SPACE');
-    this.input.keyboard.once('keydown-SPACE', () => this.scene.start(nextScene));
+    const advance = () => this.scene.start(nextScene);
+    // SPACE still works on desktop, but the overlay's dim rectangle is
+    // also interactive (see showOverlay) so phones / trackpads can just
+    // tap anywhere on the dimmed screen to continue.
+    if (this.input.keyboard) {
+      this.input.keyboard.removeAllListeners('keydown-SPACE');
+      this.input.keyboard.once('keydown-SPACE', advance);
+    }
+    this.overlayAdvance = advance;
   }
 
   private layoutHand() {
@@ -1648,6 +1656,10 @@ export class CombatScene extends Phaser.Scene {
     this.overlay.removeAll(true);
     const { width, height } = this.scale;
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.65);
+    // Tap anywhere on the dim to advance. Mirrors the SPACE binding so
+    // phone players have a reachable affordance.
+    dim.setInteractive({ useHandCursor: true });
+    dim.on('pointerdown', () => this.overlayAdvance?.());
     const t = this.add.text(width / 2, height / 2 - 20, title, {
       fontFamily: FONTS.display,
       fontSize: '64px',
@@ -1657,7 +1669,9 @@ export class CombatScene extends Phaser.Scene {
     const s = this.add.text(width / 2, height / 2 + 40, sub, {
       fontFamily: FONTS.body,
       fontSize: '16px',
-      color: hex(COLORS.bone)
+      color: hex(COLORS.bone),
+      align: 'center',
+      wordWrap: { width: Math.min(width - 40, 600) }
     }).setOrigin(0.5);
     this.overlay.add([dim, t, s]);
     this.overlay.setVisible(true);
