@@ -26,10 +26,17 @@ export class TitleScene extends Phaser.Scene {
     preloadMusic(this);
   }
 
+  // Slice 57 — debounce timer for resize-triggered scene restart.
+  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
   create() {
     startMusic(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
+    // Slice 57 — portrait flag drives the responsive layout below.
+    // Phaser's RESIZE mode hands us the actual viewport, so flipping a
+    // phone from landscape to portrait makes width < height here.
+    const portrait = height > width;
 
     // Backdrop: smokestacks silhouette
     const bg = this.add.graphics();
@@ -38,64 +45,58 @@ export class TitleScene extends Phaser.Scene {
     bg.fillStyle(0x14110f);
     bg.fillRect(0, height * 0.6, width, height * 0.4);
 
-    // Distant smokestacks with rising smoke
+    // Distant smokestacks with rising smoke. Spacing adapts so portrait
+    // / narrow viewports get fewer, evenly-spread stacks instead of a
+    // few cutting through the visible area.
     bg.fillStyle(0x2a2018);
-    for (let i = 0; i < 9; i++) {
-      const x = 60 + i * 140;
+    const stackCount = Math.max(5, Math.floor(width / 140));
+    const stackSpacing = width / stackCount;
+    const stackHeights: number[] = [];
+    for (let i = 0; i < stackCount; i++) {
+      const x = stackSpacing / 2 + i * stackSpacing;
       const h = 60 + ((i * 37) % 90);
-      bg.fillRect(x, height * 0.6 - h, 18, h);
-      bg.fillRect(x - 4, height * 0.6 - h - 6, 26, 6);
+      stackHeights.push(h);
+      bg.fillRect(x - 9, height * 0.6 - h, 18, h);
+      bg.fillRect(x - 13, height * 0.6 - h - 6, 26, 6);
     }
-    // Faint smoke puffs
     bg.fillStyle(COLORS.boneDim, 0.08);
-    for (let i = 0; i < 9; i++) {
-      const x = 60 + i * 140 + 8;
-      const baseY = height * 0.6 - (60 + ((i * 37) % 90)) - 30;
+    for (let i = 0; i < stackCount; i++) {
+      const x = stackSpacing / 2 + i * stackSpacing + 4;
+      const baseY = height * 0.6 - stackHeights[i] - 30;
       bg.fillCircle(x, baseY, 18);
       bg.fillCircle(x + 12, baseY - 20, 14);
       bg.fillCircle(x - 8, baseY - 36, 10);
     }
 
-    // Slice 55 — records panel in the top-right corner. Tiny, info-dense,
-    // shows the player's lifetime stats so the title screen reads as a
-    // hub instead of a blank gate.
+    // Records panel in the top-right corner.
     this.buildRecordsPanel(width - 30, 30);
 
-    // Slice 57 — portrait-orientation hint. The game's design canvas is
-    // 16:9 landscape; on a portrait phone Phaser's FIT mode shrinks it
-    // dramatically and adds wide letterbox bars. Surface a soft rotate
-    // hint so first-time mobile players know to flip the phone. Driven
-    // by the BROWSER viewport (not the design canvas) so it tracks the
-    // actual device orientation.
-    this.refreshOrientationHint();
-    this.scale.on('resize', this.refreshOrientationHint, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off('resize', this.refreshOrientationHint, this);
-    });
-
-    // Title
+    // Title — scales with viewport so a narrow phone screen doesn't
+    // get a title that clips off the side. Caps at the original 72px
+    // on a desktop window.
+    const titleSize = Math.min(72, Math.max(36, Math.floor(width / 18)));
+    const subtitleSize = Math.min(16, Math.max(11, Math.floor(width / 70)));
     this.add
-      .text(width / 2, height * 0.28, 'RUST & RIVETS', {
+      .text(width / 2, height * (portrait ? 0.14 : 0.28), 'RUST & RIVETS', {
         fontFamily: FONTS.display,
-        fontSize: '72px',
+        fontSize: `${titleSize}px`,
         color: hex(COLORS.brass),
         fontStyle: 'bold'
       })
       .setOrigin(0.5);
-
     this.add
-      .text(width / 2, height * 0.28 + 60, 'a dieselpunk deckbuilder', {
+      .text(width / 2, height * (portrait ? 0.14 : 0.28) + titleSize * 0.85, 'a dieselpunk deckbuilder', {
         fontFamily: FONTS.body,
-        fontSize: '16px',
+        fontSize: `${subtitleSize}px`,
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5);
 
-    // Run summary if save exists
+    // Saved-run summary. Positioned higher in portrait so the button
+    // stack below has room.
     const haveSave = hasSavedRun();
+    const summaryY = height * (portrait ? 0.26 : 0.52);
     if (haveSave) {
-      // We need a peek without committing to load. Easiest: load it now and
-      // overwrite if the user picks NEW RUN.
       const peeked = loadSavedRun();
       if (peeked) {
         const visited = peeked.visitedNodeIds.size;
@@ -105,7 +106,7 @@ export class TitleScene extends Phaser.Scene {
           peeked.awaitingInterAct ? `Act ${peeked.act} cleared — choose a boon.` :
           `Act ${peeked.act}, Floor ${this.deepestVisitedFloor(peeked.visitedNodeIds, peeked.map)} of ${peeked.map.floors - 1}`;
         this.add
-          .text(width / 2, height * 0.52,
+          .text(width / 2, summaryY,
             `SAVED RUN\nHull ${peeked.player.hull}/${peeked.player.maxHull}   ` +
             `Scrap ${peeked.scrap}   Deck ${peeked.player.deck.length}   Cleared ${visited}\n` +
             resultLine,
@@ -120,10 +121,10 @@ export class TitleScene extends Phaser.Scene {
       }
     }
 
-    // Meta-progression banner (workshop points)
+    // Workshop points banner.
     const meta = loadMeta();
     this.add
-      .text(width / 2, height * 0.62, `WORKSHOP POINTS  ${meta.points}`, {
+      .text(width / 2, height * (portrait ? 0.34 : 0.62), `WORKSHOP POINTS  ${meta.points}`, {
         fontFamily: FONTS.display,
         fontSize: '16px',
         color: hex(meta.points > 0 ? COLORS.steam : COLORS.boneDim),
@@ -131,161 +132,130 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Ascension selector — only shown once the player has at least one
-    // tier unlocked. Tap < / > to cycle through 0..highestAscension.
+    // Ascension selector.
     if (meta.highestAscension > 0) {
-      this.buildAscensionSelector(width / 2, height * 0.69, meta);
+      this.buildAscensionSelector(width / 2, height * (portrait ? 0.39 : 0.69), meta);
     }
 
-    // Primary buttons: CONTINUE / NEW RUN / WORKSHOP
-    const primaryY = height * 0.75;
-    const continueBtn = new Button(
-      this,
-      width / 2 - 240,
-      primaryY,
-      'CONTINUE',
-      () => this.continueRun(),
-      { width: 210, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
-    );
-    continueBtn.setEnabled(haveSave);
-    this.add.existing(continueBtn);
-
-    const newRunBtn = new Button(
-      this,
-      width / 2,
-      primaryY,
-      'NEW RUN',
-      () => this.newRun(),
-      { width: 210, height: 56, fontSize: 18 }
-    );
-    this.add.existing(newRunBtn);
-
-    const workshopBtn = new Button(
-      this,
-      width / 2 + 240,
-      primaryY,
-      'WORKSHOP',
-      () => this.openWorkshop(),
-      { width: 210, height: 56, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }
-    );
-    this.add.existing(workshopBtn);
-
-    if (!haveSave) {
-      this.add
-        .text(width / 2 - 240, primaryY + 36, 'No saved run found.', {
-          fontFamily: FONTS.body,
-          fontSize: '11px',
-          color: hex(COLORS.boneDim)
-        })
-        .setOrigin(0.5);
+    // ===== Buttons. Landscape uses the original 3-across rows; portrait
+    // stacks them vertically so each button stays touch-friendly. =====
+    const cx = width / 2;
+    const btnW = portrait ? Math.min(width - 40, 320) : 210;
+    const btnH = 56;
+    if (portrait) {
+      // Vertical stack: CONTINUE / NEW RUN / WORKSHOP / LIBRARY / EXPORT /
+      // IMPORT / MUSIC / SFX. Each row 64 px tall (button + 8 gap).
+      let y = height * 0.46;
+      const continueBtn = new Button(this, cx, y, 'CONTINUE', () => this.continueRun(),
+        { width: btnW, height: btnH, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
+      continueBtn.setEnabled(haveSave);
+      this.add.existing(continueBtn);
+      y += 64;
+      this.add.existing(new Button(this, cx, y, 'NEW RUN', () => this.newRun(),
+        { width: btnW, height: btnH, fontSize: 18 }));
+      y += 64;
+      this.add.existing(new Button(this, cx, y, 'WORKSHOP', () => this.openWorkshop(),
+        { width: btnW, height: btnH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      y += 64;
+      this.add.existing(new Button(this, cx, y, 'LIBRARY',
+        () => {
+          this.cameras.main.fadeOut(180, 20, 17, 15);
+          this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
+        },
+        { width: btnW, height: 44, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      y += 52;
+      // EXPORT and IMPORT side-by-side, half-width each (or full-width
+      // when the viewport is too narrow even for that).
+      const halfW = btnW > 200 ? (btnW - 12) / 2 : btnW;
+      if (halfW < 140) {
+        // Two rows
+        this.add.existing(new Button(this, cx, y, 'EXPORT SAVE', () => this.doExport(),
+          { width: btnW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+        y += 52;
+        const importBtn = new Button(this, cx, y, 'IMPORT SAVE', () => this.doImport(),
+          { width: btnW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+        this.add.existing(importBtn);
+        this.setupFileDrop(importBtn);
+        y += 52;
+      } else {
+        this.add.existing(new Button(this, cx - halfW / 2 - 6, y, 'EXPORT', () => this.doExport(),
+          { width: halfW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+        const importBtn = new Button(this, cx + halfW / 2 + 6, y, 'IMPORT', () => this.doImport(),
+          { width: halfW, height: 44, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+        this.add.existing(importBtn);
+        this.setupFileDrop(importBtn);
+        y += 52;
+      }
+      const halfMute = btnW > 200 ? (btnW - 12) / 2 : btnW;
+      this.makeMuteToggle(cx - halfMute / 2 - 6, y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), halfMute);
+      this.makeMuteToggle(cx + halfMute / 2 + 6, y, 'SFX', isSfxMuted, (m) => setSfxMuted(m), halfMute);
+    } else {
+      // ===== Landscape (original layout, slightly de-magicked) =====
+      const primaryY = height * 0.75;
+      const continueBtn = new Button(this, cx - 240, primaryY, 'CONTINUE', () => this.continueRun(),
+        { width: 210, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
+      continueBtn.setEnabled(haveSave);
+      this.add.existing(continueBtn);
+      this.add.existing(new Button(this, cx, primaryY, 'NEW RUN', () => this.newRun(),
+        { width: 210, height: 56, fontSize: 18 }));
+      this.add.existing(new Button(this, cx + 240, primaryY, 'WORKSHOP', () => this.openWorkshop(),
+        { width: 210, height: 56, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      if (!haveSave) {
+        this.add
+          .text(cx - 240, primaryY + 36, 'No saved run found.', {
+            fontFamily: FONTS.body, fontSize: '11px', color: hex(COLORS.boneDim)
+          })
+          .setOrigin(0.5);
+      }
+      const secondaryY = primaryY + 90;
+      this.add.existing(new Button(this, cx - 220, secondaryY, 'EXPORT SAVE', () => this.doExport(),
+        { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+      this.add.existing(new Button(this, cx, secondaryY, 'LIBRARY',
+        () => {
+          this.cameras.main.fadeOut(180, 20, 17, 15);
+          this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
+        },
+        { width: 180, height: 40, fontSize: 13, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      const importBtn = new Button(this, cx + 220, secondaryY, 'IMPORT SAVE', () => this.doImport(),
+        { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+      this.add.existing(importBtn);
+      this.setupFileDrop(importBtn);
+      const audioY = secondaryY + 60;
+      this.makeMuteToggle(cx - 120, audioY, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m));
+      this.makeMuteToggle(cx + 120, audioY, 'SFX', isSfxMuted, (m) => setSfxMuted(m));
     }
 
-    // Secondary buttons: EXPORT / LIBRARY / IMPORT
-    const secondaryY = primaryY + 90;
-    const exportBtn = new Button(
-      this,
-      width / 2 - 220,
-      secondaryY,
-      'EXPORT SAVE',
-      () => this.doExport(),
-      { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
-    );
-    this.add.existing(exportBtn);
-
-    // Slice 55 — LIBRARY: browses every card and relic in the game.
-    const libraryBtn = new Button(
-      this,
-      width / 2,
-      secondaryY,
-      'LIBRARY',
-      () => {
-        this.cameras.main.fadeOut(180, 20, 17, 15);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
-      },
-      { width: 180, height: 40, fontSize: 13, fill: COLORS.brass, hoverFill: COLORS.steam }
-    );
-    this.add.existing(libraryBtn);
-
-    const importBtn = new Button(
-      this,
-      width / 2 + 220,
-      secondaryY,
-      'IMPORT SAVE',
-      () => this.doImport(),
-      { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
-    );
-    this.add.existing(importBtn);
-
-    // Wire up window-level drag-and-drop. While a file is being dragged
-    // over the page, the IMPORT button switches to "DROP TO IMPORT" so
-    // the player knows where to release it.
-    this.setupFileDrop(importBtn);
-
-    // Audio mute toggles
-    const audioY = secondaryY + 44;
-    this.makeMuteToggle(
-      width / 2 - 120,
-      audioY,
-      'MUSIC',
-      isMusicMuted,
-      (m) => setMusicMuted(m)
-    );
-    this.makeMuteToggle(
-      width / 2 + 120,
-      audioY,
-      'SFX',
-      isSfxMuted,
-      (m) => setSfxMuted(m)
-    );
-
+    // Footer status line
     this.add
       .text(width / 2, height - 8, 'Your run auto-saves between rooms.  ·  Drop a save file anywhere to import.', {
         fontFamily: FONTS.body,
         fontSize: '11px',
-        color: hex(COLORS.boneDim)
+        color: hex(COLORS.boneDim),
+        align: 'center',
+        wordWrap: { width: width - 20 }
       })
       .setOrigin(0.5, 1);
+
+    // Slice 57 — re-layout on viewport changes. Debounced so a window
+    // drag-resize doesn't restart the scene 60×/second.
+    this.scale.on('resize', this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.handleResize, this);
+      if (this.resizeTimer) {
+        clearTimeout(this.resizeTimer);
+        this.resizeTimer = null;
+      }
+    });
   }
 
-  // Slice 57 — portrait orientation hint.
-  // Stored on the scene so we can replace it on resize. Removed when
-  // landscape is restored. Reads window.innerWidth/Height directly so it
-  // reflects the actual device orientation rather than the design canvas.
-  private orientationHint: Phaser.GameObjects.Container | null = null;
-
-  private refreshOrientationHint = () => {
-    // Tear down the previous hint so we don't stack overlays on
-    // repeated resize events.
-    this.orientationHint?.destroy();
-    this.orientationHint = null;
-    // Only show on actually narrow viewports — bigger displays always
-    // get the landscape layout regardless of window aspect.
-    const w = window.innerWidth || 1280;
-    const h = window.innerHeight || 720;
-    const isPortrait = h > w;
-    const isSmallEnough = Math.min(w, h) < 700;
-    if (!isPortrait || !isSmallEnough) return;
-
-    const { width, height } = this.scale;
-    const hint = this.add.container(width / 2, height / 2);
-    const panel = this.add.rectangle(0, 0, 460, 120, COLORS.bgPanel, 0.9)
-      .setStrokeStyle(2, COLORS.brass);
-    hint.add(panel);
-    hint.add(this.add.text(0, -22, '↺  ROTATE FOR BEST EXPERIENCE', {
-      fontFamily: FONTS.display,
-      fontSize: '16px',
-      color: hex(COLORS.brass),
-      fontStyle: 'bold'
-    }).setOrigin(0.5));
-    hint.add(this.add.text(0, 14, 'Rust & Rivets is laid out for landscape.\nTurn your phone sideways and you\'re set.', {
-      fontFamily: FONTS.body,
-      fontSize: '11px',
-      color: hex(COLORS.bone),
-      align: 'center',
-      lineSpacing: 4
-    }).setOrigin(0.5));
-    hint.setDepth(2000);
-    this.orientationHint = hint;
+  // Slice 57 — restart the scene after a short debounce so the layout
+  // re-flows for the new viewport / orientation.
+  private handleResize = () => {
+    if (this.resizeTimer) clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => {
+      this.resizeTimer = null;
+      this.scene.restart();
+    }, 120);
   };
 
   // Slice 55 — small RECORDS card in the top-right. Origin is top-right
@@ -409,7 +379,8 @@ export class TitleScene extends Phaser.Scene {
     y: number,
     name: string,
     getter: () => boolean,
-    setter: (m: boolean) => void
+    setter: (m: boolean) => void,
+    customWidth?: number
   ): Button {
     const labelFor = (m: boolean) => (m ? `UNMUTE ${name}` : `MUTE ${name}`);
     let btn: Button;
@@ -423,8 +394,9 @@ export class TitleScene extends Phaser.Scene {
         setter(next);
         btn.setLabel(labelFor(next));
       },
-      // Slice 57 — bumped 36 → 44 for tap-target accessibility.
-      { width: 200, height: 44, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      // Slice 57 — 200×44 default for tap-target accessibility; portrait
+      // layout passes a narrower customWidth so two toggles fit side-by-side.
+      { width: customWidth ?? 200, height: 44, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(btn);
     return btn;

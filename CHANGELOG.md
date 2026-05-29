@@ -72,6 +72,49 @@ middle of looking at the title clears it.
 drag threshold went 6 → 8 px to match MapScene / CharacterSelectScene.
 6 px was triggering scroll on finger jitter.
 
+### Responsive scenes (portrait + landscape)
+
+**Engine config switched from FIT to RESIZE mode.** RESIZE hands
+scenes the *actual* viewport width/height via `this.scale.width / height`
+instead of the fixed 1280×720 design canvas. Scenes that already
+compute positions off those values adapt naturally to any viewport
+including portrait. Scenes that want to redraw on rotation hook
+`this.scale.on('resize')`.
+
+**Regression fix from the first responsive pass:** the CSS
+`safe-area-inset` padding on `body` combined with `100% / 100%` on
+`#game` was shrinking the canvas off-center on desktop. Restored
+`100vw / 100vh` on `#game` and moved the safe-area padding onto the
+canvas element itself, so the canvas sits flush in the viewport but
+still inset from iPhone notches.
+
+**TitleScene now fully responsive.** Single create() detects
+`portrait = height > width` and branches:
+
+- Title font scales with viewport (`Math.min(72, Math.max(36, width/18))`)
+- Portrait stacks every button vertically with 64 px row pitch
+- EXPORT / IMPORT side-by-side at half-width when there's room;
+  full-width and stacked when there isn't
+- MUSIC / SFX toggles split similarly
+- Footer wraps via `wordWrap` so the long status line never clips
+
+Triggered on browser-level resize / orientation change:
+`window.addEventListener('resize', ...)` and `orientationchange` in
+`main.ts` call `game.scale.refresh()` (with a 50–200 ms debounce);
+TitleScene's own `scale.on('resize')` handler debounces 120 ms and
+restarts the scene so layout re-flows for the new dimensions.
+
+**Rotate-to-landscape hint removed.** With actual responsive
+layouts there's no need to nag the player about device orientation;
+portrait is now first-class on TitleScene.
+
+**Known follow-up.** The map, combat, character-select, library,
+event, shop, rest, and workshop scenes still assume landscape
+proportions in their absolute layouts. They render and function in
+portrait via the resize-on-rotation hook, but their UI elements
+crowd into the available space. A focused portrait pass on each is
+the next slice.
+
 ### Installable as a PWA
 
 The game is now a full Progressive Web App. On Android / Chrome /

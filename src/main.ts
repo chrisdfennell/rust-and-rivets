@@ -13,25 +13,22 @@ import { EventScene } from './scenes/EventScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
 import { LibraryScene } from './scenes/LibraryScene';
 
-// Slice 57 — Phaser's FIT mode auto-scales the canvas to whatever the
-// `#game` div is sized to. Every scene continues to use the 1280×720
-// design coords; the canvas itself stretches / shrinks via CSS so the
-// game fills the available viewport on phones, tablets, and 4K monitors
-// alike. `expandParent: false` lets our CSS rules in index.html drive
-// the parent div size (100vw × 100vh), so flipping a phone from portrait
-// to landscape just rescales the canvas — no scene reload required.
+// Slice 57 — RESIZE mode passes the *actual* viewport dimensions to
+// scenes via `this.scale.width / height`. Scenes that already compute
+// positions from those values (most of ours) adapt naturally; portrait
+// orientation simply hands them a taller, narrower canvas. Scenes that
+// want to redraw on rotation hook `this.scale.on('resize')` and
+// re-layout. Width / height in the config are the INITIAL design size
+// but Phaser overwrites them on every resize event.
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#14110f',
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER,
     width: 1280,
-    height: 720,
-    expandParent: false,
-    min: { width: 320, height: 240 },
-    max: { width: 3840, height: 2160 }
+    height: 720
   },
   // Input: enable multi-touch (Phaser default is 2 active pointers; bump
   // so multi-finger gestures and accidental palm contact don't drop the
@@ -43,12 +40,18 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const game = new Phaser.Game(config);
 
-// Slice 57 — explicit window-resize handler. Phaser's FIT mode listens
-// for the window resize event by default, but on iOS Safari rotations
-// fire `orientationchange` BEFORE the new viewport dimensions are
-// available. The delayed nudge below catches the post-rotation layout.
-window.addEventListener('orientationchange', () => {
-  setTimeout(() => game.scale.refresh(), 200);
+// Slice 57 — explicit refresh on browser-level layout events. Phaser's
+// FIT mode already listens for `window.resize`, but iOS Safari fires
+// `orientationchange` BEFORE the new viewport dimensions are available
+// and some desktop browsers fire `resize` without giving the layout
+// engine time to settle. The delayed refreshes catch both cases. Also
+// runs on `visibilitychange` so a tab unpaused after the window was
+// resized in the background lands at the right size.
+const refreshScale = () => game.scale.refresh();
+window.addEventListener('orientationchange', () => setTimeout(refreshScale, 200));
+window.addEventListener('resize', () => setTimeout(refreshScale, 50));
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshScale();
 });
 
 // Slice 57 — register the service worker so the game can be installed
