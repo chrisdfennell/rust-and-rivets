@@ -55,7 +55,7 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
   Slice-43 batch covering paid card removal, archetype-specific
   drops (random Power / random AoE), max-hull-trade vendors, sealed
   loot boxes, and a snake-oil salesman who might sell you a curse.
-- **Meta:** Workshop with 8 upgrades (max spend 18 pts). Points
+- **Meta:** Workshop with 14 upgrades (max spend 28 pts). Points
   earned per-act-boss-kill (act N = N pts). Persists across runs.
 - **Save/load:** Auto-save to localStorage after every mutation.
   Export/Import via base64 bundle (run + meta).
@@ -67,7 +67,61 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 50 — Two new acts, the Conductor, A6/A7 *(current)*
+### Slice 51 — Card pack + Workshop expansion *(current)*
+Expansion pass. The shop pool gained 12 cards; the Workshop gained 6
+upgrades; one new effect kind plus two new persistent fields cover
+the new mechanical surface area.
+
+**New effect kind**
+([src/game/types.ts](src/game/types.ts) +
+[src/game/combat.ts](src/game/combat.ts)):
+`bonusDamageIfEnemyWeak { amount }` — extra damage to the active
+target if it's Weak. Same shape as `damageIfEnemyPlated`. Resolves
+after the base damage hit so a killing blow still triggers cleanly.
+
+**12 new cards** (all in `SHOP_POOL`, all have `+` variants):
+
+| Card | Rarity | Cost | Effect |
+|---|---|---|---|
+| Field Repair | common | 0 | Heal 4. Exhaust. |
+| Steel Will | common | 1 | Gain 5 Plating. Draw 1. |
+| Quickfire | common | 1 | Deal 3 damage 3 times. |
+| Hardpoint | common | 1 | Deal 5. Gain 3 Plating. |
+| Suppressor | uncommon | 1 | Deal 6. Apply 2 Weak. |
+| Pneumatic Slam | uncommon | 2 | Deal 10. +5 if target is Weak. |
+| Coal Scoop | uncommon | 1 | Gain 2 Steam. Lose 2 Hull. Exhaust. |
+| Iron Fist | uncommon | 1 | Deal 8. Gain 2 Strength. Exhaust. |
+| Twin Hammers | rare | 2 | Deal 9 damage twice. |
+| Tempest | rare | 2 | AoE 8. Apply 1 Weak to all. |
+| Iron Maelstrom | epic | 3 | AoE 14. Apply 2 Vuln to all. Exhaust. |
+| Final Hammer | legendary | X | Deal 10 damage X times. Apply 4 Weak. Exhaust. |
+
+**6 new Workshop upgrades**
+([src/game/meta.ts](src/game/meta.ts)):
+
+- **Field Medic** (2 pts) — Heal 4 Hull after each non-boss combat.
+  Adds `postCombatHeal` on RunState; read by completeCombat after
+  Engine Oil-style onCombatEnd hooks fire.
+- **Quartermaster** (2 pts) — Shop prices reduced by 15%. Adds
+  `shopDiscount` on RunState; applied at `generateShop()` time so
+  prices don't re-roll on save/load.
+- **Sharpened Edge** (2 pts) — One starter Auto-Cannon begins each
+  run upgraded (swaps the first `autocannon` in deck for `autocannon+`).
+- **Heavy Toolkit** (1 pt) — Hydraulic Punch added to starter deck.
+- **Heavy Mantle** (1 pt) — Start each combat with 3 Thorns. Adds
+  `startingThorns` to PersistentPlayer (mirrors `startingPlating`).
+- **Brass Grip** (2 pts) — Brass Knuckles relic installed at run start.
+
+Max spend climbs from 18 → 28 pts.
+
+**Workshop UI** ([src/scenes/WorkshopScene.ts](src/scenes/WorkshopScene.ts))
+flipped to a 2-column layout — 14 rows at 56 px each don't fit a
+720 px canvas single-column. Each column gets up to 7 rows; panel
+width drops from 880 → 560 px and the description text wraps at
+340 px so the longer entries (Brass Grip) don't push into the buy
+button.
+
+### Slice 50 — Two new acts, the Conductor, A6/A7
 Major content drop. The run now goes 5 acts deep instead of 3; a fifth
 playable pilot enters the roster; the Ascension ladder extends to A7.
 

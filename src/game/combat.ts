@@ -127,6 +127,8 @@ export function createCombatState(
   // every combat. Stacks on top of any relic-granted plating.
   const startingPlating = persistent.startingPlating ?? 0;
   if (startingPlating > 0) state.player.plating += startingPlating;
+  const startingThorns = persistent.startingThorns ?? 0;
+  if (startingThorns > 0) state.player.thorns += startingThorns;
   return state;
 }
 
@@ -423,6 +425,12 @@ function applyEffect(state: CombatState, eff: CardEffect) {
     }
     case 'bonusDamageIfCardsAtLeast': {
       if (target && state.player.cardsPlayedThisTurn >= eff.threshold) {
+        dealDamageToEnemy(c, eff.amount);
+      }
+      break;
+    }
+    case 'bonusDamageIfEnemyWeak': {
+      if (target && target.weak > 0) {
         dealDamageToEnemy(c, eff.amount);
       }
       break;

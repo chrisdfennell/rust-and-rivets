@@ -57,13 +57,19 @@ export class WorkshopScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // 8 upgrades at 720 px tall is tight — slim rows from 80 → 52 px and
-    // shrink the spacing so everything fits between header (~150 px) and
-    // the BACK button (~660 px).
+    // Slice 51 — 14 upgrades doesn't fit single-column at 720 px tall, so
+    // split into two columns of 7 each. Column centers sit at ~width/4
+    // and ~3*width/4 with a narrower row panel.
     const rowSpacing = 56;
     const startY = 165;
+    const colXLeft = width / 4 + 30;
+    const colXRight = (width * 3) / 4 - 30;
+    const perColumn = Math.ceil(META_UPGRADES.length / 2);
     META_UPGRADES.forEach((def, i) => {
-      this.buildRow(def, width / 2, startY + i * rowSpacing);
+      const col = i < perColumn ? 0 : 1;
+      const rowInCol = i % perColumn;
+      const cx = col === 0 ? colXLeft : colXRight;
+      this.buildRow(def, cx, startY + rowInCol * rowSpacing);
     });
 
     const back = new Button(
@@ -83,53 +89,59 @@ export class WorkshopScene extends Phaser.Scene {
   }
 
   private buildRow(def: UpgradeDef, x: number, y: number) {
+    // Two-column layout: panels are narrower than the single-column
+    // version. Description wraps if it pushes past the level/cost block.
+    const panelW = 560;
     const panel = this.add
-      .rectangle(x, y, 880, 50, COLORS.bgPanel)
+      .rectangle(x, y, panelW, 50, COLORS.bgPanel)
       .setStrokeStyle(2, COLORS.brassDim);
     void panel;
 
+    const leftEdge = -panelW / 2 + 14;
+
     this.add
-      .text(x - 420, y - 10, def.name, {
+      .text(x + leftEdge, y - 10, def.name, {
         fontFamily: FONTS.display,
-        fontSize: '15px',
+        fontSize: '14px',
         color: hex(COLORS.bone),
         fontStyle: 'bold'
       })
       .setOrigin(0, 0.5);
 
     this.add
-      .text(x - 420, y + 10, def.description, {
+      .text(x + leftEdge, y + 10, def.description, {
         fontFamily: FONTS.body,
-        fontSize: '11px',
-        color: hex(COLORS.boneDim)
+        fontSize: '10px',
+        color: hex(COLORS.boneDim),
+        wordWrap: { width: 340 }
       })
       .setOrigin(0, 0.5);
 
     const level = this.add
-      .text(x + 220, y, '', {
+      .text(x + panelW / 2 - 110, y - 9, '', {
         fontFamily: FONTS.display,
-        fontSize: '12px',
+        fontSize: '11px',
         color: hex(COLORS.bone)
       })
       .setOrigin(1, 0.5);
 
     const cost = this.add
-      .text(x + 240, y, '', {
+      .text(x + panelW / 2 - 110, y + 9, '', {
         fontFamily: FONTS.display,
-        fontSize: '12px',
+        fontSize: '11px',
         color: hex(COLORS.steam)
       })
-      .setOrigin(0, 0.5);
+      .setOrigin(1, 0.5);
 
     const buy = new Button(
       this,
-      x + 380,
+      x + panelW / 2 - 48,
       y,
       'BUY',
       () => {
         if (buyUpgrade(def.id)) this.refresh();
       },
-      { width: 100, height: 36, fontSize: 12 }
+      { width: 80, height: 32, fontSize: 11 }
     );
     this.add.existing(buy);
 

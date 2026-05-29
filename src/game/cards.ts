@@ -379,7 +379,114 @@ export const CARDS: Record<string, CardDef> = {
     [
       { kind: 'damage', amount: 16 },
       { kind: 'bonusDamageIfCardsAtLeast', amount: 20, threshold: 3 }
-    ], false, 'rare')
+    ], false, 'rare'),
+
+  // ===== Slice 51 — Card expansion pack =====
+  // Twelve new buyable cards spanning every rarity, fleshing out the
+  // pools so longer 15-floor maps don't recycle the same shop offers.
+
+  // --- Commons ---
+  fieldRepair: card('fieldRepair', 'Field Repair', 0, 'self',
+    'Heal 4 Hull. Exhaust.',
+    [{ kind: 'heal', amount: 4 }], true, 'common'),
+  'fieldRepair+': card('fieldRepair+', 'Field Repair+', 0, 'self',
+    'Heal 7 Hull. Exhaust.',
+    [{ kind: 'heal', amount: 7 }], true, 'common'),
+
+  steelWill: card('steelWill', 'Steel Will', 1, 'self',
+    'Gain 5 Plating. Draw 1 card.',
+    [{ kind: 'plating', amount: 5 }, { kind: 'draw', amount: 1 }], false, 'common'),
+  'steelWill+': card('steelWill+', 'Steel Will+', 1, 'self',
+    'Gain 8 Plating. Draw 2 cards.',
+    [{ kind: 'plating', amount: 8 }, { kind: 'draw', amount: 2 }], false, 'common'),
+
+  quickfire: card('quickfire', 'Quickfire', 1, 'enemy',
+    'Deal 3 damage 3 times.',
+    [
+      { kind: 'damage', amount: 3 },
+      { kind: 'damage', amount: 3 },
+      { kind: 'damage', amount: 3 }
+    ], false, 'common'),
+  'quickfire+': card('quickfire+', 'Quickfire+', 1, 'enemy',
+    'Deal 4 damage 3 times.',
+    [
+      { kind: 'damage', amount: 4 },
+      { kind: 'damage', amount: 4 },
+      { kind: 'damage', amount: 4 }
+    ], false, 'common'),
+
+  hardpoint: card('hardpoint', 'Hardpoint', 1, 'enemy',
+    'Deal 5 damage. Gain 3 Plating.',
+    [{ kind: 'damage', amount: 5 }, { kind: 'plating', amount: 3 }], false, 'common'),
+  'hardpoint+': card('hardpoint+', 'Hardpoint+', 1, 'enemy',
+    'Deal 7 damage. Gain 5 Plating.',
+    [{ kind: 'damage', amount: 7 }, { kind: 'plating', amount: 5 }], false, 'common'),
+
+  // --- Uncommons ---
+  suppressor: card('suppressor', 'Suppressor', 1, 'enemy',
+    'Deal 6 damage. Apply 2 Weak.',
+    [{ kind: 'damage', amount: 6 }, { kind: 'applyWeak', amount: 2 }], false, 'uncommon'),
+  'suppressor+': card('suppressor+', 'Suppressor+', 1, 'enemy',
+    'Deal 9 damage. Apply 2 Weak.',
+    [{ kind: 'damage', amount: 9 }, { kind: 'applyWeak', amount: 2 }], false, 'uncommon'),
+
+  pneumaticSlam: card('pneumaticSlam', 'Pneumatic Slam', 2, 'enemy',
+    'Deal 10 damage. Deal 5 more if the target is Weak.',
+    [
+      { kind: 'damage', amount: 10 },
+      { kind: 'bonusDamageIfEnemyWeak', amount: 5 }
+    ], false, 'uncommon'),
+  'pneumaticSlam+': card('pneumaticSlam+', 'Pneumatic Slam+', 2, 'enemy',
+    'Deal 14 damage. Deal 7 more if the target is Weak.',
+    [
+      { kind: 'damage', amount: 14 },
+      { kind: 'bonusDamageIfEnemyWeak', amount: 7 }
+    ], false, 'uncommon'),
+
+  coalScoop: card('coalScoop', 'Coal Scoop', 1, 'self',
+    'Gain 2 Steam. Lose 2 Hull. Exhaust.',
+    [{ kind: 'gainSteam', amount: 2 }, { kind: 'loseHull', amount: 2 }], true, 'uncommon'),
+  'coalScoop+': card('coalScoop+', 'Coal Scoop+', 1, 'self',
+    'Gain 3 Steam. Lose 2 Hull. Exhaust.',
+    [{ kind: 'gainSteam', amount: 3 }, { kind: 'loseHull', amount: 2 }], true, 'uncommon'),
+
+  ironFist: card('ironFist', 'Iron Fist', 1, 'enemy',
+    'Deal 8 damage. Gain 2 Strength. Exhaust.',
+    [{ kind: 'damage', amount: 8 }, { kind: 'gainStrength', amount: 2 }], true, 'uncommon'),
+  'ironFist+': card('ironFist+', 'Iron Fist+', 1, 'enemy',
+    'Deal 10 damage. Gain 3 Strength. Exhaust.',
+    [{ kind: 'damage', amount: 10 }, { kind: 'gainStrength', amount: 3 }], true, 'uncommon'),
+
+  // --- Rares ---
+  twinHammers: card('twinHammers', 'Twin Hammers', 2, 'enemy',
+    'Deal 9 damage twice.',
+    [{ kind: 'damage', amount: 9 }, { kind: 'damage', amount: 9 }], false, 'rare'),
+  'twinHammers+': card('twinHammers+', 'Twin Hammers+', 2, 'enemy',
+    'Deal 12 damage twice.',
+    [{ kind: 'damage', amount: 12 }, { kind: 'damage', amount: 12 }], false, 'rare'),
+
+  tempest: card('tempest', 'Tempest', 2, 'allEnemies',
+    'Deal 8 damage to ALL enemies. Apply 1 Weak to all.',
+    [{ kind: 'damageAll', amount: 8 }, { kind: 'applyWeakAll', amount: 1 }], false, 'rare'),
+  'tempest+': card('tempest+', 'Tempest+', 2, 'allEnemies',
+    'Deal 11 damage to ALL enemies. Apply 2 Weak to all.',
+    [{ kind: 'damageAll', amount: 11 }, { kind: 'applyWeakAll', amount: 2 }], false, 'rare'),
+
+  // --- Epic ---
+  ironMaelstrom: card('ironMaelstrom', 'Iron Maelstrom', 3, 'allEnemies',
+    'Deal 14 damage to ALL enemies. Apply 2 Vulnerable to all. Exhaust.',
+    [{ kind: 'damageAll', amount: 14 }, { kind: 'applyVulnerableAll', amount: 2 }], true, 'epic'),
+  'ironMaelstrom+': card('ironMaelstrom+', 'Iron Maelstrom+', 3, 'allEnemies',
+    'Deal 18 damage to ALL enemies. Apply 3 Vulnerable to all. Exhaust.',
+    [{ kind: 'damageAll', amount: 18 }, { kind: 'applyVulnerableAll', amount: 3 }], true, 'epic'),
+
+  // --- Legendary ---
+  finalHammer: card('finalHammer', 'Final Hammer', 0, 'enemy',
+    'Deal 10 damage X times. Apply 4 Weak. Exhaust.',
+    [{ kind: 'xDamage', amount: 10 }, { kind: 'applyWeak', amount: 4 }], true, 'legendary', { xCost: true }),
+  'finalHammer+': card('finalHammer+', 'Final Hammer+', 0, 'enemy',
+    'Deal 13 damage X times. Apply 5 Weak. Exhaust.',
+    [{ kind: 'xDamage', amount: 13 }, { kind: 'applyWeak', amount: 5 }], true, 'legendary', { xCost: true })
 };
 
 export const STARTER_DECK: string[] = [
@@ -406,7 +513,13 @@ export const SHOP_POOL: string[] = [
   // Slice 49 — Burn pack
   'cinderWave', 'emberToss', 'ignite', 'sear', 'brimstone',
   // Slice 50 — Conductor momentum pack
-  'pressureDrum', 'tempoShift', 'crescendo', 'counterpoint'
+  'pressureDrum', 'tempoShift', 'crescendo', 'counterpoint',
+  // Slice 51 — Card expansion pack (12 cards across all rarities)
+  'fieldRepair', 'steelWill', 'quickfire', 'hardpoint',
+  'suppressor', 'pneumaticSlam', 'coalScoop', 'ironFist',
+  'twinHammers', 'tempest',
+  'ironMaelstrom',
+  'finalHammer'
 ];
 
 export function isUpgradable(cardId: string): boolean {

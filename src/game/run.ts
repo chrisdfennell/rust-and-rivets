@@ -70,6 +70,13 @@ export interface RunState {
   result: RunResult;
   // Extra scrap added on boss kills, set by the Boss Bounty workshop upgrade.
   bossBonus?: number;
+  // Shop-price multiplier (0..1). Quartermaster workshop sets it; default
+  // is 1.0 (no discount). Applied at shop-generation time so existing
+  // offers don't re-roll on save/load.
+  shopDiscount?: number;
+  // Field Medic workshop adds a flat heal after every non-boss combat.
+  // Read at the same point as Engine Oil-style onCombatEnd relic hooks.
+  postCombatHeal?: number;
   // Cumulative run stats surfaced on the post-run summary screen.
   // All optional w/ 0 defaults so pre-stats saves hydrate cleanly.
   stats?: RunStats;
@@ -197,20 +204,23 @@ export function enterNode(nodeId: string): void {
 }
 
 function generateShop(): ShopState {
+  const r = getRun();
+  const discount = r.shopDiscount ?? 1;
+  const adjust = (n: number) => Math.max(1, Math.round(n * discount));
   const pool = SHOP_POOL.slice();
   const offers: ShopOffer[] = [];
   for (let i = 0; i < 3 && pool.length > 0; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     const cardId = pool.splice(idx, 1)[0];
-    const price = 28 + Math.floor(Math.random() * 25); // 28-52
+    const price = adjust(28 + Math.floor(Math.random() * 25)); // 28-52 pre-discount
     offers.push({ cardId, price, sold: false });
   }
   const potionOffer: PotionShopOffer = {
     potionId: pickRandomPotionId(),
-    price: POTION_SHOP_PRICE + Math.floor(Math.random() * 11) - 5, // ±5 jitter
+    price: adjust(POTION_SHOP_PRICE + Math.floor(Math.random() * 11) - 5),
     sold: false
   };
-  return { offers, potionOffer, removalPrice: 55, removalUsed: false };
+  return { offers, potionOffer, removalPrice: adjust(55), removalUsed: false };
 }
 
 export function buyPotionOffer(): boolean {
@@ -369,6 +379,12 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
     const s = ensureStats(r);
     s.combatsWon += 1;
     if (node.kind === 'elite') s.elitesDefeated += 1;
+    // Field Medic workshop trickle-heal. Applies to regular AND elite
+    // wins, but not bosses (those get their own scrap bonus instead).
+    const heal = r.postCombatHeal ?? 0;
+    if (heal > 0) {
+      r.player.hull = Math.min(r.player.maxHull, r.player.hull + heal);
+    }
   }
   if (node?.kind === 'boss') {
     // Award meta points scaled to the act being cleared:

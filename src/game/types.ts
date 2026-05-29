@@ -27,6 +27,10 @@ export type CardEffect =
   // AFTER effects resolve, so threshold=2 reads as "this is the 3rd card
   // or later." Used by the Conductor's momentum-payoff cards.
   | { kind: 'bonusDamageIfCardsAtLeast'; amount: number; threshold: number }
+  // Bonus damage to the active target if the target currently has Weak.
+  // Resolves AFTER the card's base damage hit so killing-blow attacks
+  // still trigger cleanly. Same shape as `damageIfEnemyPlated`.
+  | { kind: 'bonusDamageIfEnemyWeak'; amount: number }
   | { kind: 'damageAll'; amount: number }
   | { kind: 'applyVulnerableAll'; amount: number }
   | { kind: 'applyWeakAll'; amount: number }
@@ -172,6 +176,10 @@ export interface PersistentPlayer {
   // (back-compat for saves predating workshop additions).
   maxSteam?: number;
   startingPlating?: number;
+  // Heavy Mantle workshop seeds every combat with a few Thorns. Mirrors
+  // startingPlating: read after relic onCombatStart hooks fire so the
+  // numbers stack additively.
+  startingThorns?: number;
 }
 
 export type CombatPhase = 'playerTurn' | 'enemyTurn' | 'victory' | 'defeat';

@@ -158,6 +158,100 @@ const BOSS_BOUNTY: UpgradeDef = {
   }
 };
 
+// ===== Slice 51 — Workshop expansion =====
+
+// Field Medic — trickle heal after every regular/elite combat. Read by
+// completeCombat() right after onCombatEnd hooks fire so it stacks with
+// Engine Oil for a meaty regen build.
+const FIELD_MEDIC: UpgradeDef = {
+  id: 'fieldMedic',
+  name: 'Field Medic',
+  description: 'Heal 4 Hull after each non-boss combat win.',
+  costPerLevel: 2,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.postCombatHeal = (run.postCombatHeal ?? 0) + 4;
+  }
+};
+
+// Quartermaster — flat shop-price discount. Applied at shop-generation
+// time so prices lock at first visit; saves don't re-roll cheaper.
+const QUARTERMASTER: UpgradeDef = {
+  id: 'quartermaster',
+  name: 'Quartermaster',
+  description: 'Shop prices reduced by 15%.',
+  costPerLevel: 2,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.shopDiscount = (run.shopDiscount ?? 1) * 0.85;
+  }
+};
+
+// Sharpened Edge — start each run with one Auto-Cannon already at +.
+// Looks for the first un-upgraded autocannon in the starter deck and
+// swaps it for autocannon+. Silent no-op if no autocannon is present
+// (e.g., future character with a different starter loadout).
+const SHARPENED_EDGE: UpgradeDef = {
+  id: 'sharpenedEdge',
+  name: 'Sharpened Edge',
+  description: 'Begin each run with one starter Auto-Cannon upgraded.',
+  costPerLevel: 2,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    const idx = run.player.deck.indexOf('autocannon');
+    if (idx >= 0) run.player.deck[idx] = 'autocannon+';
+  }
+};
+
+// Heavy Toolkit — drops a Hydraulic Punch into the starter deck. Pairs
+// well with Custom Loadout (Iron Hail) for a beefier opening hand.
+const HEAVY_TOOLKIT: UpgradeDef = {
+  id: 'heavyToolkit',
+  name: 'Heavy Toolkit',
+  description: 'Begin each run with a Hydraulic Punch in your deck.',
+  costPerLevel: 1,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.player.deck.push('hydraulicPunch');
+  }
+};
+
+// Heavy Mantle — passive thorns every combat. Stacks with Spike Mantle
+// (the relic) so a thorns-focused run can pile up early-fight Thorns.
+const HEAVY_MANTLE: UpgradeDef = {
+  id: 'heavyMantle',
+  name: 'Heavy Mantle',
+  description: 'Start each combat with 3 Thorns.',
+  costPerLevel: 1,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    run.player.startingThorns = (run.player.startingThorns ?? 0) + 3;
+  }
+};
+
+// Brass Grip — install the Brass Knuckles relic at run start. Salvager's
+// Eye grants a random relic; Brass Grip guarantees this specific one,
+// so deck-builds that hinge on first-attack bonuses can plan for it.
+const BRASS_GRIP: UpgradeDef = {
+  id: 'brassGrip',
+  name: 'Brass Grip',
+  description: 'Start each run with the Brass Knuckles relic installed.',
+  costPerLevel: 2,
+  maxLevel: 1,
+  apply: (run, level) => {
+    if (level <= 0) return;
+    if (!run.relics.includes('brassKnuckles')) {
+      run.relics.push('brassKnuckles');
+      RELICS['brassKnuckles']?.onPickup?.(run);
+    }
+  }
+};
+
 export const META_UPGRADES: UpgradeDef[] = [
   REINFORCED_HULL,
   FOUNDRY_STIPEND,
@@ -166,7 +260,14 @@ export const META_UPGRADES: UpgradeDef[] = [
   TEMPERED_FRAME,
   RESERVE_TANK,
   PRE_BREW,
-  BOSS_BOUNTY
+  BOSS_BOUNTY,
+  // Slice 51 — Workshop expansion
+  FIELD_MEDIC,
+  QUARTERMASTER,
+  SHARPENED_EDGE,
+  HEAVY_TOOLKIT,
+  HEAVY_MANTLE,
+  BRASS_GRIP
 ];
 
 const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(
