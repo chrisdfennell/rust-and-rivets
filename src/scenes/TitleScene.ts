@@ -155,52 +155,47 @@ export class TitleScene extends Phaser.Scene {
       if (compact) topCursor += 42;
     }
 
-    // ===== Buttons. Landscape uses the original 3-across rows; compact
-    // stacks them vertically so each button stays touch-friendly. =====
-    const btnW = compact ? Math.min(width - 40, 320) : 210;
-    const btnH = 50;
-    if (compact) {
-      // Vertical stack starts a small gap below the header content.
-      // Row pitch scaled to remaining viewport height so even short
-      // landscape viewports (e.g. 600 px tall browser windows) get the
-      // audio toggles on-screen instead of clipped under the footer.
+    // ===== Buttons. Three layouts:
+    // - PORTRAIT: vertical stack (one button per row)
+    // - COMPACT LANDSCAPE: two horizontal rows of 4 (per user feedback,
+    //   slightly smaller buttons that all fit at heights 500-700)
+    // - FULL LANDSCAPE: original 3-across primary + 3-across secondary =====
+    const portraitStack = portrait;
+    if (portraitStack) {
+      // Slice 58 — true portrait. Stack one button per row.
+      const btnWp = Math.min(width - 40, 320);
       const footerH = 24;
       const remaining = height - topCursor - footerH - 12;
-      // Six logical rows: CONTINUE / NEW RUN / WORKSHOP / LIBRARY /
-      // EXPORT+IMPORT / MUSIC+SFX. Last two are half-width side-by-side
-      // when there's room.
       const rowCount = 6;
       const rowPitch = Math.max(48, Math.min(60, Math.floor(remaining / rowCount)));
-      const mainH = Math.min(btnH, rowPitch - 6);
+      const mainH = Math.min(50, rowPitch - 6);
       let y = topCursor + 12 + mainH / 2;
       const continueBtn = new Button(this, cx, y, 'CONTINUE', () => this.continueRun(),
-        { width: btnW, height: mainH, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
+        { width: btnWp, height: mainH, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf });
       continueBtn.setEnabled(haveSave);
       this.add.existing(continueBtn);
       y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'NEW RUN', () => this.newRun(),
-        { width: btnW, height: mainH, fontSize: 18 }));
+        { width: btnWp, height: mainH, fontSize: 18 }));
       y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'WORKSHOP', () => this.openWorkshop(),
-        { width: btnW, height: mainH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
+        { width: btnWp, height: mainH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
       y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'LIBRARY',
         () => {
           this.cameras.main.fadeOut(180, 20, 17, 15);
           this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
         },
-        { width: btnW, height: mainH, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
+        { width: btnWp, height: mainH, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
       y += rowPitch;
-      // EXPORT + IMPORT side-by-side. Falls back to full-width stacked
-      // rows only if the viewport is genuinely too narrow.
-      const halfW = btnW > 200 ? (btnW - 12) / 2 : btnW;
+      const halfW = btnWp > 200 ? (btnWp - 12) / 2 : btnWp;
       const smallH = Math.min(44, mainH);
       if (halfW < 140) {
         this.add.existing(new Button(this, cx, y, 'EXPORT SAVE', () => this.doExport(),
-          { width: btnW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+          { width: btnWp, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
         y += rowPitch;
         const importBtn = new Button(this, cx, y, 'IMPORT SAVE', () => this.doImport(),
-          { width: btnW, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+          { width: btnWp, height: smallH, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
         this.add.existing(importBtn);
         this.setupFileDrop(importBtn);
         y += rowPitch;
@@ -213,9 +208,53 @@ export class TitleScene extends Phaser.Scene {
         this.setupFileDrop(importBtn);
         y += rowPitch;
       }
-      const halfMute = btnW > 200 ? (btnW - 12) / 2 : btnW;
+      const halfMute = btnWp > 200 ? (btnWp - 12) / 2 : btnWp;
       this.makeMuteToggle(cx - halfMute / 2 - 6, y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), halfMute);
       this.makeMuteToggle(cx + halfMute / 2 + 6, y, 'SFX', isSfxMuted, (m) => setSfxMuted(m), halfMute);
+    } else if (compact) {
+      // Slice 58 — compact landscape (wide but short). Two horizontal
+      // rows: primary (4 across) + secondary (4 across). Buttons sized
+      // off available width so everything fits at heights 500-700.
+      const margin = 40;
+      const colCount = 4;
+      const colGap = 10;
+      const cellW = Math.floor((width - margin * 2 - colGap * (colCount - 1)) / colCount);
+      const btnWc = Math.min(cellW, 220);
+      const row1H = 48;
+      const row2H = 40;
+      const rowGap = 14;
+      const row1Y = topCursor + 16 + row1H / 2;
+      const row2Y = row1Y + row1H / 2 + rowGap + row2H / 2;
+      // Compute column x positions (centered group)
+      const groupW = colCount * btnWc + (colCount - 1) * colGap;
+      const startX = cx - groupW / 2 + btnWc / 2;
+      const colX = (i: number) => startX + i * (btnWc + colGap);
+
+      // Row 1: CONTINUE | NEW RUN | WORKSHOP | LIBRARY
+      const continueBtn = new Button(this, colX(0), row1Y, 'CONTINUE', () => this.continueRun(),
+        { width: btnWc, height: row1H, fontSize: 16, fill: COLORS.shield, hoverFill: 0x6f9dbf });
+      continueBtn.setEnabled(haveSave);
+      this.add.existing(continueBtn);
+      this.add.existing(new Button(this, colX(1), row1Y, 'NEW RUN', () => this.newRun(),
+        { width: btnWc, height: row1H, fontSize: 16 }));
+      this.add.existing(new Button(this, colX(2), row1Y, 'WORKSHOP', () => this.openWorkshop(),
+        { width: btnWc, height: row1H, fontSize: 16, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      this.add.existing(new Button(this, colX(3), row1Y, 'LIBRARY',
+        () => {
+          this.cameras.main.fadeOut(180, 20, 17, 15);
+          this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
+        },
+        { width: btnWc, height: row1H, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
+
+      // Row 2: EXPORT | IMPORT | MUSIC | SFX
+      this.add.existing(new Button(this, colX(0), row2Y, 'EXPORT', () => this.doExport(),
+        { width: btnWc, height: row2H, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+      const importBtn = new Button(this, colX(1), row2Y, 'IMPORT', () => this.doImport(),
+        { width: btnWc, height: row2H, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+      this.add.existing(importBtn);
+      this.setupFileDrop(importBtn);
+      this.makeMuteToggle(colX(2), row2Y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), btnWc);
+      this.makeMuteToggle(colX(3), row2Y, 'SFX', isSfxMuted, (m) => setSfxMuted(m), btnWc);
     } else {
       // ===== Landscape (original layout, slightly de-magicked) =====
       const primaryY = height * 0.75;
