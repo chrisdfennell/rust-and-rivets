@@ -11,6 +11,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { PauseScene } from './scenes/PauseScene';
 import { EventScene } from './scenes/EventScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
+import { LibraryScene } from './scenes/LibraryScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -22,7 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1280,
     height: 720
   },
-  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene, PauseScene, EventScene, RunSummaryScene],
+  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene, PauseScene, EventScene, RunSummaryScene, LibraryScene],
   render: { pixelArt: false, antialias: true }
 };
 

@@ -9,7 +9,14 @@ import {
 } from './enemies';
 import { RELICS, pickRelicFor, BOSS_SIGNATURE_RELICS } from './relics';
 import { writeSave, readSave, hasSave, clearSave } from './save';
-import { applyMetaToRun, grantMetaPoints, loadMeta } from './meta';
+import {
+  applyMetaToRun,
+  grantMetaPoints,
+  loadMeta,
+  recordRunStart,
+  recordActReached,
+  recordBossDefeated
+} from './meta';
 import { getCharacter } from './characters';
 import { pickEventId } from './events';
 import {
@@ -143,6 +150,10 @@ export function startRun(characterId: string = 'pilot'): RunState {
     def.onPickup?.(fresh);
   }
   state = fresh;
+  // Slice 55 — record the run-start in the persistent history ledger
+  // BEFORE meta upgrades / save persistence so even a crash during
+  // upgrade application leaves the counter accurate.
+  recordRunStart(character.id);
   // Apply purchased meta upgrades on top — they stack with character baseline.
   applyMetaToRun(state);
   persist();
@@ -393,6 +404,12 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
     // Award meta points scaled to the act being cleared:
     // act 1 boss → 1 pt, act 2 → 2 pts, etc.
     grantMetaPoints(r.act);
+    // Slice 55 — bump persistent history counters. Boss kill always
+    // counts; bestAct tracks the act they CLEARED, so for a non-final
+    // boss kill the act-reached is r.act + 1 (they're about to start
+    // the next act). For the final boss it's r.act itself.
+    recordBossDefeated();
+    recordActReached(isFinalAct(r.act) ? r.act : r.act + 1);
     // Boss Bounty workshop upgrade adds a flat scrap bonus to boss kills.
     const bonus = r.bossBonus ?? 0;
     if (bonus > 0) r.scrap += bonus;

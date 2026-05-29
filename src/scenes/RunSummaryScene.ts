@@ -2,7 +2,12 @@ import Phaser from 'phaser';
 import { getRun, clearSavedRun } from '../game/run';
 import { CARDS } from '../game/cards';
 import { RELICS } from '../game/relics';
-import { unlockNextAscensionIfApplicable, ASCENSION_TIERS, MAX_ASCENSION } from '../game/meta';
+import {
+  unlockNextAscensionIfApplicable,
+  ASCENSION_TIERS,
+  MAX_ASCENSION,
+  recordRunWin
+} from '../game/meta';
 import { Button } from '../ui/Button';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
@@ -25,6 +30,10 @@ export class RunSummaryScene extends Phaser.Scene {
       ? unlockNextAscensionIfApplicable(clearedAscension)
       : null;
     const newlyUnlocked = won && newHighest !== null && newHighest > clearedAscension;
+    // Slice 55 — record the win in the persistent history ledger. Idempotent
+    // for the same RunSummary mount because runsWon counts on victory entry,
+    // not on Continue-press. Scene only mounts once per finished run.
+    if (won) recordRunWin(run.player.characterId, clearedAscension);
 
     // Quiet backdrop. Slightly warmer for victory, dimmer for defeat.
     const bg = this.add.graphics();

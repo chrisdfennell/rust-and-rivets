@@ -56,6 +56,11 @@ export class TitleScene extends Phaser.Scene {
       bg.fillCircle(x - 8, baseY - 36, 10);
     }
 
+    // Slice 55 — records panel in the top-right corner. Tiny, info-dense,
+    // shows the player's lifetime stats so the title screen reads as a
+    // hub instead of a blank gate.
+    this.buildRecordsPanel(width - 30, 30);
+
     // Title
     this.add
       .text(width / 2, height * 0.28, 'RUST & RIVETS', {
@@ -163,31 +168,45 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    // Secondary buttons: EXPORT / IMPORT
+    // Secondary buttons: EXPORT / LIBRARY / IMPORT
     const secondaryY = primaryY + 90;
     const exportBtn = new Button(
       this,
-      width / 2 - 120,
+      width / 2 - 220,
       secondaryY,
       'EXPORT SAVE',
       () => this.doExport(),
-      { width: 200, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(exportBtn);
 
+    // Slice 55 — LIBRARY: browses every card and relic in the game.
+    const libraryBtn = new Button(
+      this,
+      width / 2,
+      secondaryY,
+      'LIBRARY',
+      () => {
+        this.cameras.main.fadeOut(180, 20, 17, 15);
+        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
+      },
+      { width: 180, height: 40, fontSize: 13, fill: COLORS.brass, hoverFill: COLORS.steam }
+    );
+    this.add.existing(libraryBtn);
+
     const importBtn = new Button(
       this,
-      width / 2 + 120,
+      width / 2 + 220,
       secondaryY,
       'IMPORT SAVE',
       () => this.doImport(),
-      { width: 200, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(importBtn);
 
     // Hint text under the IMPORT button — discovers the drop-to-import path
     this.add
-      .text(width / 2 + 120, secondaryY + 28, 'or drop a save file anywhere', {
+      .text(width / 2 + 220, secondaryY + 28, 'or drop a save file anywhere', {
         fontFamily: FONTS.body,
         fontSize: '10px',
         color: hex(COLORS.boneDim),
@@ -224,6 +243,63 @@ export class TitleScene extends Phaser.Scene {
         color: hex(COLORS.boneDim)
       })
       .setOrigin(0.5, 1);
+  }
+
+  // Slice 55 — small RECORDS card in the top-right. Origin is top-right
+  // so the panel anchors to (x, y) regardless of label width.
+  private buildRecordsPanel(rightX: number, topY: number) {
+    const meta = loadMeta();
+    const h = meta.history;
+    if (!h) return;
+    const panelW = 200;
+    const panelH = 132;
+    const panel = this.add
+      .rectangle(rightX, topY, panelW, panelH, COLORS.bgPanel, 0.85)
+      .setStrokeStyle(2, COLORS.brassDim)
+      .setOrigin(1, 0);
+    void panel;
+    const titleY = topY + 12;
+    this.add
+      .text(rightX - panelW / 2, titleY, 'RECORDS', {
+        fontFamily: FONTS.display,
+        fontSize: '13px',
+        color: hex(COLORS.brass),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5, 0);
+
+    // Stats grid. Two-column rows: label left-aligned at the panel's
+    // left edge, value right-aligned at the panel's right edge.
+    const leftX = rightX - panelW + 14;
+    const valueX = rightX - 14;
+    const winRate = h.runsStarted > 0
+      ? Math.round((h.runsWon / h.runsStarted) * 100)
+      : 0;
+    const rows: [string, string][] = [
+      ['Runs', `${h.runsStarted}`],
+      ['Wins', `${h.runsWon}`],
+      ['Best Act', h.bestAct > 0 ? `${h.bestAct}` : '—'],
+      ['Bosses', `${h.bossesDefeated}`],
+      ['Win rate', `${winRate}%`]
+    ];
+    rows.forEach(([label, value], i) => {
+      const ry = topY + 38 + i * 17;
+      this.add
+        .text(leftX, ry, label, {
+          fontFamily: FONTS.body,
+          fontSize: '11px',
+          color: hex(COLORS.boneDim)
+        })
+        .setOrigin(0, 0);
+      this.add
+        .text(valueX, ry, value, {
+          fontFamily: FONTS.display,
+          fontSize: '12px',
+          color: hex(COLORS.bone),
+          fontStyle: 'bold'
+        })
+        .setOrigin(1, 0);
+    });
   }
 
   // Renders the ASCENSION X selector at (x, y). Re-renders on click by

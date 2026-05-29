@@ -7,6 +7,58 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 ## Unreleased
 
+### Run history & Library
+
+A title-screen overhaul: lifetime stat tracking + a browsable
+encyclopedia. The title used to be a gate to "press NEW RUN" — now
+it's the hub that shows the player what they've accomplished and
+what's possible.
+
+**Persistent run history** ([src/game/meta.ts](src/game/meta.ts)).
+New `RunHistory` block on `MetaState` tracks:
+
+- `runsStarted` / `runsWon` lifetime counters
+- `bestAct` (highest act ever reached)
+- `bossesDefeated` (cumulative)
+- `bestAscensionCleared` (highest cleared, distinct from
+  `highestAscension` which is the next tier unlocked)
+- `perCharacter` map of `{ runs, wins }` per pilot
+
+Four recorder helpers wire into the run lifecycle:
+
+- `recordRunStart(characterId)` — called from `startRun()` before
+  meta upgrades apply.
+- `recordActReached(act)` / `recordBossDefeated()` — called from
+  `completeCombat()` after every boss kill.
+- `recordRunWin(characterId, ascension)` — called from
+  `RunSummaryScene` on victory.
+
+Schema migration: old saves without `history` hydrate via
+`hydrateHistory()` — purely additive, no data loss, no version bump
+needed.
+
+**Title screen RECORDS panel.** Compact 5-row card in the top-right
+corner showing Runs / Wins / Best Act / Bosses / Win rate. Only
+renders if `meta.history` exists (always true post-Slice-55).
+
+**LibraryScene**
+([src/scenes/LibraryScene.ts](src/scenes/LibraryScene.ts)). New
+scene reachable from the title via a LIBRARY button in the
+secondary row. Two tabs:
+
+- **CARDS** — 5-column grid of every base card (no `+` variants),
+  sorted by rarity then name. Each cell shows cost badge,
+  name, full description, and a rarity label. Border tinted by
+  rarity (`RARITY_COLORS`).
+- **RELICS** — 2-column grid of every relic, sorted alphabetically.
+  Each cell shows star icon, name, description, and a `BOSS DROP`
+  tag on `signature: true` relics so players know which ones are
+  gated behind specific kills.
+
+Both grids use the same wheel + drag scroll pattern as the map
+scene (6-pixel drag threshold). Switching tabs restarts the scene
+so the scroll state resets cleanly.
+
 ### Tests
 
 - **Vitest** added as a dev dependency. `npm test` runs the suite once;
@@ -34,6 +86,18 @@ All notable changes to **Rust & Rivets**. Format loosely follows
     (gambling with seeded rng), CONFESSIONAL (Act 4 — status removal
     gated on scrap and deck contents), EMBER_PROPHET (Act 5 — Power /
     AoE / Legendary inscription with Hull cost).
+  - **`tests/meta.test.ts`** (9 tests) — RunHistory zero-state, the
+    four recorder helpers (`recordRunStart`, `recordRunWin`,
+    `recordActReached`, `recordBossDefeated`), monotonic-only
+    behavior for `bestAct` and `bestAscensionCleared`, schema
+    migration from pre-Slice-55 saves, and a full Act-5 win scenario
+    that produces a coherent ledger.
+- **Vitest setup file** (`tests/setup.ts`) provides a tiny
+  in-memory `localStorage` polyfill so the meta module's save/load
+  round-trip works without a full DOM env. Wired via
+  `vitest.config.ts`.
+
+**Total test count: 74.**
 
 ### Visuals
 

@@ -25,6 +25,41 @@ export interface MetaState {
   // they've unlocked (always >= currentAscension).
   currentAscension: number;
   highestAscension: number;
+  // Run history — persistent ledger so the title screen can show
+  // "Runs / Wins / Best Act / per-character stats." Optional so old saves
+  // (META_SCHEMA = 1) hydrate cleanly via emptyHistory().
+  history?: RunHistory;
+}
+
+// Persistent record of every run the player has ever started. Updated by
+// startRun / completeCombat / RunSummaryScene. Each field is monotonically
+// non-decreasing (we never roll stats back) which keeps the ledger trustable
+// even across crashes mid-run.
+export interface RunHistory {
+  // Total runs the player has begun (incremented on every fresh startRun).
+  runsStarted: number;
+  // Total runs cleared at the final act boss.
+  runsWon: number;
+  // Furthest act number ever reached on any run.
+  bestAct: number;
+  // Highest ascension tier ever cleared (matches highestAscension - 1
+  // since highestAscension is the NEXT tier you can attempt).
+  bestAscensionCleared: number;
+  // Total non-boss + boss combats won across all runs.
+  bossesDefeated: number;
+  // Per-character run / win counts. Index by character.id.
+  perCharacter: Record<string, { runs: number; wins: number }>;
+}
+
+function emptyHistory(): RunHistory {
+  return {
+    runsStarted: 0,
+    runsWon: 0,
+    bestAct: 0,
+    bestAscensionCleared: 0,
+    bossesDefeated: 0,
+    perCharacter: {}
+  };
 }
 
 export interface AscensionTier {
@@ -275,7 +310,31 @@ const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(
 );
 
 function emptyMeta(): MetaState {
-  return { version: META_SCHEMA, points: 0, levels: {}, currentAscension: 0, highestAscension: 0 };
+  return {
+    version: META_SCHEMA,
+    points: 0,
+    levels: {},
+    currentAscension: 0,
+    highestAscension: 0,
+    history: emptyHistory()
+  };
+}
+
+// Hydrates a partial RunHistory from disk, defaulting any missing fields.
+// Older saves that predated Slice 55 won't have `history` at all; they
+// hydrate from emptyHistory() and grow from zero — no migration step
+// needed because the schema is purely additive.
+function hydrateHistory(raw: Partial<RunHistory> | undefined): RunHistory {
+  const empty = emptyHistory();
+  if (!raw) return empty;
+  return {
+    runsStarted: Math.max(0, raw.runsStarted ?? 0),
+    runsWon: Math.max(0, raw.runsWon ?? 0),
+    bestAct: Math.max(0, raw.bestAct ?? 0),
+    bestAscensionCleared: Math.max(0, raw.bestAscensionCleared ?? 0),
+    bossesDefeated: Math.max(0, raw.bossesDefeated ?? 0),
+    perCharacter: raw.perCharacter ?? {}
+  };
 }
 
 let cache: MetaState | null = null;
@@ -298,7 +357,8 @@ export function loadMeta(): MetaState {
       points: data.points ?? 0,
       levels: data.levels ?? {},
       currentAscension: clampAscension(data.currentAscension ?? 0, data.highestAscension ?? 0),
-      highestAscension: Math.max(0, Math.min(MAX_ASCENSION, data.highestAscension ?? 0))
+      highestAscension: Math.max(0, Math.min(MAX_ASCENSION, data.highestAscension ?? 0)),
+      history: hydrateHistory(data.history)
     };
     return cache;
   } catch {
@@ -319,6 +379,65 @@ export function saveMeta(meta: MetaState): void {
 export function grantMetaPoints(amount: number): MetaState {
   const m = loadMeta();
   m.points += amount;
+  saveMeta(m);
+  return m;
+}
+
+// ===== Slice 55 — Run history helpers =====
+//
+// All three recorders pull through loadMeta() so they always operate on
+// the live cache, and call saveMeta() so a crash mid-run can't lose more
+// than the most recent transition. They quietly create `history` if a
+// pre-Slice-55 save hydrated without it.
+
+function ensureHistory(m: MetaState): RunHistory {
+  if (!m.history) m.history = emptyHistory();
+  return m.history;
+}
+
+function ensureCharacterRecord(h: RunHistory, characterId: string): { runs: number; wins: number } {
+  if (!h.perCharacter[characterId]) h.perCharacter[characterId] = { runs: 0, wins: 0 };
+  return h.perCharacter[characterId];
+}
+
+// Called by startRun() — increments lifetime + per-character run counts.
+export function recordRunStart(characterId: string): MetaState {
+  const m = loadMeta();
+  const h = ensureHistory(m);
+  h.runsStarted += 1;
+  ensureCharacterRecord(h, characterId).runs += 1;
+  saveMeta(m);
+  return m;
+}
+
+// Called whenever the player reaches a new act (in completeCombat after a
+// boss kill, before the InterAct transition). Keeps bestAct synced.
+export function recordActReached(act: number): MetaState {
+  const m = loadMeta();
+  const h = ensureHistory(m);
+  if (act > h.bestAct) h.bestAct = act;
+  saveMeta(m);
+  return m;
+}
+
+// Called from completeCombat after any boss kill (not just final).
+export function recordBossDefeated(): MetaState {
+  const m = loadMeta();
+  const h = ensureHistory(m);
+  h.bossesDefeated += 1;
+  saveMeta(m);
+  return m;
+}
+
+// Called from RunSummaryScene on a victorious run.
+export function recordRunWin(characterId: string, clearedAscension: number): MetaState {
+  const m = loadMeta();
+  const h = ensureHistory(m);
+  h.runsWon += 1;
+  ensureCharacterRecord(h, characterId).wins += 1;
+  if (clearedAscension > h.bestAscensionCleared) {
+    h.bestAscensionCleared = clearedAscension;
+  }
   saveMeta(m);
   return m;
 }
