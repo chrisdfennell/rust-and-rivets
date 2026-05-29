@@ -31,17 +31,12 @@ export class TitleScene extends Phaser.Scene {
 
   create() {
     startMusic(this);
+    // Slice 59 — RESIZE mode gives us the real viewport here, so the
+    // responsive layout reads from `this.scale.*` directly.
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
-    // Slice 58 — under Phaser.Scale.FIT, `this.scale.width/height` is
-    // always 1280×720 (the design canvas). Adaptive layout decisions
-    // need the ACTUAL browser viewport to know whether the user is on
-    // a phone in portrait or a desktop in landscape, so we read it
-    // straight from `window.innerWidth/innerHeight`.
-    const vpW = typeof window !== 'undefined' ? window.innerWidth : width;
-    const vpH = typeof window !== 'undefined' ? window.innerHeight : height;
-    const portrait = vpH > vpW;
-    const compact = portrait || vpW < 900 || vpH < 700;
+    const portrait = height > width;
+    const compact = portrait || width < 900 || height < 700;
 
     // Backdrop: smokestacks silhouette
     const bg = this.add.graphics();

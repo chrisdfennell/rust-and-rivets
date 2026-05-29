@@ -13,20 +13,21 @@ import { EventScene } from './scenes/EventScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
 import { LibraryScene } from './scenes/LibraryScene';
 
-// Slice 58 — Phaser.Scale.FIT renders the 1280×720 design canvas at
-// its native size internally, then CSS-scales the canvas to fit the
-// browser viewport while preserving aspect ratio. Letterbox bars
-// appear on whichever axis has extra room. Scenes use this.scale.width
-// / height (always 1280 × 720). Responsive scenes that want to adapt
-// to the actual viewport size read window.innerWidth / innerHeight
-// directly — see TitleScene + CharacterSelectScene.
+// Slice 59 — Phaser.Scale.RESIZE hands the actual viewport dimensions
+// to each scene. Responsive scenes (CombatScene, TitleScene, CharSelect)
+// use those dims directly to lay out portrait vs landscape. Scenes that
+// haven't been refactored yet keep using the 1280×720 design coords and
+// call `applyDesignFit()` from src/ui/sceneFit.ts, which sets the camera
+// zoom + center so their world (0,0)-(1280,720) area appears letterboxed
+// in the actual viewport. As more scenes get portrait layouts they drop
+// the `applyDesignFit` call and switch to viewport-relative positioning.
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#14110f',
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER,
     width: 1280,
     height: 720
   },

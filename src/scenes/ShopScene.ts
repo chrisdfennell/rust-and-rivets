@@ -7,6 +7,7 @@ import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class ShopScene extends Phaser.Scene {
@@ -38,7 +39,10 @@ export class ShopScene extends Phaser.Scene {
       return;
     }
 
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
+    applyDesignFit(this);
+    bindDesignFitResize(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Cluttered backdrop
@@ -57,7 +61,8 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private buildMainView() {
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
 
     this.mainView.add(
       this.add.text(width / 2, 50, 'SCRAP YARD', {
@@ -248,7 +253,8 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private buildRemovalView() {
-    const { width, height } = this.scale;
+    const width = DESIGN_W;
+    const height = DESIGN_H;
 
     this.removalView.add(
       this.add.text(width / 2, 50, 'CHOOSE A CARD TO SCRAP', {
@@ -277,7 +283,7 @@ export class ShopScene extends Phaser.Scene {
     this.removalView.removeAll(false);
     for (const c of keep) this.removalView.add(c);
 
-    const { width } = this.scale;
+    const width = DESIGN_W;
     const r = getRun();
     const deck = r.player.deck;
 
