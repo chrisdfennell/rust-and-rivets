@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Slice 57 — PWA icon. Brass-on-dark monogram framed by a riveted
+       ring so it reads as both "R&R" and "engineered." Designed to
+       work as a maskable icon: the safe zone is the central ~80% so
+       Android's circular mask doesn't crop anything important. -->
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9ae4a"/>
+      <stop offset="1" stop-color="#b88a3e"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0" stop-color="#2a2018"/>
+      <stop offset="1" stop-color="#14110f"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Outer brass ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#b88a3e" stroke-width="10"/>
+  <!-- Rivet ring on the brass band -->
+  <g fill="#d9ae4a">
+    <!-- 12 rivets evenly spaced around the ring -->
+    <circle cx="256" cy="36"  r="6"/>
+    <circle cx="366" cy="65"  r="6"/>
+    <circle cx="447" cy="146" r="6"/>
+    <circle cx="476" cy="256" r="6"/>
+    <circle cx="447" cy="366" r="6"/>
+    <circle cx="366" cy="447" r="6"/>
+    <circle cx="256" cy="476" r="6"/>
+    <circle cx="146" cy="447" r="6"/>
+    <circle cx="65"  cy="366" r="6"/>
+    <circle cx="36"  cy="256" r="6"/>
+    <circle cx="65"  cy="146" r="6"/>
+    <circle cx="146" cy="65"  r="6"/>
+  </g>
+
+  <!-- Inner darker disc to anchor the text -->
+  <circle cx="256" cy="256" r="170" fill="#1f1a16" stroke="#8a7d5e" stroke-width="4"/>
+
+  <!-- Monogram "R&R" — chunky brass letterforms -->
+  <text x="256" y="278"
+    font-family="Courier New, monospace"
+    font-size="170"
+    font-weight="bold"
+    fill="url(#brass)"
+    text-anchor="middle"
+    dominant-baseline="middle">R&amp;R</text>
+
+  <!-- Subtle smokestack hint above the monogram -->
+  <g fill="#8a7d5e" opacity="0.5">
+    <rect x="200" y="120" width="14" height="50"/>
+    <rect x="248" y="105" width="14" height="65"/>
+    <rect x="296" y="125" width="14" height="45"/>
+  </g>
+</svg>

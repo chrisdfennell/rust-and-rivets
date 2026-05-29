@@ -2,8 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rust & Rivets</title>
+    <!--
+      Slice 57 — mobile-friendly viewport setup.
+      - maximum-scale=1.0 + user-scalable=no: prevents accidental pinch-zoom
+        from messing with the game canvas
+      - viewport-fit=cover: lets the canvas extend behind iPhone notches
+        (combined with safe-area-inset padding below)
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Rust &amp; Rivets" />
+    <meta name="theme-color" content="#14110f" />
+    <!--
+      Slice 57 — PWA installability. Linking the manifest + apple-touch-icon
+      makes the page "Add to Home Screen"-eligible on iOS and triggers the
+      install prompt on Android/Chrome desktop. The SVG icon handles every
+      size; PNG fallbacks can be added later for older Android browsers.
+    -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <title>Rust &amp; Rivets</title>
     <style>
       html, body {
         margin: 0;
@@ -12,13 +33,32 @@
         color: #d9c9a3;
         font-family: 'Courier New', monospace;
         overflow: hidden;
+        /* Prevent browser-level scrolling / refresh-on-pull on mobile when
+           the player drags inside the game canvas. */
+        overscroll-behavior: none;
+        touch-action: none;
+        /* Disable iOS callouts / selection menus when long-pressing the
+           canvas (e.g. while holding a card to drag). */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        /* Honor iPhone notch — pad the safe area so the canvas inset is
+           accounted for in landscape orientation. */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        box-sizing: border-box;
       }
       #game {
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+      #game canvas {
+        display: block;
+        /* The Phaser canvas already manages its own size — disable touch
+           gestures the browser would otherwise hijack (panning, pinch). */
+        touch-action: none;
       }
     </style>
   </head>

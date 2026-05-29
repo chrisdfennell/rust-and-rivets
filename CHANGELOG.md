@@ -7,6 +7,101 @@ All notable changes to **Rust & Rivets**. Format loosely follows
 
 ## Unreleased
 
+### Mobile-friendly first pass
+
+Foundational support for small screens and touch. The game now renders
+at any viewport size from a 320×240 minimum to 4K, auto-scales on
+window resize and device rotation, prevents browser zoom-and-pan
+hijacks on mobile, and converts the relic hover tooltip to a
+tap-to-pin pattern so touch users can read what their gear does.
+
+**Engine + viewport**
+([src/main.ts](src/main.ts) + [index.html](index.html)):
+
+- Phaser scale config gained `expandParent: false`, `min` (320×240),
+  `max` (3840×2160), and `input.activePointers: 4` so multi-touch
+  gestures don't drop the primary drag pointer.
+- HTML viewport meta now includes `maximum-scale=1.0`,
+  `user-scalable=no`, and `viewport-fit=cover` to block pinch-zoom
+  and honor iPhone notches.
+- CSS adds `touch-action: none`, `overscroll-behavior: none`,
+  `-webkit-user-select: none`, and `safe-area-inset-*` padding so the
+  canvas claims the full viewport without hijacking pull-to-refresh
+  or showing iOS callout menus on long-press.
+- `orientationchange` listener calls `game.scale.refresh()` after a
+  200 ms delay so iOS Safari (which fires the event BEFORE the new
+  viewport dims are available) gets a clean post-rotation re-layout.
+
+**Tap-to-pin tooltips** ([src/scenes/MapScene.ts](src/scenes/MapScene.ts)):
+
+The relic icons on the map used to open their tooltip on `pointerover`
+and close on `pointerout` — works for mouse, breaks on touch (the
+tooltip flashes for an instant). Replaced with a hybrid pattern:
+
+- Mouse hover still opens / closes as before (flagged `hoverOnly`
+  on the container so a hover tooltip auto-dismisses on
+  `pointerout`).
+- Touch tap pins the tooltip; a second tap on the same relic
+  toggles it off; tapping anywhere else on the scene also dismisses.
+- The relic's own `pointerdown` calls `stopPropagation` so its tap
+  doesn't reach the scene-level dismisser. Scrolling the map (which
+  routes through the same scene pointerdown) cleanly closes any
+  pinned tip.
+
+**Touch tap targets bumped to ≥ 44 px**
+([Apple HIG](https://developer.apple.com/design/human-interface-guidelines/buttons)
+and Material both recommend this as the minimum hit area):
+
+- Title `<` `>` ascension cycle buttons: 40×32 → 56×44
+- Title MUSIC / SFX mute toggles: 200×36 → 200×44
+- Library `CARDS` / `RELICS` tabs: 160×36 → 160×44
+
+**Portrait-orientation hint** ([src/scenes/TitleScene.ts](src/scenes/TitleScene.ts)):
+
+A semi-transparent panel renders at the title's center reading
+`↺ ROTATE FOR BEST EXPERIENCE / Rust & Rivets is laid out for
+landscape. Turn your phone sideways and you're set.` Detection reads
+`window.innerWidth / innerHeight` directly (so the actual device
+orientation drives it, not the 1280×720 design canvas), gates on
+both `isPortrait` and `min(w, h) < 700` so desktop browsers
+narrowed for testing don't get the hint, and the panel rebuilds on
+every `scale.on('resize')` event so rotating the phone in the
+middle of looking at the title clears it.
+
+**Touch-friendly drag thresholds**: LibraryScene's pointer-move
+drag threshold went 6 → 8 px to match MapScene / CharacterSelectScene.
+6 px was triggering scroll on finger jitter.
+
+### Installable as a PWA
+
+The game is now a full Progressive Web App. On Android / Chrome /
+Edge the browser surfaces an install prompt; on iOS it can be
+added to the home screen via Safari's share menu.
+
+- **`public/manifest.webmanifest`** declares the app metadata —
+  fullscreen display, landscape orientation, dark theme color
+  (`#14110f`), and the games category. `display_override` falls
+  through fullscreen → standalone → minimal-ui so the platform
+  picks the best fit.
+- **`public/icon.svg`** — vector app icon. Brass `R&R` monogram
+  framed by a riveted ring, with a maskable-safe central zone so
+  Android's circular crop doesn't lose anything important.
+- **`public/sw.js`** — minimal service worker. Cache-first for the
+  app shell (`./`, `index.html`, `manifest.webmanifest`, `icon.svg`)
+  plus runtime caching of the hashed JS bundle on first fetch. New
+  SW activation wipes prior caches so deploys roll out cleanly.
+  Registered from [src/main.ts](src/main.ts) only in production
+  (Vite serves assets directly in dev).
+- **HTML head** updated with `<link rel="manifest">`,
+  `<link rel="apple-touch-icon">`, `apple-mobile-web-app-title`,
+  and `theme-color` so iOS Safari and Android Chrome both get a
+  clean install card.
+
+Once deployed under HTTPS (GitHub Pages already gives you this),
+the install prompt appears automatically on Chrome/Edge after the
+first interaction. iOS users get "Add to Home Screen" from the
+share sheet.
+
 ### Pilot unlocks + save migration
 
 **The non-base pilots are now gated behind boss kills.** All five

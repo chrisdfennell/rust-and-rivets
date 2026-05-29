@@ -119,8 +119,9 @@ export class LibraryScene extends Phaser.Scene {
         this.scene.restart();
       },
       {
+        // Slice 57 — tab buttons bumped 36 → 44 for tap accessibility.
         width: 160,
-        height: 36,
+        height: 44,
         fontSize: 13,
         fill: active ? COLORS.brass : COLORS.steelDark,
         hoverFill: active ? COLORS.steam : COLORS.steel
@@ -306,7 +307,10 @@ export class LibraryScene extends Phaser.Scene {
     this.input.on('wheel', (_p: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
       this.setScroll(this.scrollY - dy);
     });
-    const THRESHOLD = 6;
+    // Slice 57 — bumped 6 → 8 for touch-friendly drag detection (matches
+    // MapScene / CharacterSelectScene). 6 was triggering scroll on
+    // accidental finger jitter.
+    const THRESHOLD = 8;
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragStart = { pointerY: p.y, scrollY: this.scrollY };
       this.dragging = false;

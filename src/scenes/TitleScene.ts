@@ -61,6 +61,18 @@ export class TitleScene extends Phaser.Scene {
     // hub instead of a blank gate.
     this.buildRecordsPanel(width - 30, 30);
 
+    // Slice 57 — portrait-orientation hint. The game's design canvas is
+    // 16:9 landscape; on a portrait phone Phaser's FIT mode shrinks it
+    // dramatically and adds wide letterbox bars. Surface a soft rotate
+    // hint so first-time mobile players know to flip the phone. Driven
+    // by the BROWSER viewport (not the design canvas) so it tracks the
+    // actual device orientation.
+    this.refreshOrientationHint();
+    this.scale.on('resize', this.refreshOrientationHint, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.refreshOrientationHint, this);
+    });
+
     // Title
     this.add
       .text(width / 2, height * 0.28, 'RUST & RIVETS', {
@@ -235,6 +247,47 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
   }
 
+  // Slice 57 — portrait orientation hint.
+  // Stored on the scene so we can replace it on resize. Removed when
+  // landscape is restored. Reads window.innerWidth/Height directly so it
+  // reflects the actual device orientation rather than the design canvas.
+  private orientationHint: Phaser.GameObjects.Container | null = null;
+
+  private refreshOrientationHint = () => {
+    // Tear down the previous hint so we don't stack overlays on
+    // repeated resize events.
+    this.orientationHint?.destroy();
+    this.orientationHint = null;
+    // Only show on actually narrow viewports — bigger displays always
+    // get the landscape layout regardless of window aspect.
+    const w = window.innerWidth || 1280;
+    const h = window.innerHeight || 720;
+    const isPortrait = h > w;
+    const isSmallEnough = Math.min(w, h) < 700;
+    if (!isPortrait || !isSmallEnough) return;
+
+    const { width, height } = this.scale;
+    const hint = this.add.container(width / 2, height / 2);
+    const panel = this.add.rectangle(0, 0, 460, 120, COLORS.bgPanel, 0.9)
+      .setStrokeStyle(2, COLORS.brass);
+    hint.add(panel);
+    hint.add(this.add.text(0, -22, '↺  ROTATE FOR BEST EXPERIENCE', {
+      fontFamily: FONTS.display,
+      fontSize: '16px',
+      color: hex(COLORS.brass),
+      fontStyle: 'bold'
+    }).setOrigin(0.5));
+    hint.add(this.add.text(0, 14, 'Rust & Rivets is laid out for landscape.\nTurn your phone sideways and you\'re set.', {
+      fontFamily: FONTS.body,
+      fontSize: '11px',
+      color: hex(COLORS.bone),
+      align: 'center',
+      lineSpacing: 4
+    }).setOrigin(0.5));
+    hint.setDepth(2000);
+    this.orientationHint = hint;
+  };
+
   // Slice 55 — small RECORDS card in the top-right. Origin is top-right
   // so the panel anchors to (x, y) regardless of label width.
   private buildRecordsPanel(rightX: number, topY: number) {
@@ -317,13 +370,16 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
     // < / > cycle buttons
+    // Slice 57 — bumped from 40×32 to 56×44 for touch friendliness.
+    // Apple's HIG and Google's Material both recommend ≥44 pt as the
+    // minimum hit area. Visual character (<, >) is unchanged.
     const dec = new Button(
       this,
       x - 220,
       y + 2,
       '<',
       () => this.cycleAscension(-1),
-      { width: 40, height: 32, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      { width: 56, height: 44, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(dec);
     dec.setEnabled(level > 0);
@@ -334,7 +390,7 @@ export class TitleScene extends Phaser.Scene {
       y + 2,
       '>',
       () => this.cycleAscension(1),
-      { width: 40, height: 32, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      { width: 56, height: 44, fontSize: 18, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(inc);
     inc.setEnabled(level < meta.highestAscension && level < MAX_ASCENSION);
@@ -367,7 +423,8 @@ export class TitleScene extends Phaser.Scene {
         setter(next);
         btn.setLabel(labelFor(next));
       },
-      { width: 200, height: 36, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      // Slice 57 — bumped 36 → 44 for tap-target accessibility.
+      { width: 200, height: 44, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(btn);
     return btn;

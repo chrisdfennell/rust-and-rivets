@@ -25,6 +25,12 @@ export class MapScene extends Phaser.Scene {
   private scrollMax = 0;
   private dragStart: { pointerY: number; scrollY: number } | null = null;
   private dragging = false;
+  // Slice 57 — active relic tooltip + which relic id is showing it.
+  // Tap-to-pin pattern: tapping a relic opens, tapping the same one
+  // again or any other relic closes the previous one, tapping anywhere
+  // else also closes. Works for both mouse and touch.
+  private activeRelicTip: Phaser.GameObjects.Container | null = null;
+  private activeRelicTipId: string | null = null;
 
   constructor() {
     super('Map');
@@ -172,11 +178,17 @@ export class MapScene extends Phaser.Scene {
           fontStyle: 'bold'
         })
         .setOrigin(0.5);
-      // Hover tooltip. Body wraps at 280 px, so longer descriptions span
-      // multiple lines — size the panel off the measured text height instead
-      // of a fixed 50 px so the description never spills over the border.
+      // Slice 57 — tap-to-pin tooltip. Works on mouse hover (pointerover
+      // also pins) and touch (pointerdown pins). Tapping anywhere else
+      // closes via the scene-level pointerdown listener wired up below.
       bg.setInteractive({ useHandCursor: true });
-      bg.on('pointerover', () => {
+      const openTip = () => {
+        // Toggle off if this relic's tip is already pinned.
+        if (this.activeRelicTipId === id) {
+          this.dismissActiveRelicTip();
+          return;
+        }
+        this.dismissActiveRelicTip();
         const tip = this.add.container(cx + slotSize, cy);
         const padX = 8;
         const padY = 8;
@@ -206,10 +218,41 @@ export class MapScene extends Phaser.Scene {
           .setStrokeStyle(2, COLORS.brassDim);
         tip.add([tipBg, name, desc]);
         tip.setDepth(500);
-        bg.once('pointerout', () => tip.destroy());
+        this.activeRelicTip = tip;
+        this.activeRelicTipId = id;
+      };
+      // Open on tap (touch + mouse click) and on hover (mouse only — does
+      // nothing extra on touch since pointerover doesn't fire there).
+      bg.on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, ev?: Phaser.Types.Input.EventData) => {
+        openTip();
+        // Stop the event from propagating to the scene-level dismisser.
+        ev?.stopPropagation?.();
+        void p;
+      });
+      bg.on('pointerover', () => {
+        // Hover-open keeps the old mouse UX. Auto-dismiss on pointerout
+        // ONLY if the tooltip was opened by hover (not pinned by a tap).
+        // We use a flag stored on the container.
+        if (this.activeRelicTipId === id) return;
+        openTip();
+        const hoverTip = this.activeRelicTip;
+        (hoverTip as Phaser.GameObjects.Container & { hoverOnly?: boolean }).hoverOnly = true;
+      });
+      bg.on('pointerout', () => {
+        const t = this.activeRelicTip as (Phaser.GameObjects.Container & { hoverOnly?: boolean }) | null;
+        if (t?.hoverOnly) this.dismissActiveRelicTip();
       });
       void glyph;
     });
+  }
+
+  // Slice 57 — closes the pinned relic tooltip if one is showing.
+  private dismissActiveRelicTip() {
+    if (this.activeRelicTip) {
+      this.activeRelicTip.destroy();
+      this.activeRelicTip = null;
+      this.activeRelicTipId = null;
+    }
   }
 
   // Returns the natural (unscrolled) screen position of a node. Floor 0
@@ -401,10 +444,18 @@ export class MapScene extends Phaser.Scene {
 
     // Drag scroll. pointerdown records start; pointermove past threshold
     // flips `dragging` on and pans. Node click handlers gate on this flag.
-    const THRESHOLD = 6;
+    // Touch-friendly threshold: 8 px. The relic-bg interactive handlers
+    // call stopPropagation so taps on relics don't dismiss their own tip.
+    const THRESHOLD = 8;
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragStart = { pointerY: p.y, scrollY: this.scrollY };
       this.dragging = false;
+      // Slice 57 — pin-dismiss: tapping anywhere on the scene closes a
+      // pinned relic tooltip. The relic bg's own pointerdown handler
+      // stops propagation so it doesn't reach here when the player is
+      // actually tapping the relic (which would toggle it off via the
+      // separate logic inside openTip).
+      this.dismissActiveRelicTip();
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (!this.dragStart) return;
