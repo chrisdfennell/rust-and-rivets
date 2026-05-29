@@ -251,26 +251,27 @@ export class CombatScene extends Phaser.Scene {
     // Enemy lineup
     this.layoutEnemies();
 
-    // Steam gauge. Landscape: bottom-left of the player area. Portrait:
-    // compact, sitting along the right edge above the hand row.
-    const steamSize = portrait ? 70 : 100;
-    const steamX = portrait ? width - 50 : 80;
-    const steamY = portrait ? height - 230 : height - 130;
+    // Steam gauge. Landscape: bottom-left of the player area at 100px.
+    // Portrait: compact 56px square aligned with the potion belt row
+    // along the right side of the bottom action band.
+    const steamSize = portrait ? 56 : 100;
+    const steamX = portrait ? width - 40 : 80;
+    const steamY = portrait ? height - 260 : height - 130;
     this.add
       .rectangle(steamX, steamY, steamSize, steamSize, COLORS.bgPanel)
       .setStrokeStyle(3, COLORS.brass)
       .setOrigin(0.5);
     this.add
-      .text(steamX, steamY - steamSize * 0.6, 'STEAM', {
+      .text(steamX, steamY - steamSize * 0.55, 'STEAM', {
         fontFamily: FONTS.display,
-        fontSize: portrait ? '10px' : '12px',
+        fontSize: portrait ? '9px' : '12px',
         color: hex(COLORS.brass)
       })
       .setOrigin(0.5);
     this.steamText = this.add
       .text(steamX, steamY, '3/3', {
         fontFamily: FONTS.display,
-        fontSize: portrait ? '22px' : '32px',
+        fontSize: portrait ? '18px' : '32px',
         color: hex(COLORS.steam),
         fontStyle: 'bold'
       })
@@ -296,11 +297,11 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(portrait ? 1 : 0.5, 0);
 
     // Deck / discard pile anchors. Landscape: pinned to the bottom
-    // corners below the hand band. Portrait: anchored to the steam area
-    // since the bottom corners are reserved for the wide hand strip.
+    // corners below the hand band. Portrait: small icons along the
+    // potion-belt row, left and right of the steam/belt cluster.
     if (portrait) {
-      this.drawPile = { x: 40, y: height - 230 };
-      this.discardPile = { x: width - 50, y: height - 320 };
+      this.drawPile = { x: 30, y: height - 260 };
+      this.discardPile = { x: width - 100, y: height - 260 };
     } else {
       this.drawPile = { x: 70, y: height - 62 };
       this.discardPile = { x: width - 100, y: height - 62 };
@@ -309,7 +310,7 @@ export class CombatScene extends Phaser.Scene {
     this.drawPileStack(this.discardPile.x, this.discardPile.y);
 
     // Deck/discard counters
-    const counterY = portrait ? height - 195 : height - 40;
+    const counterY = portrait ? height - 222 : height - 40;
     this.deckText = this.add
       .text(portrait ? this.drawPile.x : 40, counterY, '', {
         fontFamily: FONTS.body,
@@ -318,7 +319,7 @@ export class CombatScene extends Phaser.Scene {
       })
       .setOrigin(portrait ? 0.5 : 0, 0.5);
     this.discardText = this.add
-      .text(portrait ? this.discardPile.x : width - 40, portrait ? this.discardPile.y + 35 : counterY, '', {
+      .text(portrait ? this.discardPile.x : width - 40, counterY, '', {
         fontFamily: FONTS.body,
         fontSize: portrait ? '10px' : '12px',
         color: hex(COLORS.boneDim)
@@ -339,17 +340,23 @@ export class CombatScene extends Phaser.Scene {
     }
 
     // Potion belt. Landscape: above the hand row at the bottom. Portrait:
-    // compact strip just above the hand strip, centered horizontally.
+    // centered horizontally on the same row as the steam gauge and the
+    // draw / discard pile icons. Belt width grows with potion count
+    // (Potion Belt relic adds slots), so we derive originX from the
+    // actual length to keep it centered.
     if (portrait) {
-      this.makePotionBelt(width / 2 - 110, height - 280);
+      const slotCount = getRun().potions.length;
+      const beltW = slotCount * 44 + Math.max(0, slotCount - 1) * 8;
+      this.makePotionBelt(width / 2 - beltW / 2 + 22, height - 260);
     } else {
       this.makePotionBelt(80, height - 240);
     }
 
     // End turn button. Landscape: bottom-right of the player area.
-    // Portrait: above the hand row, opposite the steam gauge.
+    // Portrait: centered horizontally just above the hand strip — the
+    // primary action gets the prime real estate.
     if (portrait) {
-      this.makeEndTurnButton(80, height - 230);
+      this.makeEndTurnButton(width / 2, height - 195);
     } else {
       this.makeEndTurnButton(width - 130, height - 130);
     }
