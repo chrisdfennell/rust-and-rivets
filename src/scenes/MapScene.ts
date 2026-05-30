@@ -174,16 +174,26 @@ export class MapScene extends Phaser.Scene {
 
     // Scroll bounds — the layer's y translates to pan the map. Travel
     // range covers from "boss visible near header" to "floor 0 visible
-    // near hint." Auto-center on the player's current node (or floor 0
-    // if they haven't picked a starting road yet).
+    // well above the canvas bottom." Auto-center on the player's
+    // current node (or floor 0 if they haven't picked a starting road
+    // yet).
+    //
+    // Mobile-browser fix: the URL bar on Chrome / Safari / Edge overlays
+    // the bottom of the canvas without resizing it. If floor 0 was only
+    // allowed to reach mapAreaBottom (the canvas edge), the starting
+    // nodes ended up under the browser chrome and the player couldn't
+    // tap them. In portrait we reserve ~25 % of the viewport at the
+    // bottom as scroll overshoot so floor 0 can always be pulled up
+    // into clearly tappable space.
     const hudTop = this.portrait ? 70 : 80;
     const hudBottom = this.portrait ? 40 : 50;
     this.mapAreaTop = hudTop;
     this.mapAreaBottom = height - hudBottom;
+    const bottomScrollClearance = this.portrait ? Math.round(height * 0.25) : 0;
     const naturalY = (floor: number) => height - MARGIN_BOTTOM - floor * this.floorH;
     const topFloor = run.map.floors - 1;
     this.scrollMax = hudTop - naturalY(topFloor);
-    this.scrollMin = this.mapAreaBottom - naturalY(0);
+    this.scrollMin = (this.mapAreaBottom - bottomScrollClearance) - naturalY(0);
     if (this.scrollMax < this.scrollMin) this.scrollMax = this.scrollMin;
     const focusNode = run.currentNodeId ? run.map.nodes.get(run.currentNodeId) : null;
     const focusFloor = focusNode ? focusNode.floor : 0;
