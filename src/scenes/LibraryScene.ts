@@ -4,24 +4,23 @@ import { RELICS } from '../game/relics';
 import type { CardDef, CardRarity } from '../game/types';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
-import { DESIGN_W, DESIGN_H, applyDesignFit, bindDesignFitResize } from '../ui/sceneFit';
 import { COLORS, FONTS, hex, RARITY_COLORS } from '../ui/theme';
 
 type Tab = 'cards' | 'relics';
 
-// Cell geometry shared across both tabs. Cells are sized to read at a
-// glance — name + cost on top row, description wrapped underneath.
-const CARD_CELL_W = 220;
-const CARD_CELL_H = 130;
-const CARD_COLS = 5;
-const CARD_GAP_X = 12;
-const CARD_GAP_Y = 14;
+// Landscape cell geometry — historic desktop layout. Portrait derives
+// its own narrower sizing from the live viewport (see rebuild()).
+const CARD_CELL_W_L = 220;
+const CARD_CELL_H_L = 130;
+const CARD_COLS_L = 5;
+const CARD_GAP_X_L = 12;
+const CARD_GAP_Y_L = 14;
 
-const RELIC_CELL_W = 460;
-const RELIC_CELL_H = 70;
-const RELIC_COLS = 2;
-const RELIC_GAP_X = 20;
-const RELIC_GAP_Y = 12;
+const RELIC_CELL_W_L = 460;
+const RELIC_CELL_H_L = 70;
+const RELIC_COLS_L = 2;
+const RELIC_GAP_X_L = 20;
+const RELIC_GAP_Y_L = 12;
 
 // Rarity sort order so the card grid reads common-to-legendary.
 const RARITY_ORDER: Record<CardRarity, number> = {
@@ -36,6 +35,14 @@ export class LibraryScene extends Phaser.Scene {
   private scrollMax = 0;
   private dragStart: { pointerY: number; scrollY: number } | null = null;
   private dragging = false;
+  private portrait = false;
+  private viewW = 0;
+  private viewH = 0;
+  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  private chevronUp: Phaser.GameObjects.Text | null = null;
+  private chevronDown: Phaser.GameObjects.Text | null = null;
+  private viewportTop = 0;
+  private viewportBottom = 0;
 
   constructor() {
     super('Library');
@@ -43,10 +50,10 @@ export class LibraryScene extends Phaser.Scene {
 
   create() {
     setupPause(this);
-    const width = DESIGN_W;
-    const height = DESIGN_H;
-    applyDesignFit(this);
-    bindDesignFitResize(this);
+    const { width, height } = this.scale;
+    this.viewW = width;
+    this.viewH = height;
+    this.portrait = height > width;
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     // Backdrop — quiet, ledger feel
@@ -56,38 +63,44 @@ export class LibraryScene extends Phaser.Scene {
     bg.fillStyle(0x14110f);
     bg.fillRect(0, height * 0.84, width, height * 0.16);
     bg.fillStyle(COLORS.brass, 0.04);
-    bg.fillCircle(width / 2, 110, 240);
+    bg.fillCircle(width / 2, 110, Math.min(240, width * 0.4));
 
     // Title
     this.add
-      .text(width / 2, 36, 'LIBRARY', {
+      .text(width / 2, this.portrait ? 28 : 36, 'LIBRARY', {
         fontFamily: FONTS.display,
-        fontSize: '36px',
+        fontSize: this.portrait ? '26px' : '36px',
         color: hex(COLORS.brass),
         fontStyle: 'bold'
       })
       .setOrigin(0.5);
     this.add
-      .text(width / 2, 78, 'Every card and relic the wasteland can hand you.', {
+      .text(width / 2, this.portrait ? 60 : 78, 'Every card and relic the wasteland can hand you.', {
         fontFamily: FONTS.body,
-        fontSize: '12px',
-        color: hex(COLORS.boneDim)
+        fontSize: this.portrait ? '11px' : '12px',
+        color: hex(COLORS.boneDim),
+        align: 'center',
+        wordWrap: { width: Math.min(width - 32, 700) }
       })
       .setOrigin(0.5);
 
-    // Tab toggles
-    this.buildTab(width / 2 - 110, 116, 'CARDS', 'cards');
-    this.buildTab(width / 2 + 110, 116, 'RELICS', 'relics');
+    // Tab toggles — narrower in portrait so they fit side-by-side.
+    const tabW = this.portrait ? Math.min((width - 48) / 2, 140) : 160;
+    const tabY = this.portrait ? 90 : 116;
+    const tabSpacing = tabW / 2 + 14;
+    this.buildTab(width / 2 - tabSpacing, tabY, tabW, 'CARDS', 'cards');
+    this.buildTab(width / 2 + tabSpacing, tabY, tabW, 'RELICS', 'relics');
 
     // Scroll layer — contents added by buildCards / buildRelics
     this.content = this.add.container(0, 0);
     this.rebuild();
 
-    // BACK button
+    // BACK button. Portrait pins it bottom-center; landscape keeps the
+    // bottom-left placement that the original layout used.
     const back = new Button(
       this,
-      120,
-      height - 50,
+      this.portrait ? width / 2 : 120,
+      height - (this.portrait ? 36 : 50),
       'BACK',
       () => {
         this.cameras.main.fadeOut(180, 20, 17, 15);
@@ -97,20 +110,38 @@ export class LibraryScene extends Phaser.Scene {
     );
     this.add.existing(back);
 
-    // Scroll hint
-    this.add
-      .text(width / 2, height - 28, 'Scroll the list with the mouse wheel or drag.', {
-        fontFamily: FONTS.body,
-        fontSize: '10px',
-        color: hex(COLORS.boneDim),
-        fontStyle: 'italic'
-      })
-      .setOrigin(0.5);
+    // Scroll hint (landscape only — portrait has the chevrons + an
+    // obvious touch-drag affordance).
+    if (!this.portrait) {
+      this.add
+        .text(width / 2, height - 28, 'Scroll the list with the mouse wheel or drag.', {
+          fontFamily: FONTS.body,
+          fontSize: '10px',
+          color: hex(COLORS.boneDim),
+          fontStyle: 'italic'
+        })
+        .setOrigin(0.5);
+    }
 
+    this.drawScrollChevrons();
     this.attachScrollInput();
+
+    this.scale.on('resize', this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.handleResize, this);
+      if (this.resizeTimer) clearTimeout(this.resizeTimer);
+    });
   }
 
-  private buildTab(x: number, y: number, label: string, tab: Tab) {
+  private handleResize = () => {
+    if (this.resizeTimer) clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => {
+      this.resizeTimer = null;
+      this.scene.restart();
+    }, 120);
+  };
+
+  private buildTab(x: number, y: number, w: number, label: string, tab: Tab) {
     const active = this.tab === tab;
     const btn = new Button(
       this,
@@ -123,8 +154,8 @@ export class LibraryScene extends Phaser.Scene {
         this.scene.restart();
       },
       {
-        // Slice 57 — tab buttons bumped 36 → 44 for tap accessibility.
-        width: 160,
+        // Slice 57 — tap-accessible 44 px height.
+        width: w,
         height: 44,
         fontSize: 13,
         fill: active ? COLORS.brass : COLORS.steelDark,
@@ -135,25 +166,24 @@ export class LibraryScene extends Phaser.Scene {
   }
 
   private rebuild() {
-    const width = DESIGN_W;
-    const height = DESIGN_H;
+    const { viewH: height, portrait } = this;
     this.content.removeAll(true);
 
     if (this.tab === 'cards') this.buildCards();
     else this.buildRelics();
 
-    // Scroll bounds: viewport is between the tabs (y ~150) and the BACK
-    // button (y ~height - 80). Below = scrollMax (showing the top of
-    // content), above = scrollMin (showing the bottom).
-    const top = 150;
-    const bottom = height - 80;
-    const viewportH = bottom - top;
+    // Scroll bounds: viewport is between the tabs (y ~150 / portrait
+    // ~124) and the BACK button (y ~height - 80 / portrait ~height -
+    // 60).
+    const top = portrait ? 124 : 150;
+    const bottom = portrait ? height - 60 : height - 80;
+    this.viewportTop = top;
+    this.viewportBottom = bottom;
     const contentH = (this.content as Phaser.GameObjects.Container).getBounds().height + 40;
     this.scrollMax = top;
     this.scrollMin = bottom - contentH;
     if (this.scrollMin > this.scrollMax) this.scrollMin = this.scrollMax;
     this.setScroll(top); // start at the top
-    void width; void viewportH;
   }
 
   private buildCards() {
@@ -169,16 +199,24 @@ export class LibraryScene extends Phaser.Scene {
         return CARDS[a].name.localeCompare(CARDS[b].name);
       });
 
-    const width = DESIGN_W;
-    const gridW = CARD_COLS * CARD_CELL_W + (CARD_COLS - 1) * CARD_GAP_X;
-    const startX = (width - gridW) / 2 + CARD_CELL_W / 2;
-    const startY = CARD_CELL_H / 2;
+    const { viewW: width, portrait } = this;
+    const cols = portrait ? 2 : CARD_COLS_L;
+    const cellH = portrait ? 120 : CARD_CELL_H_L;
+    const gapX = portrait ? 10 : CARD_GAP_X_L;
+    const gapY = portrait ? 12 : CARD_GAP_Y_L;
+    const margin = portrait ? 16 : 0;
+    const cellW = portrait
+      ? Math.floor((width - margin * 2 - (cols - 1) * gapX) / cols)
+      : CARD_CELL_W_L;
+    const gridW = cols * cellW + (cols - 1) * gapX;
+    const startX = (width - gridW) / 2 + cellW / 2;
+    const startY = cellH / 2;
     ids.forEach((id, i) => {
-      const col = i % CARD_COLS;
-      const row = Math.floor(i / CARD_COLS);
-      const cx = startX + col * (CARD_CELL_W + CARD_GAP_X);
-      const cy = startY + row * (CARD_CELL_H + CARD_GAP_Y);
-      this.content.add(this.drawCardCell(CARDS[id], cx, cy));
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = startX + col * (cellW + gapX);
+      const cy = startY + row * (cellH + gapY);
+      this.content.add(this.drawCardCell(CARDS[id], cx, cy, cellW, cellH));
     });
   }
 
@@ -186,25 +224,33 @@ export class LibraryScene extends Phaser.Scene {
     const ids = Object.keys(RELICS).sort((a, b) =>
       RELICS[a].name.localeCompare(RELICS[b].name)
     );
-    const width = DESIGN_W;
-    const gridW = RELIC_COLS * RELIC_CELL_W + (RELIC_COLS - 1) * RELIC_GAP_X;
-    const startX = (width - gridW) / 2 + RELIC_CELL_W / 2;
-    const startY = RELIC_CELL_H / 2;
+    const { viewW: width, portrait } = this;
+    const cols = portrait ? 1 : RELIC_COLS_L;
+    const cellH = portrait ? 84 : RELIC_CELL_H_L;
+    const gapX = portrait ? 0 : RELIC_GAP_X_L;
+    const gapY = portrait ? 10 : RELIC_GAP_Y_L;
+    const margin = portrait ? 16 : 0;
+    const cellW = portrait
+      ? width - margin * 2
+      : RELIC_CELL_W_L;
+    const gridW = cols * cellW + (cols - 1) * gapX;
+    const startX = (width - gridW) / 2 + cellW / 2;
+    const startY = cellH / 2;
     ids.forEach((id, i) => {
-      const col = i % RELIC_COLS;
-      const row = Math.floor(i / RELIC_COLS);
-      const cx = startX + col * (RELIC_CELL_W + RELIC_GAP_X);
-      const cy = startY + row * (RELIC_CELL_H + RELIC_GAP_Y);
-      this.content.add(this.drawRelicCell(RELICS[id], cx, cy));
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = startX + col * (cellW + gapX);
+      const cy = startY + row * (cellH + gapY);
+      this.content.add(this.drawRelicCell(RELICS[id], cx, cy, cellW, cellH));
     });
   }
 
-  private drawCardCell(def: CardDef, cx: number, cy: number): Phaser.GameObjects.Container {
+  private drawCardCell(def: CardDef, cx: number, cy: number, cellW: number, cellH: number): Phaser.GameObjects.Container {
     const cell = this.add.container(cx, cy);
     const rarity = def.rarity ?? 'common';
     const borderColor = RARITY_COLORS[rarity];
 
-    const bg = this.add.rectangle(0, 0, CARD_CELL_W, CARD_CELL_H, COLORS.bgPanel)
+    const bg = this.add.rectangle(0, 0, cellW, cellH, COLORS.bgPanel)
       .setStrokeStyle(2, borderColor);
     cell.add(bg);
 
@@ -213,24 +259,24 @@ export class LibraryScene extends Phaser.Scene {
       : def.unplayable ? COLORS.danger
       : COLORS.brass;
     const costStr = def.xCost ? 'X' : def.unplayable ? '—' : `${def.cost}`;
-    const costBadge = this.add.circle(-CARD_CELL_W / 2 + 18, -CARD_CELL_H / 2 + 18, 13, COLORS.bgPanel)
+    const costBadge = this.add.circle(-cellW / 2 + 18, -cellH / 2 + 18, 13, COLORS.bgPanel)
       .setStrokeStyle(2, costColor);
     cell.add(costBadge);
-    cell.add(this.add.text(-CARD_CELL_W / 2 + 18, -CARD_CELL_H / 2 + 18, costStr, {
+    cell.add(this.add.text(-cellW / 2 + 18, -cellH / 2 + 18, costStr, {
       fontFamily: FONTS.display,
-      fontSize: '14px',
+      fontSize: '13px',
       color: hex(costColor),
       fontStyle: 'bold'
     }).setOrigin(0.5));
 
     // Name (top center)
-    cell.add(this.add.text(0, -CARD_CELL_H / 2 + 14, def.name, {
+    cell.add(this.add.text(0, -cellH / 2 + 14, def.name, {
       fontFamily: FONTS.display,
-      fontSize: '13px',
+      fontSize: '12px',
       color: hex(COLORS.bone),
       fontStyle: 'bold',
       align: 'center',
-      wordWrap: { width: CARD_CELL_W - 50 }
+      wordWrap: { width: cellW - 50 }
     }).setOrigin(0.5, 0));
 
     // Description (middle / bottom)
@@ -240,11 +286,11 @@ export class LibraryScene extends Phaser.Scene {
       color: hex(COLORS.boneDim),
       align: 'center',
       lineSpacing: 2,
-      wordWrap: { width: CARD_CELL_W - 16 }
+      wordWrap: { width: cellW - 16 }
     }).setOrigin(0.5, 0));
 
     // Rarity label (bottom)
-    cell.add(this.add.text(0, CARD_CELL_H / 2 - 14, rarity.toUpperCase(), {
+    cell.add(this.add.text(0, cellH / 2 - 12, rarity.toUpperCase(), {
       fontFamily: FONTS.display,
       fontSize: '9px',
       color: hex(borderColor),
@@ -254,16 +300,16 @@ export class LibraryScene extends Phaser.Scene {
     return cell;
   }
 
-  private drawRelicCell(def: { name: string; description: string; signature?: boolean }, cx: number, cy: number): Phaser.GameObjects.Container {
+  private drawRelicCell(def: { name: string; description: string; signature?: boolean }, cx: number, cy: number, cellW: number, cellH: number): Phaser.GameObjects.Container {
     const cell = this.add.container(cx, cy);
     const accent = def.signature ? COLORS.danger : COLORS.brass;
 
-    const bg = this.add.rectangle(0, 0, RELIC_CELL_W, RELIC_CELL_H, COLORS.bgPanel)
+    const bg = this.add.rectangle(0, 0, cellW, cellH, COLORS.bgPanel)
       .setStrokeStyle(2, accent);
     cell.add(bg);
 
     // Star icon (left)
-    const iconX = -RELIC_CELL_W / 2 + 26;
+    const iconX = -cellW / 2 + 26;
     cell.add(this.add.circle(iconX, 0, 18, COLORS.bgPanel).setStrokeStyle(2, accent));
     cell.add(this.add.text(iconX, 0, '★', {
       fontFamily: FONTS.display,
@@ -273,8 +319,8 @@ export class LibraryScene extends Phaser.Scene {
     }).setOrigin(0.5));
 
     // Name (top)
-    const textX = -RELIC_CELL_W / 2 + 56;
-    cell.add(this.add.text(textX, -RELIC_CELL_H / 2 + 8, def.name, {
+    const textX = -cellW / 2 + 56;
+    cell.add(this.add.text(textX, -cellH / 2 + 8, def.name, {
       fontFamily: FONTS.display,
       fontSize: '13px',
       color: hex(COLORS.bone),
@@ -282,17 +328,17 @@ export class LibraryScene extends Phaser.Scene {
     }).setOrigin(0, 0));
 
     // Description (wraps)
-    cell.add(this.add.text(textX, -RELIC_CELL_H / 2 + 28, def.description, {
+    cell.add(this.add.text(textX, -cellH / 2 + 28, def.description, {
       fontFamily: FONTS.body,
       fontSize: '11px',
       color: hex(COLORS.boneDim),
-      wordWrap: { width: RELIC_CELL_W - 80 },
+      wordWrap: { width: cellW - 80 },
       lineSpacing: 2
     }).setOrigin(0, 0));
 
     // Signature tag (bottom-right)
     if (def.signature) {
-      cell.add(this.add.text(RELIC_CELL_W / 2 - 8, RELIC_CELL_H / 2 - 4, 'BOSS DROP', {
+      cell.add(this.add.text(cellW / 2 - 8, cellH / 2 - 4, 'BOSS DROP', {
         fontFamily: FONTS.display,
         fontSize: '9px',
         color: hex(COLORS.danger),
@@ -303,18 +349,61 @@ export class LibraryScene extends Phaser.Scene {
     return cell;
   }
 
+  private drawScrollChevrons() {
+    if (!this.portrait) return;
+    const cx = this.viewW / 2;
+    this.chevronUp = this.add
+      .text(cx, this.viewportTop + 4, '▲', {
+        fontFamily: FONTS.display,
+        fontSize: '18px',
+        color: hex(COLORS.brass),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5)
+      .setDepth(50)
+      .setAlpha(0);
+    this.chevronDown = this.add
+      .text(cx, this.viewportBottom - 4, '▼', {
+        fontFamily: FONTS.display,
+        fontSize: '18px',
+        color: hex(COLORS.brass),
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5)
+      .setDepth(50)
+      .setAlpha(0);
+    this.tweens.add({
+      targets: [this.chevronUp, this.chevronDown],
+      alpha: { from: 0.4, to: 1 },
+      y: { from: '-=3', to: '+=3' },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.InOut'
+    });
+    this.refreshChevrons();
+  }
+
+  private refreshChevrons() {
+    // scrollY < scrollMax → we've scrolled past the initial top, content
+    // is above the viewport → show UP arrow.
+    // scrollY > scrollMin → there's still room to scroll further down →
+    // show DOWN arrow.
+    if (this.chevronUp) this.chevronUp.setVisible(this.scrollY < this.scrollMax - 1);
+    if (this.chevronDown) this.chevronDown.setVisible(this.scrollY > this.scrollMin + 1);
+  }
+
   private setScroll(y: number) {
     this.scrollY = Math.max(this.scrollMin, Math.min(this.scrollMax, y));
     this.content.y = this.scrollY;
+    this.refreshChevrons();
   }
 
   private attachScrollInput() {
     this.input.on('wheel', (_p: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
       this.setScroll(this.scrollY - dy);
     });
-    // Slice 57 — bumped 6 → 8 for touch-friendly drag detection (matches
-    // MapScene / CharacterSelectScene). 6 was triggering scroll on
-    // accidental finger jitter.
+    // Slice 57 — bumped 6 → 8 for touch-friendly drag detection.
     const THRESHOLD = 8;
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragStart = { pointerY: p.y, scrollY: this.scrollY };
