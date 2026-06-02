@@ -164,7 +164,7 @@ export class TitleScene extends Phaser.Scene {
       const btnWp = Math.min(width - 40, 320);
       const footerH = 24;
       const remaining = height - topCursor - footerH - 12;
-      const rowCount = 6;
+      const rowCount = 7;
       const rowPitch = Math.max(48, Math.min(60, Math.floor(remaining / rowCount)));
       const mainH = Math.min(50, rowPitch - 6);
       let y = topCursor + 12 + mainH / 2;
@@ -185,6 +185,9 @@ export class TitleScene extends Phaser.Scene {
           this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
         },
         { width: btnWp, height: mainH, fontSize: 14, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      y += rowPitch;
+      this.add.existing(new Button(this, cx, y, 'HOW TO PLAY', () => this.openHowToPlay(),
+        { width: btnWp, height: mainH, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
       y += rowPitch;
       const halfW = btnWp > 200 ? (btnWp - 12) / 2 : btnWp;
       const smallH = Math.min(44, mainH);
@@ -253,6 +256,11 @@ export class TitleScene extends Phaser.Scene {
       this.setupFileDrop(importBtn);
       this.makeMuteToggle(colX(2), row2Y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), btnWc);
       this.makeMuteToggle(colX(3), row2Y, 'SFX', isSfxMuted, (m) => setSfxMuted(m), btnWc);
+
+      // Row 3: HOW TO PLAY, centered under the grid.
+      const row3Y = row2Y + row2H / 2 + rowGap + 18;
+      this.add.existing(new Button(this, cx, row3Y, 'HOW TO PLAY', () => this.openHowToPlay(),
+        { width: btnWc, height: 36, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
     } else {
       // ===== Landscape (original layout, slightly de-magicked) =====
       const primaryY = height * 0.75;
@@ -271,17 +279,22 @@ export class TitleScene extends Phaser.Scene {
           })
           .setOrigin(0.5);
       }
+      // Secondary row — four across so HOW TO PLAY fits without spilling
+      // below the 720px-tall viewport (the audio row already sits near the
+      // bottom edge).
       const secondaryY = primaryY + 90;
-      this.add.existing(new Button(this, cx - 220, secondaryY, 'EXPORT SAVE', () => this.doExport(),
-        { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
-      this.add.existing(new Button(this, cx, secondaryY, 'LIBRARY',
+      this.add.existing(new Button(this, cx - 330, secondaryY, 'EXPORT SAVE', () => this.doExport(),
+        { width: 200, height: 40, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+      this.add.existing(new Button(this, cx - 110, secondaryY, 'LIBRARY',
         () => {
           this.cameras.main.fadeOut(180, 20, 17, 15);
           this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Library'));
         },
-        { width: 180, height: 40, fontSize: 13, fill: COLORS.brass, hoverFill: COLORS.steam }));
-      const importBtn = new Button(this, cx + 220, secondaryY, 'IMPORT SAVE', () => this.doImport(),
-        { width: 180, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel });
+        { width: 200, height: 40, fontSize: 13, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      this.add.existing(new Button(this, cx + 110, secondaryY, 'HOW TO PLAY', () => this.openHowToPlay(),
+        { width: 200, height: 40, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
+      const importBtn = new Button(this, cx + 330, secondaryY, 'IMPORT SAVE', () => this.doImport(),
+        { width: 200, height: 40, fontSize: 12, fill: COLORS.steelDark, hoverFill: COLORS.steel });
       this.add.existing(importBtn);
       this.setupFileDrop(importBtn);
       const audioY = secondaryY + 60;
@@ -525,6 +538,11 @@ export class TitleScene extends Phaser.Scene {
   private openWorkshop() {
     this.cameras.main.fadeOut(180, 20, 17, 15);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Workshop'));
+  }
+
+  private openHowToPlay() {
+    this.cameras.main.fadeOut(180, 20, 17, 15);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('HowToPlay'));
   }
 
   private doExport() {

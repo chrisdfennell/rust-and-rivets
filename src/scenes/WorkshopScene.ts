@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { loadMeta, buyUpgrade, META_UPGRADES, type UpgradeDef } from '../game/meta';
 import { Button } from '../ui/Button';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 interface RowRefs {
@@ -141,6 +142,16 @@ export class WorkshopScene extends Phaser.Scene {
     this.add.existing(back);
 
     this.refresh();
+
+    runTutorial(this, 'workshop', [
+      {
+        title: 'THE WORKSHOP',
+        text:
+          'Workshop Points are earned across your runs and never expire. Spend them here on ' +
+          'permanent upgrades — bigger Hull, starting relics, sharper cards — so every future ' +
+          'run begins a little stronger than the last.'
+      }
+    ]);
 
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

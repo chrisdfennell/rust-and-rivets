@@ -4,6 +4,7 @@ import { RELICS } from '../game/relics';
 import type { CardDef, CardRarity } from '../game/types';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex, RARITY_COLORS } from '../ui/theme';
 
 type Tab = 'cards' | 'relics';
@@ -125,6 +126,16 @@ export class LibraryScene extends Phaser.Scene {
 
     this.drawScrollChevrons();
     this.attachScrollInput();
+
+    runTutorial(this, 'library', [
+      {
+        title: 'THE LIBRARY',
+        text:
+          'A reference catalogue of every card and relic in the game. Browse it to plan your ' +
+          'builds — switch between the CARDS and RELICS tabs, and scroll with the wheel or a ' +
+          'drag. Nothing here affects your run; it\'s just for learning the options.'
+      }
+    ]);
 
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

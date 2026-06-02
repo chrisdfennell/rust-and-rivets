@@ -9,6 +9,7 @@ import {
   recordRunWin
 } from '../game/meta';
 import { Button } from '../ui/Button';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RunSummaryScene extends Phaser.Scene {
@@ -340,6 +341,15 @@ export class RunSummaryScene extends Phaser.Scene {
       this.input.keyboard.once('keydown-SPACE', () => this.returnToTitle());
       this.input.keyboard.once('keydown-ENTER', () => this.returnToTitle());
     }
+
+    runTutorial(this, 'runSummary', [
+      {
+        title: 'RUN SUMMARY',
+        text:
+          'However the run ended, this is the tally. Win or lose, you keep the Workshop Points ' +
+          'you earned — take them back to the Workshop and come back stronger.'
+      }
+    ]);
 
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

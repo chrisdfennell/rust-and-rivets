@@ -12,6 +12,7 @@ import { PauseScene } from './scenes/PauseScene';
 import { EventScene } from './scenes/EventScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
 import { LibraryScene } from './scenes/LibraryScene';
+import { HowToPlayScene } from './scenes/HowToPlayScene';
 
 // Slice 59 — Phaser.Scale.RESIZE hands the actual viewport dimensions
 // to each scene. Responsive scenes (CombatScene, TitleScene, CharSelect)
@@ -35,7 +36,7 @@ const config: Phaser.Types.Core.GameConfig = {
   // so multi-finger gestures and accidental palm contact don't drop the
   // primary pointer mid-drag).
   input: { activePointers: 4 },
-  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene, PauseScene, EventScene, RunSummaryScene, LibraryScene],
+  scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene, PauseScene, EventScene, RunSummaryScene, LibraryScene, HowToPlayScene],
   render: { pixelArt: false, antialias: true }
 };
 

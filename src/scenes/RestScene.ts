@@ -11,6 +11,7 @@ import type { CardInstance } from '../game/types';
 import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RestScene extends Phaser.Scene {
@@ -68,6 +69,16 @@ export class RestScene extends Phaser.Scene {
     this.buildMainView();
     this.buildUpgradeView();
     this.refresh();
+
+    runTutorial(this, 'rest', [
+      {
+        title: 'REST SITE',
+        text:
+          'A moment of quiet between fights. Choose ONE: repair some Hull, or upgrade a card ' +
+          'to its stronger version. You can\'t do both — weigh staying alive against hitting ' +
+          'harder down the road.'
+      }
+    ]);
 
     // Re-layout on rotation. Debounced because iOS Safari fires
     // resize twice on a single flip.

@@ -8,6 +8,7 @@ import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class RewardScene extends Phaser.Scene {
@@ -216,6 +217,16 @@ export class RewardScene extends Phaser.Scene {
       { width: 200, fontSize: 16, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(skipBtn);
+
+    runTutorial(this, 'reward', [
+      {
+        title: 'COMBAT REWARD',
+        text:
+          'Victory! Take Scrap and choose one card to add to your deck — or SKIP if none fit ' +
+          'your plan. A leaner deck draws your best cards more often, so don\'t feel you have ' +
+          'to grab every card offered.'
+      }
+    ]);
 
     // Re-layout on rotation so the scene survives the user flipping
     // their phone mid-pick.

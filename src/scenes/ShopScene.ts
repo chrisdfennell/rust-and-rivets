@@ -7,6 +7,7 @@ import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { drawPotionIcon } from '../ui/PotionIcon';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class ShopScene extends Phaser.Scene {
@@ -62,6 +63,16 @@ export class ShopScene extends Phaser.Scene {
     this.buildMainView();
     this.buildRemovalView();
     this.refresh();
+
+    runTutorial(this, 'shop', [
+      {
+        title: 'THE SHOP',
+        text:
+          'Scrap is your in-run currency. Spend it here on cards, relics, and potions, or ' +
+          'pay for the one-time card-removal service to thin your deck. Buy what sharpens ' +
+          'your build, then leave whenever you like — you keep any Scrap you don\'t spend.'
+      }
+    ]);
 
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

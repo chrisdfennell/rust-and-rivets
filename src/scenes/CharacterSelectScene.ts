@@ -5,6 +5,7 @@ import { RELICS } from '../game/relics';
 import { isCharacterUnlocked, unlockRequirementFor } from '../game/meta';
 import { CHARACTER_SPRITES } from '../ui/MechSprite';
 import { Button } from '../ui/Button';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class CharacterSelectScene extends Phaser.Scene {
@@ -112,6 +113,16 @@ export class CharacterSelectScene extends Phaser.Scene {
       { width: backW, height: 40, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(back);
+
+    runTutorial(this, 'characterSelect', [
+      {
+        title: 'CHOOSE YOUR PILOT',
+        text:
+          'Each pilot plays differently — its own starting deck, Hull, and signature trick. ' +
+          'You begin with one; more unlock as you beat each act. Tap a pilot to start your ' +
+          'run with them.'
+      }
+    ]);
 
     // Slice 58 — re-layout on resize / orientation change.
     this.scale.on('resize', this.handleResize, this);

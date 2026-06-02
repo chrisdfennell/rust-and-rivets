@@ -3,6 +3,7 @@ import { getRun, completeNode, resolveEvent } from '../game/run';
 import { EVENTS_BY_ID, type EventChoice, type EventDef } from '../game/events';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class EventScene extends Phaser.Scene {
@@ -90,6 +91,17 @@ export class EventScene extends Phaser.Scene {
     // If a choice was already made (player refreshed between pick and continue),
     // jump straight to the result phase.
     if (run.pendingEventResult) this.showResult(run.pendingEventResult);
+    else {
+      runTutorial(this, 'event', [
+        {
+          title: 'AN EVENT',
+          text:
+            'Not every room is a fight. Events are story moments with a choice to make — and ' +
+            'the options can reward you or cost you. Read each one before you commit; there ' +
+            'are no take-backs.'
+        }
+      ]);
+    }
 
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

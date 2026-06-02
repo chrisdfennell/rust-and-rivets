@@ -7,6 +7,7 @@ import { CardView, CARD_W, CARD_H } from '../ui/CardView';
 import { CHARACTER_SPRITES, ENEMY_SPRITES } from '../ui/MechSprite';
 import { drawPotionIcon } from '../ui/PotionIcon';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial, type TutorialStep } from '../ui/TutorialOverlay';
 import { sfx, playCardLayer } from '../audio/sfx';
 import { StatBar } from '../ui/StatBar';
 import { IntentView } from '../ui/IntentView';
@@ -392,6 +393,70 @@ export class CombatScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-D', () => this.toggleHitAreaDebug());
 
     this.refresh();
+
+    // First-combat guided tour — coachmarks over the live HUD. No-ops if
+    // tutorials are off or the player has already seen it.
+    this.runCombatTutorial();
+  }
+
+  // Spotlights the key combat UI one element at a time on the player's very
+  // first fight. Each target() reads the live object bounds so the highlight
+  // lands correctly in either orientation; conceptual steps with no target
+  // render as a centered modal.
+  private runCombatTutorial() {
+    const rectOf = (obj: { getBounds(): Phaser.Geom.Rectangle } | undefined | null) => {
+      if (!obj) return null;
+      const b = obj.getBounds();
+      return new Phaser.Geom.Rectangle(b.x, b.y, b.width, b.height);
+    };
+
+    const steps: TutorialStep[] = [
+      {
+        title: 'YOUR HULL',
+        text:
+          'This bar is your Hull — your health. The lighter overlay is Plating: temporary ' +
+          'armor that soaks up damage and resets at the start of each turn. Lose all your ' +
+          'Hull and the run ends.',
+        target: () => rectOf(this.playerBar)
+      },
+      {
+        title: 'STEAM',
+        text:
+          'Steam is your energy. Every card costs Steam to play, and it refills at the start ' +
+          'of each of your turns. Spend it wisely — you rarely have enough for everything.',
+        target: () => rectOf(this.steamText)
+      },
+      {
+        title: 'YOUR HAND',
+        text:
+          'These are the cards you can play this turn. Drag an attack onto an enemy to strike ' +
+          'it; drag a defensive card onto your own mech to use it.',
+        target: () => rectOf(this.handLayer)
+      },
+      {
+        title: 'ENEMY INTENT',
+        text:
+          'The icon above each enemy shows what it plans to do next turn — and how much ' +
+          'damage it will deal. Stack Plating or kill it first to blunt the blow.',
+        target: () => rectOf(this.enemyUIs[0]?.intent ?? this.enemyUIs[0]?.sprite)
+      },
+      {
+        title: 'END YOUR TURN',
+        text:
+          'When you have spent what you want, end your turn. The enemies act, your Plating ' +
+          'resets, and you draw a fresh hand. Win by reducing every enemy to zero Hull.',
+        target: () => rectOf(this.endTurnBg)
+      },
+      {
+        title: 'POTIONS',
+        text:
+          'Your potion belt holds one-shot consumables. Tap a filled slot mid-combat for a ' +
+          'burst of healing or damage when you are in trouble.',
+        target: () => rectOf(this.potionSlots[0]?.container)
+      }
+    ];
+
+    runTutorial(this, 'combat', steps);
   }
 
   // ===== Enemy layout =====

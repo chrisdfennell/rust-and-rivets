@@ -5,6 +5,7 @@ import { RELICS } from '../game/relics';
 import { getActName } from '../game/enemies';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 // Node radii — landscape uses the historical desktop sizes; portrait
@@ -215,6 +216,26 @@ export class MapScene extends Phaser.Scene {
         if (getRun().result === 'inProgress') return;
         this.scene.start('CharacterSelect');
       });
+    }
+
+    // First-visit map tour — only while the run is live (skip it on the
+    // win/lose overlay where the map is just a backdrop).
+    if (run.result === 'inProgress') {
+      runTutorial(this, 'map', [
+        {
+          title: 'THE MAP',
+          text:
+            'This is the act map, and you are climbing it. Tap a connected room above your ' +
+            'current position to travel there — you can only move forward along the paths.'
+        },
+        {
+          title: 'KNOW THE ROOMS',
+          text:
+            'Icons tell you what waits: regular combat, tougher elites (better rewards), ' +
+            'shops, rest sites, and mystery events. The boss sits at the top of the act. ' +
+            'Pick the route that fits your Hull and your plan.'
+        }
+      ]);
     }
 
     // Re-layout on rotation. Debounced so iOS Safari doesn't restart us

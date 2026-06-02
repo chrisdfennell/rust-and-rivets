@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Button } from '../ui/Button';
 import { setMusicMuted, isMusicMuted } from '../audio/music';
 import { setSfxMuted, isSfxMuted } from '../audio/sfx';
+import { tutorialsEnabled, setTutorialsEnabled } from '../game/tutorial';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 export class PauseScene extends Phaser.Scene {
@@ -43,31 +44,46 @@ export class PauseScene extends Phaser.Scene {
     const resume = new Button(
       this,
       width / 2,
-      height / 2 - 10,
+      height / 2 - 30,
       'RESUME',
       () => this.doResume(),
-      { width: 280, height: 56, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
+      { width: 280, height: 52, fontSize: 18, fill: COLORS.shield, hoverFill: 0x6f9dbf }
     );
     this.add.existing(resume);
     resume.setDepth(1);
 
+    const howTo = new Button(
+      this,
+      width / 2,
+      height / 2 + 28,
+      'HOW TO PLAY',
+      () => this.openHowToPlay(),
+      { width: 280, height: 46, fontSize: 15, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(howTo);
+    howTo.setDepth(1);
+
     const quit = new Button(
       this,
       width / 2,
-      height / 2 + 60,
+      height / 2 + 84,
       'QUIT TO TITLE',
       () => this.doQuit(),
-      { width: 280, height: 56, fontSize: 18, fill: COLORS.rust, hoverFill: COLORS.danger }
+      { width: 280, height: 52, fontSize: 18, fill: COLORS.rust, hoverFill: COLORS.danger }
     );
     this.add.existing(quit);
     quit.setDepth(1);
 
     // Audio toggles
-    this.makeMuteToggle(width / 2 - 110, height / 2 + 130, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m));
-    this.makeMuteToggle(width / 2 + 110, height / 2 + 130, 'SFX', isSfxMuted, (m) => setSfxMuted(m));
+    this.makeMuteToggle(width / 2 - 110, height / 2 + 146, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m));
+    this.makeMuteToggle(width / 2 + 110, height / 2 + 146, 'SFX', isSfxMuted, (m) => setSfxMuted(m));
+
+    // Tutorials on/off — mirrors the toggle in HowToPlay so it's reachable
+    // mid-run without leaving the pause menu.
+    this.makeTutorialToggle(width / 2, height / 2 + 192);
 
     this.add
-      .text(width / 2, height / 2 + 180, 'ESC to resume', {
+      .text(width / 2, height / 2 + 230, 'ESC to resume', {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.boneDim)
@@ -103,6 +119,35 @@ export class PauseScene extends Phaser.Scene {
     this.add.existing(btn);
     btn.setDepth(1);
     return btn;
+  }
+
+  private makeTutorialToggle(x: number, y: number): Button {
+    const labelFor = (on: boolean) => `TUTORIALS: ${on ? 'ON' : 'OFF'}`;
+    let btn: Button;
+    btn = new Button(
+      this,
+      x,
+      y,
+      labelFor(tutorialsEnabled()),
+      () => {
+        const next = !tutorialsEnabled();
+        setTutorialsEnabled(next);
+        btn.setLabel(labelFor(next));
+      },
+      { width: 240, height: 36, fontSize: 12, fill: COLORS.brass, hoverFill: COLORS.steam }
+    );
+    this.add.existing(btn);
+    btn.setDepth(1);
+    return btn;
+  }
+
+  // Open the reference as an overlay so the paused run (and any unsaved
+  // mid-combat turn underneath) survives. Pausing this scene stops its
+  // buttons from receiving input while HowToPlay is on top; HowToPlay's
+  // BACK resumes us.
+  private openHowToPlay() {
+    this.scene.pause();
+    this.scene.launch('HowToPlay', { returnTo: 'Pause' });
   }
 
   private doResume() {

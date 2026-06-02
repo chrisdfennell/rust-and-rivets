@@ -3,6 +3,7 @@ import { getRun, advanceAct, type InterActBoon } from '../game/run';
 import { RELICS } from '../game/relics';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
+import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
 
 // `run.act` is the act just CLEARED — the boon then advances to act+1.
@@ -181,6 +182,16 @@ export class InterActScene extends Phaser.Scene {
           .setOrigin(0.5, 0);
       });
     }
+
+    runTutorial(this, 'interAct', [
+      {
+        title: 'BETWEEN ACTS',
+        text:
+          'You cleared an act — the wasteland deepens from here. Claim a boon to carry into ' +
+          'the next act, then press on. Your Hull and deck come with you, so the choice ' +
+          'compounds.'
+      }
+    ]);
 
     // Re-layout on rotation. Debounced because iOS Safari fires resize
     // twice on a single flip.
