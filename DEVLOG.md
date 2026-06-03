@@ -70,7 +70,58 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 53 — Themed events + Volatile / Echo keywords *(current)*
+### Slice 54 — Engine hardening: CI gate, save tests, seeded RNG *(current)*
+Infrastructure pass, no new player-facing content. Three things:
+
+**CI gate** ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
+Runs on every push to `main` and on all PRs: `npm ci` →
+`npm run build` (which is `tsc --noEmit && vite build`) → `npm test`.
+The existing `deploy.yml` only built+deployed; nothing gated a broken
+build or red test from reaching the live Pages URL. This does.
+
+**Save migration tests** ([tests/save.test.ts](tests/save.test.ts),
+18 tests). Pins down the `hydrate`/normalize contract in
+[src/game/save.ts](src/game/save.ts) — the scariest bug class here is
+a schema change silently corrupting a real player's in-progress run.
+Covers: version-mismatch + corrupt-JSON rejection (and that the bad
+blob is wiped, not left to confuse the next read), collection
+round-trips (`visitedNodeIds` Set ⇄ array, `map.nodes` Map ⇄ array),
+and every additive-field default (characterId→'pilot', zeroed stats,
+potion-belt padding/over-length preservation, pending-enemy id
+resolution dropping unknowns, shop/reward potion back-fill).
+
+**Seeded RNG** ([src/game/rng.ts](src/game/rng.ts) + threading,
+[tests/rng.test.ts](tests/rng.test.ts), 11 tests). mulberry32 — entire
+state is one uint32, so the run carries it in the save blob and
+resumes the exact sequence after a reload. `RunState` gained `seed`
+(immutable, surfaced for daily/shared runs) and `rngState` (the
+evolving cursor). `startRun(characterId, seed?)` now takes an optional
+seed; omitted → `randomSeed()`. A `runRng(r)` draw fn advances
+`r.rngState` (persisted on the next `persist()`), and `getRunRng()`
+exposes it to scenes (EventScene resolves event choices through it).
+
+*Seeding boundary* (deliberate): the run-structure stream is seeded —
+map gen, encounter/elite/boss selection, event selection, event-branch
+coin-flips, shop generation, post-combat reward scrap/cards/relics,
+potion drops, and the workshop startup bonuses (Salvager's Eye relic /
+Pre-Brew potions via `applyMetaToRun(run, rng)`). Left on `Math.random`
+by design: combat shuffle + random targeting (transient — combat isn't
+persisted mid-fight, and its draw count depends on player choices, so
+folding it into the run stream would break "same seed → same run"),
+plus all audio and particle jitter. **Known remaining surface:**
+event-internal reward-card/relic *identity* (the `pickRewardCards` /
+`grantRelic` calls inside `resolve` bodies in
+[src/game/events.ts](src/game/events.ts)) still draw from `Math.random`
+— the seeded `rng` reaches each `resolve` but ~25 bodies don't forward
+it yet. Thread those when daily-seed actually ships, guarded by
+identity-asserting event tests.
+
+This unblocks the Tier-2 **daily seed / shareable runs** item: the
+hard part (a persisted seed cursor threaded through the run lifecycle)
+now exists; `seedFromString('2026-06-03')` derives a daily seed, and a
+share code is just the run's `seed`.
+
+### Slice 53 — Themed events + Volatile / Echo keywords
 Two parallel expansions: 12 act-themed events for the late-game
 maps, plus two new card keywords with four cards to seed them.
 
@@ -2170,9 +2221,13 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   hull enemy deals double").
 - **Daily seed / shareable runs** — same seed for everyone on a
   given date; share button copies a permalink that imports the
-  exact run state. Would require seeded RNG threaded through map
-  gen, encounter pick, card pool, etc. (currently uses
-  `Math.random` directly throughout).
+  exact run state. **Foundation landed in Slice 54**: seeded RNG
+  ([src/game/rng.ts](src/game/rng.ts)) is threaded through map gen,
+  encounter/event selection, shops, rewards, and drops; `RunState`
+  carries `seed` + `rngState`, and `seedFromString(dateStamp)` derives
+  a daily seed. Remaining work: a seed-entry / share UI, and threading
+  the last `Math.random` holdout — event-internal reward-card identity
+  in [src/game/events.ts](src/game/events.ts) (see Slice 54 notes).
 - **Run history** — past runs (win/loss, final deck, deaths)
   stored locally for retrospection.
 

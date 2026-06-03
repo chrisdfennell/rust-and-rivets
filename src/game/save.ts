@@ -3,6 +3,7 @@ import { ENEMY_DEFS } from './enemies';
 import type { RunState, ShopState, RunResult, PendingReward, RunStats } from './run';
 import type { PersistentPlayer } from './types';
 import { POTION_SLOT_COUNT } from './potions';
+import { randomSeed } from './rng';
 
 export const SAVE_KEY = 'rust-and-rivets/save/v4';
 const KEY = SAVE_KEY;
@@ -36,6 +37,10 @@ interface SavedRun {
   stats?: RunStats;
   bossBonus?: number;
   ascension?: number;
+  // Seeded-RNG fields. Optional so saves written before seeding hydrate
+  // cleanly — hydrate() assigns them a fresh random seed in that case.
+  seed?: number;
+  rngState?: number;
 }
 
 function snapshot(state: RunState): SavedRun {
@@ -64,7 +69,9 @@ function snapshot(state: RunState): SavedRun {
     pendingEventResult: state.pendingEventResult,
     stats: state.stats,
     bossBonus: state.bossBonus,
-    ascension: state.ascension
+    ascension: state.ascension,
+    seed: state.seed,
+    rngState: state.rngState
   };
 }
 
@@ -131,7 +138,13 @@ function hydrate(saved: SavedRun): RunState {
     pendingEventResult: saved.pendingEventResult ?? null,
     stats: normalizeStats(saved.stats),
     bossBonus: saved.bossBonus ?? 0,
-    ascension: saved.ascension ?? 0
+    ascension: saved.ascension ?? 0,
+    // Pre-seed saves lack these; assign a fresh seed so the rest of the run
+    // is still deterministic from here forward (its map/encounters already
+    // happened, so this only governs future draws). rngState resumes from the
+    // saved cursor when present.
+    seed: saved.seed ?? randomSeed(),
+    rngState: saved.rngState ?? saved.seed ?? randomSeed()
   };
 }
 

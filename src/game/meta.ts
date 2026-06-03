@@ -16,7 +16,10 @@ export interface UpgradeDef {
   description: string;
   costPerLevel: number;
   maxLevel: number;
-  apply: (run: RunState, level: number) => void;
+  // rng is the run's seeded draw fn — upgrades that grant random content
+  // (Salvager's Eye relic, Pre-Brew potions) draw from it so a seeded run's
+  // starting loadout is reproducible. Upgrades with no randomness ignore it.
+  apply: (run: RunState, level: number, rng: () => number) => void;
 }
 
 export interface MetaState {
@@ -133,9 +136,9 @@ const SALVAGERS_EYE: UpgradeDef = {
   description: 'Start each run with a random Relic already installed.',
   costPerLevel: 1,
   maxLevel: 1,
-  apply: (run, level) => {
+  apply: (run, level, rng) => {
     if (level <= 0) return;
-    const id = pickRelicFor(new Set(run.relics));
+    const id = pickRelicFor(new Set(run.relics), rng);
     if (!id) return;
     run.relics.push(id);
     RELICS[id]?.onPickup?.(run);
@@ -177,12 +180,12 @@ const PRE_BREW: UpgradeDef = {
   description: 'Start each run with 1 random potion per level.',
   costPerLevel: 1,
   maxLevel: 3,
-  apply: (run, level) => {
+  apply: (run, level, rng) => {
     if (level <= 0) return;
     let placed = 0;
     for (let i = 0; i < run.potions.length && placed < level; i++) {
       if (run.potions[i] === null) {
-        run.potions[i] = pickRandomPotionId();
+        run.potions[i] = pickRandomPotionId(rng);
         placed++;
       }
     }
@@ -573,11 +576,11 @@ export function buyUpgrade(id: string): boolean {
   return true;
 }
 
-export function applyMetaToRun(run: RunState): void {
+export function applyMetaToRun(run: RunState, rng: () => number = Math.random): void {
   const m = loadMeta();
   for (const def of META_UPGRADES) {
     const level = m.levels[def.id] ?? 0;
-    def.apply(run, level);
+    def.apply(run, level, rng);
   }
 }
 

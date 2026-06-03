@@ -26,6 +26,7 @@ import {
   POTION_SHOP_PRICE,
   pickRandomPotionId
 } from './potions';
+import { makeCursor, nextFromState, randomSeed } from './rng';
 
 export type RunResult = 'inProgress' | 'victory' | 'defeat';
 
@@ -99,6 +100,37 @@ export interface RunState {
   // read this rather than re-reading meta so mid-run changes to
   // meta.currentAscension don't apply retroactively.
   ascension?: number;
+  // Seeded-RNG state for reproducible runs. `seed` is the immutable seed the
+  // run was started from (surfaced for daily/shareable runs); `rngState` is
+  // the evolving mulberry32 cursor that every run-structure draw advances and
+  // persist() writes to the save so the sequence resumes after a reload. See
+  // src/game/rng.ts. Optional so pre-seed saves hydrate cleanly (save.ts
+  // assigns a fresh seed to those).
+  seed: number;
+  rngState: number;
+}
+
+// A draw function (`() => number`, same contract as Math.random) bound to the
+// run's persisted RNG cursor. Every draw advances r.rngState; the next
+// persist() writes it, so the seeded sequence resumes exactly after a reload.
+// Used for all run-structure randomness: encounter / event / shop / reward /
+// drop rolls. Combat and cosmetic randomness stay on Math.random by design.
+function runRng(r: RunState): () => number {
+  return () => {
+    const step = nextFromState(r.rngState);
+    r.rngState = step.state;
+    return step.value;
+  };
+}
+
+/**
+ * The current run's seeded draw function, for callers outside this module
+ * (e.g. EventScene resolving a choice). Mutations advance the persisted
+ * cursor; the caller is responsible for persisting afterward (resolveEvent
+ * does).
+ */
+export function getRunRng(): () => number {
+  return runRng(getRun());
 }
 
 let state: RunState | null = null;
@@ -107,7 +139,7 @@ function persist() {
   if (state) writeSave(state);
 }
 
-export function startRun(characterId: string = 'pilot'): RunState {
+export function startRun(characterId: string = 'pilot', seed?: number): RunState {
   const character = getCharacter(characterId);
   // Snapshot the player's chosen ascension tier so mid-run changes to
   // meta don't retroactively apply.
@@ -116,8 +148,16 @@ export function startRun(characterId: string = 'pilot'): RunState {
   // stacks another -5 on top, for -10 total at A6+.
   const hullPenalty = ascension >= 6 ? 10 : ascension >= 5 ? 5 : 0;
   const startingHull = Math.max(1, character.startingHull - hullPenalty);
+  // Seed the run. An explicit seed (daily / shared run) is honored; otherwise
+  // we draw one fresh. The first thing the seed feeds is map generation, so we
+  // advance the cursor through generateMap and snapshot the resulting state.
+  const runSeed = seed ?? randomSeed();
+  const cursor = makeCursor(runSeed);
+  const map = generateMap(cursor.draw);
   const fresh: RunState = {
-    map: generateMap(),
+    seed: runSeed,
+    rngState: cursor.state,
+    map,
     act: 1,
     currentNodeId: null,
     visitedNodeIds: new Set(),
@@ -156,7 +196,9 @@ export function startRun(characterId: string = 'pilot'): RunState {
   // upgrade application leaves the counter accurate.
   recordRunStart(character.id);
   // Apply purchased meta upgrades on top — they stack with character baseline.
-  applyMetaToRun(state);
+  // Use the run's seeded cursor so random startup bonuses (Salvager's Eye
+  // relic, Pre-Brew potions) are part of the seed.
+  applyMetaToRun(state, runRng(state));
   persist();
   return state;
 }
@@ -201,35 +243,37 @@ export function enterNode(nodeId: string): void {
   r.pendingReward = null;
   r.pendingEventId = null;
   r.pendingEventResult = null;
+  const rng = runRng(r);
   if (node.kind === 'combat') {
-    r.pendingEnemies = pickRegularEncounter(r.act, Math.random);
+    r.pendingEnemies = pickRegularEncounter(r.act, rng);
   } else if (node.kind === 'elite') {
-    r.pendingEnemies = pickEliteEncounter(r.act, Math.random);
+    r.pendingEnemies = pickEliteEncounter(r.act, rng);
   } else if (node.kind === 'boss') {
-    r.pendingEnemies = getBossEncounter(r.act, Math.random);
+    r.pendingEnemies = getBossEncounter(r.act, rng);
   } else if (node.kind === 'shop') {
     r.pendingShop = generateShop();
   } else if (node.kind === 'event') {
-    r.pendingEventId = pickEventId(Math.random, r.act);
+    r.pendingEventId = pickEventId(rng, r.act);
   }
   persist();
 }
 
 function generateShop(): ShopState {
   const r = getRun();
+  const rng = runRng(r);
   const discount = r.shopDiscount ?? 1;
   const adjust = (n: number) => Math.max(1, Math.round(n * discount));
   const pool = SHOP_POOL.slice();
   const offers: ShopOffer[] = [];
   for (let i = 0; i < 3 && pool.length > 0; i++) {
-    const idx = Math.floor(Math.random() * pool.length);
+    const idx = Math.floor(rng() * pool.length);
     const cardId = pool.splice(idx, 1)[0];
-    const price = adjust(28 + Math.floor(Math.random() * 25)); // 28-52 pre-discount
+    const price = adjust(28 + Math.floor(rng() * 25)); // 28-52 pre-discount
     offers.push({ cardId, price, sold: false });
   }
   const potionOffer: PotionShopOffer = {
-    potionId: pickRandomPotionId(),
-    price: adjust(POTION_SHOP_PRICE + Math.floor(Math.random() * 11) - 5),
+    potionId: pickRandomPotionId(rng),
+    price: adjust(POTION_SHOP_PRICE + Math.floor(rng() * 11) - 5),
     sold: false
   };
   return { offers, potionOffer, removalPrice: adjust(55), removalUsed: false };
@@ -436,8 +480,9 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
     return bonus;
   }
 
+  const rng = runRng(r);
   const isElite = node?.kind === 'elite';
-  const baseReward = isElite ? 25 + Math.floor(Math.random() * 11) : 12 + Math.floor(Math.random() * 8);
+  const baseReward = isElite ? 25 + Math.floor(rng() * 11) : 12 + Math.floor(rng() * 8);
   const bonus =
     (r.relics.includes('salvageLoop') ? 5 : 0) +
     (r.relics.includes('salvageWreath') ? 3 : 0);
@@ -445,10 +490,10 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
   r.scrap += reward;
 
   // Stage a card reward (and a relic if elite)
-  const cards = pickRewardCards(3, isElite);
+  const cards = pickRewardCards(3, isElite, rng);
   let relicId: string | null = null;
   if (isElite) {
-    relicId = pickRelicFor(new Set(r.relics));
+    relicId = pickRelicFor(new Set(r.relics), rng);
   }
 
   // Potion drop: only roll if a slot is open (auto-claim, no overflow UI).
@@ -456,9 +501,9 @@ export function completeCombat(survivingHull: number, combatStats?: CombatStatsP
   let potionId: string | null = null;
   const slot = firstEmptyPotionSlot(r);
   if (slot >= 0) {
-    const drops = isElite || Math.random() < POTION_DROP_CHANCE;
+    const drops = isElite || rng() < POTION_DROP_CHANCE;
     if (drops) {
-      potionId = pickRandomPotionId();
+      potionId = pickRandomPotionId(rng);
       r.potions[slot] = potionId;
     }
   }
@@ -525,6 +570,7 @@ export type InterActBoon = 'repair' | 'refit' | 'salvage';
 export function advanceAct(boon: InterActBoon): void {
   const r = getRun();
   if (!r.awaitingInterAct) return;
+  const rng = runRng(r);
 
   // Apply the boon
   if (boon === 'repair') {
@@ -533,13 +579,13 @@ export function advanceAct(boon: InterActBoon): void {
     r.player.maxHull += 15;
     r.player.hull += 15;
   } else if (boon === 'salvage') {
-    const offers = pickRewardCards(1, true);
+    const offers = pickRewardCards(1, true, rng);
     if (offers[0]) r.player.deck.push(offers[0]);
   }
 
   // Advance to act 2 with a fresh map but persistent everything else
   r.act += 1;
-  r.map = generateMap();
+  r.map = generateMap(rng);
   r.currentNodeId = null;
   r.visitedNodeIds = new Set();
   r.pendingEnemies = null;

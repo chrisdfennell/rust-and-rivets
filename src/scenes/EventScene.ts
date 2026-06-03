@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getRun, completeNode, resolveEvent } from '../game/run';
+import { getRun, completeNode, resolveEvent, getRunRng } from '../game/run';
 import { EVENTS_BY_ID, type EventChoice, type EventDef } from '../game/events';
 import { Button } from '../ui/Button';
 import { setupPause } from '../ui/setupPause';
@@ -228,7 +228,9 @@ export class EventScene extends Phaser.Scene {
   private pick(choice: EventChoice) {
     const run = getRun();
     if (choice.enabled && !choice.enabled(run)) return;
-    const message = choice.resolve(run, Math.random);
+    // Draw from the run's seeded cursor so event outcomes are reproducible.
+    // resolveEvent() persists immediately after, saving the advanced cursor.
+    const message = choice.resolve(run, getRunRng());
     resolveEvent(message);
     this.showResult(message);
   }
