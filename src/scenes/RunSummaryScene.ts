@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getRun, clearSavedRun } from '../game/run';
+import { encodeRunCode } from '../game/seedcode';
 import { CARDS } from '../game/cards';
 import { RELICS } from '../game/relics';
 import {
@@ -112,6 +113,11 @@ export class RunSummaryScene extends Phaser.Scene {
     const startingDeckSize = 10;
     const cardsDrafted = Math.max(0, run.player.deck.length - startingDeckSize);
 
+    // Shareable code for this exact run (pilot + seed). Surfaced as a stat
+    // row and copied by the COPY RUN CODE button — paste it on the pilot
+    // screen to replay the identical map / encounters / rewards.
+    const runCode = encodeRunCode(run.player.characterId, run.seed);
+
     const rows: Array<[string, string]> = [
       ['RESULT', won ? 'Victory' : 'Defeat'],
       ['ACT REACHED', String(run.act)],
@@ -124,7 +130,8 @@ export class RunSummaryScene extends Phaser.Scene {
       ['HULL', `${Math.max(0, run.player.hull)} / ${run.player.maxHull}`],
       ['SCRAP', String(run.scrap)],
       ['DECK SIZE', String(run.player.deck.length)],
-      ['CARDS DRAFTED', String(cardsDrafted)]
+      ['CARDS DRAFTED', String(cardsDrafted)],
+      ['RUN CODE', runCode]
     ];
 
     const deckCounts = countDeck(run.player.deck);
@@ -136,7 +143,7 @@ export class RunSummaryScene extends Phaser.Scene {
       // relic strip pad it out, so a scroll layer + chevrons match the
       // pattern used elsewhere.
       const headerH = 100 + ascensionH;
-      const footerH = 76; // RETURN TO TITLE
+      const footerH = 114; // COPY RUN CODE + RETURN TO TITLE
       this.viewportTop = headerH;
       this.viewportBottom = height - footerH;
       this.content = this.add.container(0, 0);
@@ -235,14 +242,24 @@ export class RunSummaryScene extends Phaser.Scene {
       this.drawScrollChevrons();
       this.attachScrollInput();
 
-      // Return-to-title button pinned to actual bottom.
+      // Copy + return buttons pinned to the actual bottom.
+      const btnW = Math.min(width - 60, 280);
+      const copy = new Button(
+        this,
+        width / 2,
+        height - 74,
+        'COPY RUN CODE',
+        () => this.copyRunCode(runCode),
+        { width: btnW, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      );
+      this.add.existing(copy);
       const back = new Button(
         this,
         width / 2,
         height - 36,
         'RETURN TO TITLE',
         () => this.returnToTitle(),
-        { width: Math.min(width - 60, 280), fontSize: 15 }
+        { width: btnW, fontSize: 15 }
       );
       this.add.existing(back);
     } else {
@@ -325,13 +342,22 @@ export class RunSummaryScene extends Phaser.Scene {
           .setOrigin(0.5);
       });
 
+      const copy = new Button(
+        this,
+        width / 2 - 150,
+        height - 50,
+        'COPY RUN CODE',
+        () => this.copyRunCode(runCode),
+        { width: 220, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+      );
+      this.add.existing(copy);
       const back = new Button(
         this,
-        width / 2,
+        width / 2 + 150,
         height - 50,
         'RETURN TO TITLE',
         () => this.returnToTitle(),
-        { width: 260, fontSize: 16 }
+        { width: 220, fontSize: 16 }
       );
       this.add.existing(back);
     }
@@ -434,6 +460,44 @@ export class RunSummaryScene extends Phaser.Scene {
     };
     this.input.on('pointerup', end);
     this.input.on('pointerupoutside', end);
+  }
+
+  // Copy the run code to the clipboard and flash a confirmation. Falls back
+  // to showing the code (so the player can copy by hand) if the Clipboard API
+  // is unavailable — e.g. an insecure context or an old browser.
+  private copyRunCode(code: string) {
+    const clip = (navigator as Navigator | undefined)?.clipboard;
+    if (clip?.writeText) {
+      clip.writeText(code).then(
+        () => this.flashToast('RUN CODE COPIED'),
+        () => this.flashToast(code)
+      );
+    } else {
+      this.flashToast(code);
+    }
+  }
+
+  private flashToast(message: string) {
+    const toast = this.add
+      .text(this.viewW / 2, this.scale.height * 0.5, message, {
+        fontFamily: FONTS.display,
+        fontSize: '16px',
+        color: hex(COLORS.bg),
+        backgroundColor: hex(COLORS.brass),
+        padding: { x: 14, y: 8 },
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5)
+      .setDepth(200)
+      .setAlpha(0);
+    this.tweens.add({
+      targets: toast,
+      alpha: { from: 0, to: 1 },
+      duration: 140,
+      yoyo: true,
+      hold: 900,
+      onComplete: () => toast.destroy()
+    });
   }
 
   private returnToTitle() {

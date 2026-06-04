@@ -3,10 +3,18 @@ import { startRun, clearSavedRun } from '../game/run';
 import { CHARACTERS, type CharacterDef } from '../game/characters';
 import { RELICS } from '../game/relics';
 import { isCharacterUnlocked, unlockRequirementFor } from '../game/meta';
+import { dailySeedFor, todayStamp, decodeRunCode } from '../game/seedcode';
+import { seedFromString } from '../game/rng';
 import { CHARACTER_SPRITES } from '../ui/MechSprite';
 import { Button } from '../ui/Button';
 import { runTutorial } from '../ui/TutorialOverlay';
 import { COLORS, FONTS, hex } from '../ui/theme';
+
+// Seed selection persists across this scene's resize-driven restarts (and a
+// back-and-forth to Title), so it lives at module scope rather than on the
+// instance. null = a fresh random seed each run (the default).
+let pendingSeed: number | null = null;
+let pendingSeedLabel = 'Random';
 
 export class CharacterSelectScene extends Phaser.Scene {
   // Slice 58 — debounce for resize-triggered re-layout.
@@ -45,6 +53,18 @@ export class CharacterSelectScene extends Phaser.Scene {
         fontFamily: FONTS.body,
         fontSize: '13px',
         color: hex(COLORS.boneDim)
+      })
+      .setOrigin(0.5, 0);
+
+    // Active run-seed indicator. Default "Random"; shows Daily / Custom once
+    // the player sets one via the RUN SEED control (bottom-right).
+    const seeded = pendingSeed !== null;
+    this.add
+      .text(width / 2, 36 + titleSize + 24, `RUN SEED: ${pendingSeedLabel}`, {
+        fontFamily: FONTS.display,
+        fontSize: '12px',
+        color: hex(seeded ? COLORS.steam : COLORS.boneDim),
+        fontStyle: seeded ? 'bold' : 'normal'
       })
       .setOrigin(0.5, 0);
 
@@ -113,6 +133,20 @@ export class CharacterSelectScene extends Phaser.Scene {
       { width: backW, height: 40, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(back);
+
+    // RUN SEED control (bottom-right): daily seed, custom seed, or paste a
+    // run code to replay an exact run. Mirror BACK's sizing so the two
+    // bottom corners stay balanced across viewport widths.
+    const seedW = Math.min(180, Math.max(120, width / 5));
+    const seedBtn = new Button(
+      this,
+      width - seedW / 2 - 20,
+      height - 36,
+      'RUN SEED…',
+      () => this.openSeedPrompt(),
+      { width: seedW, height: 40, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
+    );
+    this.add.existing(seedBtn);
 
     runTutorial(this, 'characterSelect', [
       {
@@ -354,9 +388,68 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private pick(characterId: string) {
+    this.launchRun(characterId, pendingSeed ?? undefined);
+  }
+
+  // Shared run-launch path: wipe any saved run, start the new one (optionally
+  // seeded), clear the pending seed so the next visit defaults back to Random,
+  // then fade into the map.
+  private launchRun(characterId: string, seed?: number) {
     clearSavedRun();
-    startRun(characterId);
+    startRun(characterId, seed);
+    pendingSeed = null;
+    pendingSeedLabel = 'Random';
     this.cameras.main.fadeOut(220, 20, 17, 15);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Map'));
+  }
+
+  // One prompt drives all three seed modes. We use window.prompt rather than a
+  // bespoke Phaser text field — it's the pragmatic, reliable way to take typed
+  // input in a canvas game, and keypads work on mobile webviews.
+  private openSeedPrompt() {
+    const input = window.prompt(
+      'RUN SEED\n' +
+        '• Leave blank for a random run\n' +
+        '• Type DAILY for today’s shared daily seed\n' +
+        '• Paste a RUN CODE (from a run summary) to replay an exact run\n' +
+        '• Or type any word/number for a custom seed',
+      ''
+    );
+    if (input === null) return; // cancelled
+    const trimmed = input.trim();
+
+    if (trimmed === '') {
+      pendingSeed = null;
+      pendingSeedLabel = 'Random';
+      this.scene.restart();
+      return;
+    }
+
+    if (trimmed.toLowerCase() === 'daily') {
+      const stamp = todayStamp();
+      pendingSeed = dailySeedFor(stamp);
+      pendingSeedLabel = `Daily ${stamp}`;
+      this.scene.restart();
+      return;
+    }
+
+    // A full run code carries its own pilot — start that exact run now, as
+    // long as the pilot is unlocked.
+    const decoded = decodeRunCode(trimmed);
+    const isKnownPilot = decoded && CHARACTERS.some((c) => c.id === decoded.characterId);
+    if (decoded && isKnownPilot) {
+      if (!isCharacterUnlocked(decoded.characterId)) {
+        window.alert('That run code uses a pilot you haven’t unlocked yet.');
+        return;
+      }
+      this.launchRun(decoded.characterId, decoded.seed);
+      return;
+    }
+
+    // Otherwise treat the text as a custom seed: pure digits become the seed
+    // directly; any other phrase is hashed into one.
+    pendingSeed = /^[0-9]+$/.test(trimmed) ? Number(trimmed) >>> 0 : seedFromString(trimmed);
+    pendingSeedLabel = 'Custom';
+    this.scene.restart();
   }
 }

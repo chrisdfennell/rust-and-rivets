@@ -70,7 +70,47 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 54 — Engine hardening: CI gate, save tests, seeded RNG *(current)*
+### Slice 55 — Daily seeds + shareable run codes *(current)*
+Turns the Slice-54 seeded-RNG foundation into a player-facing feature,
+and closes the last `Math.random` gap in the run-structure stream.
+
+**Completed event seeding** ([src/game/events.ts](src/game/events.ts)).
+The ~25 reward-granting `resolve` bodies now forward the seeded `rng`
+they already receive to `pickRewardCards` / `grantRelic` (and
+`grantRelic` → `pickRelicFor`). Previously these drew reward *identity*
+from `Math.random`, so two players on the same seed could get different
+cards out of the same event. New guard tests in
+[tests/events.test.ts](tests/events.test.ts): same seed → same reward
+card/relic, and a sweep proves the seed actually selects it. The whole
+run-structure stream is now seeded; only combat shuffle/targeting,
+audio, and particles remain on `Math.random` (by design).
+
+**Seed codes** ([src/game/seedcode.ts](src/game/seedcode.ts),
+[tests/seedcode.test.ts](tests/seedcode.test.ts), 8 tests). A run is
+reproduced by a `(characterId, seed)` pair; `encodeRunCode` packs it
+into a copy-pasteable `"<pilot>-<seed-base36>"` (e.g. `pilot-3kf09a`),
+`decodeRunCode` parses it back (case/whitespace-tolerant, rejects
+malformed input). `dailySeedFor(dateStamp)` derives a shared daily
+seed via `seedFromString('daily-YYYY-MM-DD')`; `todayStamp()` supplies
+the UTC date (kept out of the pure module so it stays testable).
+
+**UI.** [CharacterSelectScene](src/scenes/CharacterSelectScene.ts)
+gained a **RUN SEED** control (bottom-right) + an active-seed indicator
+under the subtitle. One `window.prompt` drives all modes: blank =
+random, `DAILY` = today's daily, a pasted run code = launch that exact
+run (if the pilot is unlocked), any other word/number = custom seed.
+The pending seed lives at module scope so it survives the scene's
+resize-restarts; it resets to Random after a run launches.
+[RunSummaryScene](src/scenes/RunSummaryScene.ts) shows the run's code
+as a `RUN CODE` stat and a **COPY RUN CODE** button (Clipboard API,
+with a hand-copy fallback toast).
+
+*Note:* typed input uses `window.prompt` / `navigator.clipboard` rather
+than a bespoke Phaser text widget — pragmatic and reliable in a canvas
+game, works on mobile webviews. A nicer in-canvas input is a future
+polish item.
+
+### Slice 54 — Engine hardening: CI gate, save tests, seeded RNG
 Infrastructure pass, no new player-facing content. Three things:
 
 **CI gate** ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
@@ -2219,15 +2259,15 @@ and so the bosses can no longer be brute-forced in 4-5 turns.
   ("at start of combat, draw a specific card type"), cost-modifier
   ("Attacks cost 1 less"), conditional-damage ("first hit vs a full-
   hull enemy deals double").
-- **Daily seed / shareable runs** — same seed for everyone on a
-  given date; share button copies a permalink that imports the
-  exact run state. **Foundation landed in Slice 54**: seeded RNG
-  ([src/game/rng.ts](src/game/rng.ts)) is threaded through map gen,
-  encounter/event selection, shops, rewards, and drops; `RunState`
-  carries `seed` + `rngState`, and `seedFromString(dateStamp)` derives
-  a daily seed. Remaining work: a seed-entry / share UI, and threading
-  the last `Math.random` holdout — event-internal reward-card identity
-  in [src/game/events.ts](src/game/events.ts) (see Slice 54 notes).
+- **Daily seed / shareable runs** — ✅ **shipped in Slice 55.** Seeded
+  RNG ([src/game/rng.ts](src/game/rng.ts)) threaded through the full
+  run-structure stream; `RunState` carries `seed` + `rngState`; run
+  codes ([src/game/seedcode.ts](src/game/seedcode.ts)) encode
+  pilot+seed; CharacterSelect has a RUN SEED control (random / daily /
+  custom / paste-a-code) and RunSummary copies the run code.
+  *Possible follow-ups:* a polished in-canvas seed-entry widget
+  (currently `window.prompt`), a share **permalink** (URL param that
+  auto-imports), and a dedicated daily-run leaderboard.
 - **Run history** — past runs (win/loss, final deck, deaths)
   stored locally for retrospection.
 

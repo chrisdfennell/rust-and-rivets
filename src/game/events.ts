@@ -36,8 +36,8 @@ function cardName(id: string): string {
   return CARDS[id]?.name ?? id;
 }
 
-function grantRelic(run: RunState): string | null {
-  const id = pickRelicFor(new Set(run.relics));
+function grantRelic(run: RunState, rng: () => number): string | null {
+  const id = pickRelicFor(new Set(run.relics), rng);
   if (!id) return null;
   run.relics.push(id);
   RELICS[id]?.onPickup?.(run);
@@ -67,8 +67,8 @@ const SALVAGED_MECH: EventDef = {
     {
       label: 'SALVAGE',
       description: 'Pull a rare component card from the wreck.',
-      resolve: (run) => {
-        const id = pickRewardCards(1, true)[0];
+      resolve: (run, rng) => {
+        const id = pickRewardCards(1, true, rng)[0];
         if (!id) return 'You comb the wreck. Nothing worth lifting.';
         run.player.deck.push(id);
         return `Salvaged: ${cardName(id)}.`;
@@ -100,9 +100,9 @@ const WANDERING_TRADER: EventDef = {
       label: 'BUY RELIC — 75 Scrap',
       description: 'A random Relic, bolted in on the spot.',
       enabled: (run) => run.scrap >= 75 && pickRelicFor(new Set(run.relics)) !== null,
-      resolve: (run) => {
+      resolve: (run, rng) => {
         if (run.scrap < 75) return 'You count again. Not enough.';
-        const id = grantRelic(run);
+        const id = grantRelic(run, rng);
         if (!id) return 'The trader shakes their head. You already carry every part they sell.';
         run.scrap -= 75;
         const def = RELICS[id];
@@ -113,9 +113,9 @@ const WANDERING_TRADER: EventDef = {
       label: 'BUY CARD — 40 Scrap',
       description: 'A random uncommon card, your pick of fate.',
       enabled: (run) => run.scrap >= 40,
-      resolve: (run) => {
+      resolve: (run, rng) => {
         if (run.scrap < 40) return 'Not enough scrap to deal.';
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (!id) return 'The trader has nothing for you.';
         run.scrap -= 40;
         run.player.deck.push(id);
@@ -140,9 +140,9 @@ const OLD_VETERAN: EventDef = {
     {
       label: 'SPAR',
       description: 'Take 8 Hull damage. Gain a stronger card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 8);
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (id) run.player.deck.push(id);
         return `-8 Hull. ${id ? `Learned: ${cardName(id)}.` : 'No new technique stuck.'}`;
       }
@@ -180,8 +180,8 @@ const GLOWING_POOL: EventDef = {
     {
       label: 'BOTTLE IT',
       description: 'Sample carefully. Gain a common card.',
-      resolve: (run) => {
-        const id = pickRewardCards(1, false)[0];
+      resolve: (run, rng) => {
+        const id = pickRewardCards(1, false, rng)[0];
         if (!id) return 'The liquid evaporates before you can use it.';
         run.player.deck.push(id);
         return `Stabilized into: ${cardName(id)}.`;
@@ -205,9 +205,9 @@ const HOT_FORGE: EventDef = {
     {
       label: 'TEMPER',
       description: 'Lose 5 Hull from the heat. Gain an upgraded card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 5);
-        const baseId = pickRewardCards(1, true)[0];
+        const baseId = pickRewardCards(1, true, rng)[0];
         if (!baseId) return '-5 Hull. The coal dies before you finish.';
         const id = upgradeCardId(baseId);
         run.player.deck.push(id);
@@ -322,7 +322,7 @@ const FORGOTTEN_CACHE: EventDef = {
             ? `-4 Hull. The lid pops. +1 potion: ${potionName(pid)}.`
             : '-4 Hull. The lid pops to reveal a brew you have no room for.';
         }
-        const cid = pickRewardCards(1, true)[0];
+        const cid = pickRewardCards(1, true, rng)[0];
         if (cid) run.player.deck.push(cid);
         return `-4 Hull. Folded inside: ${cardName(cid)}.`;
       }
@@ -332,7 +332,7 @@ const FORGOTTEN_CACHE: EventDef = {
       description: '70% chance to open cleanly for a rare card. 30%: -3 Hull, nothing.',
       resolve: (run, rng) => {
         if (rng() < 0.7) {
-          const cid = pickRewardCards(1, true)[0];
+          const cid = pickRewardCards(1, true, rng)[0];
           if (cid) run.player.deck.push(cid);
           return `The tumblers click. Inside: ${cardName(cid)}.`;
         }
@@ -407,7 +407,7 @@ const PILGRIMS_SHRINE: EventDef = {
         // Remove a random non-starter-ish card. Just any random card except the last one.
         const idx = Math.floor(rng() * run.player.deck.length);
         const removed = run.player.deck.splice(idx, 1)[0];
-        const id = grantRelic(run);
+        const id = grantRelic(run, rng);
         if (!id) {
           // Refund the card
           run.player.deck.push(removed);
@@ -477,9 +477,9 @@ const ECHOING_VAULT: EventDef = {
     {
       label: 'STEP IN',
       description: '-10 Hull from the chill. Gain an upgraded random card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 10);
-        const baseId = pickRewardCards(1, true)[0];
+        const baseId = pickRewardCards(1, true, rng)[0];
         if (!baseId) return '-10 Hull. The vault is empty.';
         const id = upgradeCardId(baseId);
         run.player.deck.push(id);
@@ -491,12 +491,12 @@ const ECHOING_VAULT: EventDef = {
       description: '50%: gain a random relic. 50%: -6 Hull, gain a common card.',
       resolve: (run, rng) => {
         if (rng() < 0.5) {
-          const id = grantRelic(run);
+          const id = grantRelic(run, rng);
           if (!id) return 'The vault has nothing left to give you.';
           return `The vault hums. Bolted on: ${RELICS[id]?.name ?? id}.`;
         }
         losePlayerHull(run, 6);
-        const cid = pickRewardCards(1, false)[0];
+        const cid = pickRewardCards(1, false, rng)[0];
         if (cid) run.player.deck.push(cid);
         return `The echo cuts back. -6 Hull. Picked up: ${cardName(cid)}.`;
       }
@@ -521,8 +521,8 @@ const CURSED_IDOL: EventDef = {
       label: 'TAKE THE PRIZE',
       description: 'Gain a random Relic. Add a Heat Damage curse to your deck.',
       enabled: (run) => pickRelicFor(new Set(run.relics)) !== null,
-      resolve: (run) => {
-        const id = grantRelic(run);
+      resolve: (run, rng) => {
+        const id = grantRelic(run, rng);
         if (!id) return 'The shrine has nothing the road hasn\'t already given you.';
         run.player.deck.push('heatDamage');
         return `Bolted on: ${RELICS[id]?.name ?? id}. A Heat Damage card slots into your gear, warm to the touch.`;
@@ -609,9 +609,9 @@ const BLACK_MARKET: EventDef = {
       label: 'BUY RARE — 70 Scrap',
       description: 'Acquire an elite-tier random card.',
       enabled: (run) => run.scrap >= 70,
-      resolve: (run) => {
+      resolve: (run, rng) => {
         if (run.scrap < 70) return 'Not enough scrap.';
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (!id) return 'The stall has nothing for you.';
         run.scrap -= 70;
         run.player.deck.push(id);
@@ -673,9 +673,9 @@ const WHIRLWIND_SURVIVOR: EventDef = {
     {
       label: 'HELP THEM',
       description: '-12 Hull from a bad transfusion. Gain a rare card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 12);
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (id) run.player.deck.push(id);
         return `-12 Hull. They press a chip into your hand: ${cardName(id)}.`;
       }
@@ -726,7 +726,7 @@ const FROZEN_ENGINE: EventDef = {
       description: '50%: gain a random relic. Else: -10 Hull, nothing.',
       resolve: (run, rng) => {
         if (rng() < 0.5) {
-          const id = grantRelic(run);
+          const id = grantRelic(run, rng);
           if (!id) return 'The engine sputters and dies. Nothing left to give.';
           return `The engine kicks. Bolted on: ${RELICS[id]?.name ?? id}.`;
         }
@@ -864,7 +864,7 @@ const MIRRORED_POOL: EventDef = {
       description: '50%: gain a random relic. 50%: -8 Hull from what looks back.',
       resolve: (run, rng) => {
         if (rng() < 0.5) {
-          const id = grantRelic(run);
+          const id = grantRelic(run, rng);
           if (!id) return 'The pool offers nothing you don\'t already carry.';
           return `Lifted from the surface: ${RELICS[id]?.name ?? id}.`;
         }
@@ -904,7 +904,7 @@ const SEALED_AUCTION: EventDef = {
         run.scrap -= 35;
         const roll = rng();
         if (roll < 0.34) {
-          const id = pickRewardCards(1, false)[0];
+          const id = pickRewardCards(1, false, rng)[0];
           if (id) run.player.deck.push(id);
           return `-35 Scrap. Inside: ${cardName(id)}.`;
         }
@@ -1041,9 +1041,9 @@ const BOILER_SPIRIT: EventDef = {
     {
       label: 'BANISH',
       description: '-5 Hull from the backlash. Gain a rare card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 5);
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (id) run.player.deck.push(id);
         return `-5 Hull. The spirit cracks apart. Gained: ${cardName(id)}.`;
       }
@@ -1066,9 +1066,9 @@ const OLD_SOLDIERS_CACHE: EventDef = {
     {
       label: 'FORCE IT',
       description: '-8 Hull. Gain 2 random cards.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 8);
-        const ids = pickRewardCards(2, false);
+        const ids = pickRewardCards(2, false, rng);
         for (const id of ids) run.player.deck.push(id);
         return `-8 Hull. Loaded: ${ids.map(cardName).join(', ')}.`;
       }
@@ -1078,7 +1078,7 @@ const OLD_SOLDIERS_CACHE: EventDef = {
       description: '50%: 2 cards clean. 50%: -3 Hull, nothing.',
       resolve: (run, rng) => {
         if (rng() < 0.5) {
-          const ids = pickRewardCards(2, false);
+          const ids = pickRewardCards(2, false, rng);
           for (const id of ids) run.player.deck.push(id);
           return `Cracked it. Loaded: ${ids.map(cardName).join(', ')}.`;
         }
@@ -1308,9 +1308,9 @@ const VESTIGIAL_BELL: EventDef = {
     {
       label: 'RING IT',
       description: '-8 Hull from the shockwave. Gain a rare card.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 8);
-        const id = pickRewardCards(1, true)[0];
+        const id = pickRewardCards(1, true, rng)[0];
         if (id) run.player.deck.push(id);
         return `-8 Hull. The bell echoes through your wiring: ${cardName(id)}.`;
       }
@@ -1342,9 +1342,9 @@ const PILGRIMS_MARCH: EventDef = {
     {
       label: 'JOIN THEM',
       description: '-8 Hull on the march. Gain 2 random cards.',
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 8);
-        const ids = pickRewardCards(2, true);
+        const ids = pickRewardCards(2, true, rng);
         for (const id of ids) run.player.deck.push(id);
         return `-8 Hull. Pilgrim gifts: ${ids.map(cardName).join(', ')}.`;
       }
@@ -1390,8 +1390,8 @@ const CLOCKWORK_ACOLYTE: EventDef = {
     {
       label: 'RECEIVE A BLESSING',
       description: 'Free. Gain a common card.',
-      resolve: (run) => {
-        const id = pickRewardCards(1, false)[0];
+      resolve: (run, rng) => {
+        const id = pickRewardCards(1, false, rng)[0];
         if (id) run.player.deck.push(id);
         return `The acolyte taps your hull. Gift: ${cardName(id)}.`;
       }
@@ -1502,9 +1502,9 @@ const CRUCIBLE_TEST: EventDef = {
       label: 'STAND IN THE FIRE',
       description: '-15 Hull. Gain a random Relic.',
       enabled: (run) => pickRelicFor(new Set(run.relics)) !== null,
-      resolve: (run) => {
+      resolve: (run, rng) => {
         losePlayerHull(run, 15);
-        const id = grantRelic(run);
+        const id = grantRelic(run, rng);
         if (!id) return '-15 Hull. The crucible has nothing left to give you.';
         return `-15 Hull. Bolted to your frame: ${RELICS[id]?.name ?? id}.`;
       }

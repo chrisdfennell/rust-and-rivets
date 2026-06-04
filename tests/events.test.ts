@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { EVENTS_BY_ID, ALL_EVENTS, pickEventId } from '../src/game/events';
 import type { RunState } from '../src/game/run';
 import { generateMap } from '../src/game/map';
+import { makeCursor } from '../src/game/rng';
 
 // Build a minimal RunState directly. We bypass startRun() so localStorage
 // stays out of the test fixture — events only read/mutate the fields
@@ -75,6 +76,50 @@ describe('event pool', () => {
     const act4Events = ALL_EVENTS.filter((e) => e.acts?.includes(4));
     expect(act4Events.length).toBeGreaterThan(0);
     expect(act4Events.some((e) => seen.has(e.id))).toBe(true);
+  });
+});
+
+// ===== Reward identity follows the seed =====
+
+// Guards the Slice-54 threading: events that grant cards/relics must draw
+// the *identity* of that reward from the passed-in rng, not Math.random —
+// otherwise two players on the same daily seed would get different cards out
+// of the same event. We resolve a card-granting choice with seeded cursors
+// and assert (a) same seed → same card, and (b) the seed actually drives the
+// choice (a sweep produces more than one distinct card).
+
+describe('seeded event rewards', () => {
+  // SALVAGED_MECH → SALVAGE pulls a card via pickRewardCards(1, true, rng).
+  function salvageCard(seed: number): string {
+    const run = makeFakeRun();
+    const ev = EVENTS_BY_ID.salvagedMech;
+    const salvage = ev.choices.find((c) => c.label === 'SALVAGE')!;
+    const before = run.player.deck.length;
+    salvage.resolve(run, makeCursor(seed).draw);
+    expect(run.player.deck.length).toBe(before + 1);
+    return run.player.deck[run.player.deck.length - 1];
+  }
+
+  it('the same seed grants the same card', () => {
+    expect(salvageCard(13579)).toBe(salvageCard(13579));
+  });
+
+  it('the seed actually selects the card (a sweep yields variety)', () => {
+    const seen = new Set<string>();
+    for (let s = 0; s < 40; s++) seen.add(salvageCard(s * 7919 + 1));
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('grantRelic-backed events are seeded too', () => {
+    // WANDERING_TRADER → BUY RELIC grants via grantRelic(run, rng).
+    const buy = (seed: number) => {
+      const run = makeFakeRun({ scrap: 999 });
+      const ev = EVENTS_BY_ID.wanderingTrader;
+      const choice = ev.choices.find((c) => c.label.startsWith('BUY RELIC'))!;
+      choice.resolve(run, makeCursor(seed).draw);
+      return run.relics[0];
+    };
+    expect(buy(2468)).toBe(buy(2468));
   });
 });
 
