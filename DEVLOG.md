@@ -70,7 +70,32 @@ Quick orientation for someone coming in cold. Numbers as of Slice 49.
 
 ## Done
 
-### Slice 55 — Daily seeds + shareable run codes *(current)*
+### Slice 56 — Seed UX: in-canvas modal + DAILY RUN button *(current)*
+Replaces the Slice-55 `window.prompt` stopgap with a proper interface.
+
+**Phaser DOM enabled** ([src/main.ts](src/main.ts)). Game config now
+sets `dom: { createContainer: true }` so scenes can mount real HTML
+elements over the canvas. A native `<input>` brings up the mobile soft
+keyboard and supports paste — an on-canvas text field can't.
+
+**Seed modal** ([CharacterSelectScene](src/scenes/CharacterSelectScene.ts)).
+The RUN SEED control now opens a themed in-canvas modal: dim backdrop
+(tap-outside / CANCEL / Esc to dismiss), a brass-bordered panel, a real
+DOM `<input>`, and START / RANDOM / CANCEL. START launches a pasted run
+code as an exact run (locked-pilot → inline error, not an alert), or
+sets a custom seed (digits → seed, any phrase → hashed). `setPendingRunSeed`
+is exported so other scenes can preset the seed.
+
+**DAILY RUN button** ([TitleScene](src/scenes/TitleScene.ts)). A green
+DAILY RUN button now sits on the main menu in all three layouts
+(portrait stack, compact grid row 3, landscape under NEW RUN) — no more
+typing `DAILY`. It presets today's daily seed via `setPendingRunSeed`
+then routes to the pilot picker, which shows the active daily.
+
+Verified by screenshotting all three Title layouts + the modal
+(Playwright driving headless Chrome against the dev server).
+
+### Slice 55 — Daily seeds + shareable run codes
 Turns the Slice-54 seeded-RNG foundation into a player-facing feature,
 and closes the last `Math.random` gap in the run-structure stream.
 
@@ -105,10 +130,9 @@ resize-restarts; it resets to Random after a run launches.
 as a `RUN CODE` stat and a **COPY RUN CODE** button (Clipboard API,
 with a hand-copy fallback toast).
 
-*Note:* typed input uses `window.prompt` / `navigator.clipboard` rather
-than a bespoke Phaser text widget — pragmatic and reliable in a canvas
-game, works on mobile webviews. A nicer in-canvas input is a future
-polish item.
+*Note:* this slice's typed input used `window.prompt` as a stopgap —
+**superseded by the in-canvas modal in Slice 56.** Run-code copy still
+uses `navigator.clipboard` (with a hand-copy fallback).
 
 ### Slice 54 — Engine hardening: CI gate, save tests, seeded RNG
 Infrastructure pass, no new player-facing content. Three things:

@@ -13,6 +13,8 @@ import {
   MAX_ASCENSION
 } from '../game/meta';
 import { Button } from '../ui/Button';
+import { setPendingRunSeed } from './CharacterSelectScene';
+import { dailySeedFor, todayStamp } from '../game/seedcode';
 import { preloadMusic, startMusic, setMusicMuted, isMusicMuted } from '../audio/music';
 import { setSfxMuted, isSfxMuted } from '../audio/sfx';
 import { COLORS, FONTS, hex } from '../ui/theme';
@@ -164,7 +166,7 @@ export class TitleScene extends Phaser.Scene {
       const btnWp = Math.min(width - 40, 320);
       const footerH = 24;
       const remaining = height - topCursor - footerH - 12;
-      const rowCount = 7;
+      const rowCount = 8;
       const rowPitch = Math.max(48, Math.min(60, Math.floor(remaining / rowCount)));
       const mainH = Math.min(50, rowPitch - 6);
       let y = topCursor + 12 + mainH / 2;
@@ -175,6 +177,9 @@ export class TitleScene extends Phaser.Scene {
       y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'NEW RUN', () => this.newRun(),
         { width: btnWp, height: mainH, fontSize: 18 }));
+      y += rowPitch;
+      this.add.existing(new Button(this, cx, y, 'DAILY RUN', () => this.playDaily(),
+        { width: btnWp, height: mainH, fontSize: 18, fill: COLORS.buff, hoverFill: COLORS.ok }));
       y += rowPitch;
       this.add.existing(new Button(this, cx, y, 'WORKSHOP', () => this.openWorkshop(),
         { width: btnWp, height: mainH, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
@@ -257,9 +262,11 @@ export class TitleScene extends Phaser.Scene {
       this.makeMuteToggle(colX(2), row2Y, 'MUSIC', isMusicMuted, (m) => setMusicMuted(m), btnWc);
       this.makeMuteToggle(colX(3), row2Y, 'SFX', isSfxMuted, (m) => setSfxMuted(m), btnWc);
 
-      // Row 3: HOW TO PLAY, centered under the grid.
+      // Row 3: DAILY RUN + HOW TO PLAY, centered under the grid.
       const row3Y = row2Y + row2H / 2 + rowGap + 18;
-      this.add.existing(new Button(this, cx, row3Y, 'HOW TO PLAY', () => this.openHowToPlay(),
+      this.add.existing(new Button(this, cx - btnWc / 2 - 6, row3Y, 'DAILY RUN', () => this.playDaily(),
+        { width: btnWc, height: 36, fontSize: 13, fill: COLORS.buff, hoverFill: COLORS.ok }));
+      this.add.existing(new Button(this, cx + btnWc / 2 + 6, row3Y, 'HOW TO PLAY', () => this.openHowToPlay(),
         { width: btnWc, height: 36, fontSize: 13, fill: COLORS.steelDark, hoverFill: COLORS.steel }));
     } else {
       // ===== Landscape (original layout, slightly de-magicked) =====
@@ -272,6 +279,9 @@ export class TitleScene extends Phaser.Scene {
         { width: 210, height: 56, fontSize: 18 }));
       this.add.existing(new Button(this, cx + 240, primaryY, 'WORKSHOP', () => this.openWorkshop(),
         { width: 210, height: 56, fontSize: 18, fill: COLORS.brass, hoverFill: COLORS.steam }));
+      // DAILY RUN sits just under NEW RUN (the center column).
+      this.add.existing(new Button(this, cx, primaryY + 48, 'DAILY RUN', () => this.playDaily(),
+        { width: 210, height: 34, fontSize: 14, fill: COLORS.buff, hoverFill: COLORS.ok }));
       if (!haveSave) {
         this.add
           .text(cx - 240, primaryY + 36, 'No saved run found.', {
@@ -693,6 +703,17 @@ export class TitleScene extends Phaser.Scene {
 
   private newRun() {
     // Route to pilot selection first; character pick triggers startRun()
+    this.cameras.main.fadeOut(180, 20, 17, 15);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('CharacterSelect'));
+  }
+
+  // DAILY RUN — preset today's shared daily seed, then route to the pilot
+  // picker (everyone who plays the daily gets the same map/encounters; the
+  // pilot is still the player's pick). The seed indicator on CharacterSelect
+  // shows the active daily.
+  private playDaily() {
+    const stamp = todayStamp();
+    setPendingRunSeed(dailySeedFor(stamp), `Daily ${stamp}`);
     this.cameras.main.fadeOut(180, 20, 17, 15);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('CharacterSelect'));
   }

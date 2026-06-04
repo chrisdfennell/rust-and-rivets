@@ -36,6 +36,10 @@ const config: Phaser.Types.Core.GameConfig = {
   // so multi-finger gestures and accidental palm contact don't drop the
   // primary pointer mid-drag).
   input: { activePointers: 4 },
+  // DOM container overlays the canvas so scenes can mount real HTML inputs
+  // (the seed/run-code modal). A native <input> brings up the mobile soft
+  // keyboard, which an on-canvas text field can't.
+  dom: { createContainer: true },
   scene: [TitleScene, MapScene, CombatScene, RewardScene, ShopScene, RestScene, InterActScene, WorkshopScene, CharacterSelectScene, PauseScene, EventScene, RunSummaryScene, LibraryScene, HowToPlayScene],
   render: { pixelArt: false, antialias: true }
 };

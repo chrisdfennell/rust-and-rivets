@@ -3,7 +3,7 @@ import { startRun, clearSavedRun } from '../game/run';
 import { CHARACTERS, type CharacterDef } from '../game/characters';
 import { RELICS } from '../game/relics';
 import { isCharacterUnlocked, unlockRequirementFor } from '../game/meta';
-import { dailySeedFor, todayStamp, decodeRunCode } from '../game/seedcode';
+import { decodeRunCode } from '../game/seedcode';
 import { seedFromString } from '../game/rng';
 import { CHARACTER_SPRITES } from '../ui/MechSprite';
 import { Button } from '../ui/Button';
@@ -16,15 +16,27 @@ import { COLORS, FONTS, hex } from '../ui/theme';
 let pendingSeed: number | null = null;
 let pendingSeedLabel = 'Random';
 
+// Lets other scenes (TitleScene's DAILY RUN) preset the seed before routing
+// here, so the pilot picker opens with the daily already selected.
+export function setPendingRunSeed(seed: number | null, label: string) {
+  pendingSeed = seed;
+  pendingSeedLabel = label;
+}
+
 export class CharacterSelectScene extends Phaser.Scene {
   // Slice 58 — debounce for resize-triggered re-layout.
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  // Active seed-entry modal overlay (null when closed).
+  private seedModal: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super('CharacterSelect');
   }
 
   create() {
+    // Phaser reuses the scene instance across restarts; a stale modal ref
+    // would block reopening (the old container was destroyed on shutdown).
+    this.seedModal = null;
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(COLORS.bg);
     const portrait = height > width;
@@ -143,7 +155,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       width - seedW / 2 - 20,
       height - 36,
       'RUN SEED…',
-      () => this.openSeedPrompt(),
+      () => this.openSeedModal(),
       { width: seedW, height: 40, fontSize: 14, fill: COLORS.steelDark, hoverFill: COLORS.steel }
     );
     this.add.existing(seedBtn);
@@ -403,53 +415,178 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Map'));
   }
 
-  // One prompt drives all three seed modes. We use window.prompt rather than a
-  // bespoke Phaser text field — it's the pragmatic, reliable way to take typed
-  // input in a canvas game, and keypads work on mobile webviews.
-  private openSeedPrompt() {
-    const input = window.prompt(
-      'RUN SEED\n' +
-        '• Leave blank for a random run\n' +
-        '• Type DAILY for today’s shared daily seed\n' +
-        '• Paste a RUN CODE (from a run summary) to replay an exact run\n' +
-        '• Or type any word/number for a custom seed',
-      ''
+  // Custom in-canvas modal for entering a seed or run code. Backed by a real
+  // DOM <input> (Phaser dom container, enabled in main.ts) so the mobile soft
+  // keyboard appears and paste works. Tap outside / CANCEL / Esc dismisses.
+  private openSeedModal() {
+    if (this.seedModal) return;
+    const { width, height } = this.scale;
+    const portrait = height > width;
+    const panelW = Math.min(width - 32, 440);
+    const panelH = portrait ? 308 : 284;
+    const cx = width / 2;
+    const cy = height / 2;
+    const topY = cy - panelH / 2;
+
+    const modal = this.add.container(0, 0).setDepth(3000);
+    this.seedModal = modal;
+
+    // Dim catcher — tap anywhere outside the panel to cancel.
+    const dim = this.add.rectangle(cx, cy, width, height, 0x000000, 0.6).setInteractive();
+    dim.on('pointerdown', () => this.closeSeedModal());
+    modal.add(dim);
+
+    // Panel — eats clicks so they don't fall through to the dim catcher.
+    const panel = this.add
+      .rectangle(cx, cy, panelW, panelH, COLORS.bgPanel, 1)
+      .setStrokeStyle(2, COLORS.brass)
+      .setInteractive();
+    panel.on(
+      'pointerdown',
+      (_p: Phaser.Input.Pointer, _x: number, _y: number, ev?: Phaser.Types.Input.EventData) =>
+        ev?.stopPropagation?.()
     );
-    if (input === null) return; // cancelled
-    const trimmed = input.trim();
+    modal.add(panel);
 
-    if (trimmed === '') {
-      pendingSeed = null;
-      pendingSeedLabel = 'Random';
-      this.scene.restart();
-      return;
-    }
+    modal.add(
+      this.add
+        .text(cx, topY + 22, 'PLAY A SEED OR RUN CODE', {
+          fontFamily: FONTS.display,
+          fontSize: '17px',
+          color: hex(COLORS.brass),
+          fontStyle: 'bold'
+        })
+        .setOrigin(0.5)
+    );
+    modal.add(
+      this.add
+        .text(
+          cx,
+          topY + 48,
+          'Paste a run code to replay an exact run,\nor type any word or number for a custom seed.',
+          {
+            fontFamily: FONTS.body,
+            fontSize: '12px',
+            color: hex(COLORS.boneDim),
+            align: 'center',
+            lineSpacing: 4,
+            wordWrap: { width: panelW - 32 }
+          }
+        )
+        .setOrigin(0.5, 0)
+    );
 
-    if (trimmed.toLowerCase() === 'daily') {
-      const stamp = todayStamp();
-      pendingSeed = dailySeedFor(stamp);
-      pendingSeedLabel = `Daily ${stamp}`;
-      this.scene.restart();
-      return;
-    }
+    // Inline feedback (e.g. locked pilot). Empty until something goes wrong.
+    const errText = this.add
+      .text(cx, topY + panelH - 92, '', {
+        fontFamily: FONTS.body,
+        fontSize: '12px',
+        color: hex(COLORS.danger),
+        align: 'center',
+        wordWrap: { width: panelW - 32 }
+      })
+      .setOrigin(0.5);
+    modal.add(errText);
 
-    // A full run code carries its own pilot — start that exact run now, as
-    // long as the pilot is unlocked.
-    const decoded = decodeRunCode(trimmed);
-    const isKnownPilot = decoded && CHARACTERS.some((c) => c.id === decoded.characterId);
-    if (decoded && isKnownPilot) {
-      if (!isCharacterUnlocked(decoded.characterId)) {
-        window.alert('That run code uses a pilot you haven’t unlocked yet.');
+    // Real DOM text input.
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 48;
+    input.placeholder = 'run code or seed…';
+    input.autocapitalize = 'off';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.style.cssText = [
+      `width:${panelW - 64}px`,
+      'box-sizing:border-box',
+      'padding:10px 12px',
+      'font-family:monospace',
+      'font-size:16px',
+      'text-align:center',
+      `color:${hex(COLORS.bone)}`,
+      'background:#14110f',
+      `border:2px solid ${hex(COLORS.brassDim)}`,
+      'border-radius:4px',
+      'outline:none'
+    ].join(';');
+    const domEl = this.add.dom(cx, topY + 116, input);
+    modal.add(domEl);
+    this.time.delayedCall(40, () => input.focus());
+
+    const submit = () => {
+      const trimmed = input.value.trim();
+      if (trimmed === '') {
+        this.applyRandomSeed();
         return;
       }
-      this.launchRun(decoded.characterId, decoded.seed);
-      return;
-    }
+      // A full run code carries its own pilot — launch that exact run.
+      const decoded = decodeRunCode(trimmed);
+      const known = decoded && CHARACTERS.some((c) => c.id === decoded.characterId);
+      if (decoded && known) {
+        if (!isCharacterUnlocked(decoded.characterId)) {
+          errText.setText('That run code needs a pilot you haven’t unlocked yet.');
+          return;
+        }
+        this.closeSeedModal();
+        this.launchRun(decoded.characterId, decoded.seed);
+        return;
+      }
+      // Otherwise a custom seed: pure digits become the seed; any other phrase
+      // is hashed into one.
+      pendingSeed = /^[0-9]+$/.test(trimmed) ? Number(trimmed) >>> 0 : seedFromString(trimmed);
+      pendingSeedLabel = 'Custom';
+      this.closeSeedModal();
+      this.scene.restart();
+    };
 
-    // Otherwise treat the text as a custom seed: pure digits become the seed
-    // directly; any other phrase is hashed into one.
-    pendingSeed = /^[0-9]+$/.test(trimmed) ? Number(trimmed) >>> 0 : seedFromString(trimmed);
-    pendingSeedLabel = 'Custom';
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.closeSeedModal();
+      }
+    });
+
+    // START / RANDOM / CANCEL row.
+    const btnY = topY + panelH - 40;
+    const bw = Math.min((panelW - 48) / 3, 124);
+    const gap = 10;
+    modal.add(
+      new Button(this, cx - bw - gap, btnY, 'START', submit, { width: bw, height: 42, fontSize: 14 })
+    );
+    modal.add(
+      new Button(this, cx, btnY, 'RANDOM', () => this.applyRandomSeed(), {
+        width: bw,
+        height: 42,
+        fontSize: 14,
+        fill: COLORS.steelDark,
+        hoverFill: COLORS.steel
+      })
+    );
+    modal.add(
+      new Button(this, cx + bw + gap, btnY, 'CANCEL', () => this.closeSeedModal(), {
+        width: bw,
+        height: 42,
+        fontSize: 14,
+        fill: COLORS.steelDark,
+        hoverFill: COLORS.steel
+      })
+    );
+  }
+
+  private applyRandomSeed() {
+    pendingSeed = null;
+    pendingSeedLabel = 'Random';
+    this.closeSeedModal();
     this.scene.restart();
+  }
+
+  private closeSeedModal() {
+    if (this.seedModal) {
+      this.seedModal.destroy();
+      this.seedModal = null;
+    }
   }
 }
